@@ -27,6 +27,7 @@ lerna-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.example
 
 # Vercel
 .vercel
@@ -77,3 +78,4 @@ QUICK_START.md
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
+
