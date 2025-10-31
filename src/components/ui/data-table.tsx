@@ -71,10 +71,10 @@ export function DataTable<T>({
                   {columns.map((column, index) => (
                     <TableHead
                       key={index}
-                      className={`${column.headerClassName || "} ${
+                      className={`${column.headerClassName || ""} ${
                         column.sticky
                           ? "sticky right-0 bg-surface-1 dark:bg-surface-1"
-                          : "
+                          : ""
                       }`}
                     >
                       {column.header}
@@ -88,10 +88,10 @@ export function DataTable<T>({
                     {columns.map((column, colIndex) => (
                       <TableCell
                         key={colIndex}
-                        className={`${column.className || "} ${
+                        className={`${column.className || ""} ${
                           column.sticky
                             ? "sticky right-0 bg-surface-1 dark:bg-surface-1"
-                            : "
+                            : ""
                         }`}
                       >
                         {getCellValue(row, column)}
@@ -108,7 +108,7 @@ export function DataTable<T>({
             <div className="flex items-center gap-2 text-sm text-text-secondary">
               <span>
                 Mostrando {startIndex + 1} - {Math.min(endIndex, data.length)} de{" "}
-                {data.length} registro{data.length !== 1 ? "s" : "}
+                {data.length} registro{data.length !== 1 ? "s" : ""}
               </span>
             </div>
 
