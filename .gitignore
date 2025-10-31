@@ -1,41 +1,75 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Testing
+coverage/
+.nyc_output
 
-# testing
-/coverage
+# Next.js
+.next/
+out/
+build/
+dist/
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Production
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Environment variables
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# vercel
+# Vercel
 .vercel
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Supabase
+.supabase/
+
+# Build outputs
+.turbo/
+.cache/
+
+# Temporary files
+*.tmp
+*.temp
+supabase.txt
+
+# Documentation temporal (mantener solo README.md y QUICK_START.md)
+CHECK_SETUP.md
+DEV_MODE.md
+ERRORS_FIXED.md
+NEXT_STEPS.md
+SETUP_STATUS.md
+START_HERE.md
+STATUS.md
+
+# Lock files (opcional - descomentar si no quieres trackear)
+# bun.lock
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
