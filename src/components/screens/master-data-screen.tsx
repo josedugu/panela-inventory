@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Plus, Search, Pencil, Trash2, Users, Package, Building2, DollarSign, Smartphone, Warehouse } from "lucide-react";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 // Suppliers
 interface Supplier {

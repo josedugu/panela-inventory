@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 export function ComponentShowcase() {
   return (

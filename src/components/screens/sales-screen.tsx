@@ -30,7 +30,7 @@ import {
 import { Label } from "../ui/label";
 import { Search, Filter, Download, Eye, Trash2, ChevronLeft, ChevronRight, X, Plus } from "lucide-react";
 import { Badge } from "../ui/badge";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface Sale {
   id: string;

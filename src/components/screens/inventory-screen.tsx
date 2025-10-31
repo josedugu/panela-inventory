@@ -31,7 +31,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { Card, CardContent } from "../ui/card";
 
 interface InventoryProduct {
