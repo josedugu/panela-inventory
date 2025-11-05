@@ -1,4 +1,14 @@
-import { useState, ReactNode } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { Button } from "./button";
+import { Card, CardContent } from "./card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./select";
 import {
   Table,
   TableBody,
@@ -7,16 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "./table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./select";
-import { Button } from "./button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Card, CardContent } from "./card";
 
 interface Column<T> {
   header: string;
@@ -68,9 +68,9 @@ export function DataTable<T>({
             <Table>
               <TableHeader className="sticky top-0 bg-surface-1 dark:bg-surface-1 z-10 shadow-sm">
                 <TableRow>
-                  {columns.map((column, index) => (
+                  {columns.map((column, idx) => (
                     <TableHead
-                      key={index}
+                      key={`col-${typeof column.accessor === "string" ? column.accessor : idx}`}
                       className={`${column.headerClassName || ""} ${
                         column.sticky
                           ? "sticky right-0 bg-surface-1 dark:bg-surface-1"
@@ -85,9 +85,9 @@ export function DataTable<T>({
               <TableBody>
                 {paginatedData.map((row) => (
                   <TableRow key={keyExtractor(row)}>
-                    {columns.map((column, colIndex) => (
+                    {columns.map((column, colIdx) => (
                       <TableCell
-                        key={colIndex}
+                        key={`${keyExtractor(row)}-${typeof column.accessor === "string" ? column.accessor : colIdx}`}
                         className={`${column.className || ""} ${
                           column.sticky
                             ? "sticky right-0 bg-surface-1 dark:bg-surface-1"
@@ -107,8 +107,8 @@ export function DataTable<T>({
           <div className="sticky bottom-0 bg-surface-1 dark:bg-surface-1 border-t border-border p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-text-secondary">
               <span>
-                Mostrando {startIndex + 1} - {Math.min(endIndex, data.length)} de{" "}
-                {data.length} registro{data.length !== 1 ? "s" : ""}
+                Mostrando {startIndex + 1} - {Math.min(endIndex, data.length)}{" "}
+                de {data.length} registro{data.length !== 1 ? "s" : ""}
               </span>
             </div>
 
@@ -141,7 +141,9 @@ export function DataTable<T>({
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -149,13 +151,17 @@ export function DataTable<T>({
 
                 <div className="flex items-center gap-1 px-2">
                   <span className="text-sm font-medium">{currentPage}</span>
-                  <span className="text-sm text-text-secondary">de {totalPages || 1}</span>
+                  <span className="text-sm text-text-secondary">
+                    de {totalPages || 1}
+                  </span>
                 </div>
 
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={currentPage === totalPages || totalPages === 0}
                 >
                   <ChevronRight className="w-4 h-4" />

@@ -1,42 +1,27 @@
-import { createClient } from "@/lib/supabase/server";
+import "server-only";
+
+import type { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma/client";
 
 export async function getAllCategories() {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("name", { ascending: true });
-
-  if (error) throw error;
-  return data;
+  return prisma.tipoProducto.findMany({
+    orderBy: { nombre: "asc" },
+  });
 }
 
 export async function getCategoryById(id: string) {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error) throw error;
-  return data;
+  return prisma.tipoProducto.findUnique({
+    where: { id },
+  });
 }
 
-export async function createCategory(categoryData: {
-  name: string;
-  description?: string;
-}) {
-  const supabase = await createClient();
+type CreateCategoryInput = Pick<
+  Prisma.TipoProductoUncheckedCreateInput,
+  "nombre" | "descripcion"
+>;
 
-  const { data, error } = await supabase
-    .from("categories")
-    .insert(categoryData)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+export async function createCategory(tipoProductoData: CreateCategoryInput) {
+  return prisma.tipoProducto.create({
+    data: tipoProductoData,
+  });
 }

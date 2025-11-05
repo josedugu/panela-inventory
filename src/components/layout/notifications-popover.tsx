@@ -2,11 +2,7 @@
 
 import { Bell } from "lucide-react";
 import { Button } from "../ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
 
@@ -98,7 +94,8 @@ export function NotificationsPopover({ onViewAll }: NotificationsPopoverProps) {
           <div>
             <h4 className="font-medium">Notificaciones</h4>
             <p className="text-sm text-text-secondary">
-              Tienes {unreadCount} notificación{unreadCount !== 1 ? "es" : ""} sin leer
+              Tienes {unreadCount} notificación{unreadCount !== 1 ? "es" : ""}{" "}
+              sin leer
             </p>
           </div>
         </div>
@@ -107,6 +104,7 @@ export function NotificationsPopover({ onViewAll }: NotificationsPopoverProps) {
             {recentNotifications.map((notification, index) => (
               <div key={notification.id}>
                 <button
+                  type="button"
                   className="w-full text-left p-3 rounded-lg hover:bg-surface-2 transition-colors"
                   onClick={() => {
                     // Handle notification click
@@ -114,7 +112,7 @@ export function NotificationsPopover({ onViewAll }: NotificationsPopoverProps) {
                 >
                   <div className="flex gap-3">
                     <div
-                      className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${
+                      className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
                         notification.read ? "bg-border" : "bg-primary"
                       }`}
                     />
@@ -122,7 +120,7 @@ export function NotificationsPopover({ onViewAll }: NotificationsPopoverProps) {
                       <div className="flex items-start justify-between gap-2">
                         <p
                           className={`text-sm font-medium ${getNotificationColor(
-                            notification.type
+                            notification.type,
                           )}`}
                         >
                           {notification.title}

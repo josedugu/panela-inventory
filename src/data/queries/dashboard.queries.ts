@@ -1,49 +1,79 @@
-import { createClient } from "@/lib/supabase/server";
+import "server-only";
 
-export async function getDashboardMetrics() {
-  const supabase = await createClient();
+import { prisma } from "@/lib/prisma/client";
 
-  // Get total products
-  const { count: totalProducts } = await supabase
-    .from("products")
-    .select("*", { count: "exact", head: true });
+export interface DashboardMetrics {
+  totalProducts: number;
+  inventoryValue: number;
+  lowStockCount: number;
+  totalStock: number;
+}
 
-  // Get total inventory value using RPC function
-  const { data: inventoryValue } = await supabase.rpc(
-    "calculate_inventory_value"
+export interface RecentActivityItem {
+  id: string;
+  imei: string | null | undefined;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getDashboardMetrics(): Promise<DashboardMetrics> {
+  const [totalProducts, lowStockCount, inventoryRecords] = await Promise.all([
+    prisma.producto.count(),
+    prisma.movimientoInventario.count({
+      where: {
+        cantidad: {
+          lte: 10,
+        },
+        estado: true,
+      },
+    }),
+    prisma.movimientoInventario.findMany({
+      select: {
+        cantidad: true,
+        producto: {
+          select: {
+            precio: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const { totalStock, inventoryValue } = inventoryRecords.reduce(
+    (acc, item) => {
+      const price = Number(item.producto.precio);
+      return {
+        totalStock: acc.totalStock + item.cantidad,
+        inventoryValue: acc.inventoryValue + price * item.cantidad,
+      };
+    },
+    { totalStock: 0, inventoryValue: 0 },
   );
 
-  // Get low stock count
-  const { count: lowStockCount } = await supabase
-    .from("inventory")
-    .select("*", { count: "exact", head: true })
-    .lte("quantity", 10);
-
-  // Get total stock quantity
-  const { data: inventoryData } = await supabase
-    .from("inventory")
-    .select("quantity");
-
-  const totalStock =
-    inventoryData?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
-
   return {
-    totalProducts: totalProducts ?? 0,
-    inventoryValue: inventoryValue ?? 0,
-    lowStockCount: lowStockCount ?? 0,
+    totalProducts,
+    lowStockCount,
     totalStock,
+    inventoryValue,
   };
 }
 
-export async function getRecentActivity() {
-  const supabase = await createClient();
+export async function getRecentActivity(): Promise<RecentActivityItem[]> {
+  const products = await prisma.producto.findMany({
+    select: {
+      id: true,
+      imei: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 10,
+  });
 
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, name, sku, created_at, updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(10);
-
-  if (error) throw error;
-  return data;
+  return products.map((product) => ({
+    id: product.id,
+    imei: product.imei ?? null,
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+  }));
 }

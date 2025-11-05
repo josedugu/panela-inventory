@@ -12,13 +12,16 @@ const sizeClasses = {
   xl: "w-16 h-16 border-4",
 };
 
-export function LoadingSpinner({ size = "md", className }: LoadingSpinnerProps) {
+export function LoadingSpinner({
+  size = "md",
+  className,
+}: LoadingSpinnerProps) {
   return (
     <div
       className={cn(
         "inline-block animate-spin rounded-full border-solid border-primary border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]",
         sizeClasses[size],
-        className
+        className,
       )}
       role="status"
     >
@@ -34,12 +37,15 @@ interface LoadingOverlayProps {
   className?: string;
 }
 
-export function LoadingOverlay({ message = "Cargando...", className }: LoadingOverlayProps) {
+export function LoadingOverlay({
+  message = "Cargando...",
+  className,
+}: LoadingOverlayProps) {
   return (
     <div
       className={cn(
         "fixed inset-0 z-50 flex items-center justify-center bg-overlay",
-        className
+        className,
       )}
     >
       <div className="rounded-lg bg-card p-6 shadow-xl">
@@ -57,9 +63,17 @@ interface LoadingStateProps {
   className?: string;
 }
 
-export function LoadingState({ message = "Cargando...", className }: LoadingStateProps) {
+export function LoadingState({
+  message = "Cargando...",
+  className,
+}: LoadingStateProps) {
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-4 p-8", className)}>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-4 p-8",
+        className,
+      )}
+    >
       <LoadingSpinner size="lg" />
       <p className="text-sm text-text-secondary">{message}</p>
     </div>

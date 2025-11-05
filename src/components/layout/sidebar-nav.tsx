@@ -1,23 +1,23 @@
 "use client";
 
 import {
-  LayoutDashboard,
-  Package,
   ArrowRightLeft,
   BarChart3,
-  Settings,
-  FileText,
   ChevronLeft,
-  Palette,
-  Grid3x3,
   Database,
+  FileText,
+  Grid3x3,
+  LayoutDashboard,
   LogOut,
+  Package,
+  Palette,
+  Settings,
   Users,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "../ui/utils";
-import { useState } from "react";
 
 interface NavItem {
   title: string;
@@ -30,52 +30,52 @@ const navItems: NavItem[] = [
   {
     title: "Panel Principal",
     icon: LayoutDashboard,
-    href: "#dashboard",
+    href: "/dashboard",
   },
   {
     title: "Inventario",
     icon: Package,
-    href: "#inventory",
+    href: "/dashboard/inventory",
   },
   {
     title: "Datos Maestros",
     icon: Database,
-    href: "#master-data",
+    href: "/dashboard/master-data",
   },
   {
     title: "Ventas",
     icon: ArrowRightLeft,
-    href: "#sales",
+    href: "/dashboard/sales",
   },
   {
     title: "Clientes",
     icon: Users,
-    href: "#customers",
+    href: "/dashboard/customers",
   },
   {
     title: "Reportes",
     icon: FileText,
-    href: "#reports",
+    href: "/dashboard/reports",
   },
   {
     title: "Analíticas",
     icon: BarChart3,
-    href: "#analytics",
+    href: "/dashboard/analytics",
   },
   {
     title: "Configuración",
     icon: Settings,
-    href: "#settings",
+    href: "/dashboard/settings",
   },
   {
     title: "Componentes",
     icon: Grid3x3,
-    href: "#components",
+    href: "/components",
   },
   {
     title: "Guía de Estilo",
     icon: Palette,
-    href: "#style-guide",
+    href: "/style-guide",
   },
 ];
 
@@ -93,8 +93,6 @@ export function SidebarNav({
   onItemClick,
   onLogout,
   className,
-  isOpen = true,
-  onClose,
 }: SidebarNavProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -104,7 +102,7 @@ export function SidebarNav({
         "border-r border-border bg-surface-1 transition-all duration-300",
         collapsed ? "w-16" : "w-64",
         "hidden lg:block",
-        className
+        className,
       )}
     >
       <div className="flex h-full flex-col">
@@ -119,7 +117,7 @@ export function SidebarNav({
             <ChevronLeft
               className={cn(
                 "h-4 w-4 transition-transform",
-                collapsed && "rotate-180"
+                collapsed && "rotate-180",
               )}
             />
           </Button>
@@ -138,11 +136,11 @@ export function SidebarNav({
                   variant={isActive ? "secondary" : "ghost"}
                   className={cn(
                     "w-full justify-start gap-3",
-                    collapsed && "justify-center px-2"
+                    collapsed && "justify-center px-2",
                   )}
                   onClick={() => onItemClick?.(item.href)}
                 >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  <Icon className="h-5 w-5 shrink-0" />
                   {!collapsed && (
                     <>
                       <span className="flex-1 text-left">{item.title}</span>
@@ -163,7 +161,7 @@ export function SidebarNav({
         {!collapsed && (
           <div className="border-t border-border p-4 space-y-3">
             <div className="flex items-center gap-3 rounded-lg bg-surface-2 p-3">
-              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shrink-0">
                 <span className="text-sm text-primary-foreground font-medium">
                   JP
                 </span>
@@ -173,29 +171,6 @@ export function SidebarNav({
                 <p className="text-xs text-text-secondary truncate">Admin</p>
               </div>
             </div>
-            {onLogout && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3"
-                onClick={onLogout}
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Cerrar Sesión</span>
-              </Button>
-            )}
-          </div>
-        )}
-        {collapsed && onLogout && (
-          <div className="border-t border-border p-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-full"
-              onClick={onLogout}
-              title="Cerrar Sesión"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
           </div>
         )}
       </div>
@@ -220,7 +195,8 @@ export function MobileSidebar({
     <>
       {/* Overlay */}
       {isOpen && (
-        <div
+        <button
+          type="button"
           className="fixed inset-0 z-40 bg-overlay lg:hidden"
           onClick={onClose}
         />
@@ -230,7 +206,7 @@ export function MobileSidebar({
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-surface-1 transform transition-transform duration-300 lg:hidden",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-full flex-col">
@@ -259,7 +235,7 @@ export function MobileSidebar({
                       onClose();
                     }}
                   >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    <Icon className="h-5 w-5 shrink-0" />
                     <span className="flex-1 text-left">{item.title}</span>
                     {item.badge && (
                       <span className="ml-auto bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
@@ -275,7 +251,7 @@ export function MobileSidebar({
           {/* User info and logout */}
           <div className="border-t border-border p-4 space-y-3">
             <div className="flex items-center gap-3 rounded-lg bg-surface-2 p-3">
-              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shrink-0">
                 <span className="text-sm text-primary-foreground font-medium">
                   JP
                 </span>
@@ -285,19 +261,6 @@ export function MobileSidebar({
                 <p className="text-xs text-text-secondary truncate">Admin</p>
               </div>
             </div>
-            {onLogout && (
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3"
-                onClick={() => {
-                  onLogout();
-                  onClose();
-                }}
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Cerrar Sesión</span>
-              </Button>
-            )}
           </div>
         </div>
       </aside>

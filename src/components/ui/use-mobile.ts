@@ -7,13 +7,23 @@ export function useIsMobile() {
     undefined,
   );
 
-  React.useEffect(() => {
+  // useLayoutEffect es más apropiado para efectos síncronos que afectan el layout
+  // Se ejecuta antes del paint del navegador, evitando flickering
+  React.useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+
     const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      setIsMobile(mql.matches);
     };
+
+    // Establecer valor inicial inmediatamente
+    setIsMobile(mql.matches);
+
+    // Escuchar cambios
     mql.addEventListener("change", onChange);
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+
     return () => mql.removeEventListener("change", onChange);
   }, []);
 

@@ -1,0 +1,310 @@
+// PANELA - Prisma Schema
+// Entidades: Autenticación, Datos Maestros e Inventario
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["dev", "prod", "public"]
+}
+
+// Usuarios
+model Usuario {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String
+  email         String   @unique
+  telefono      String?
+  rolId         String?  @map("rol_id") @db.Uuid
+  centroCostoId String?  @map("centro_costo_id") @db.Uuid
+  estado        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relación con Centro de Costo
+  centroCostos               CentroCostos?          @relation(fields: [centroCostoId], references: [id])
+  rol                        Rol?                   @relation(fields: [rolId], references: [id])
+  movimientosCreadosPor      MovimientoInventario[] @relation("MovimientosCreadosPor")
+  movimientosActualizadosPor MovimientoInventario[] @relation("MovimientosActualizadosPor")
+
+  @@index([centroCostoId])
+  @@index([email])
+  @@map("usuario")
+  @@schema("dev")
+}
+
+// ============================================
+// DATOS MAESTROS
+// ============================================
+
+model Proveedor {
+  id        String     @id @default(uuid()) @db.Uuid
+  nombre    String
+  contacto  String
+  email     String
+  telefono  String
+  direccion String?
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  producto  Producto[]
+
+  @@map("proveedor")
+  @@schema("dev")
+}
+
+// Marcas
+model Marca {
+  id          String   @id @default(uuid()) @db.Uuid
+  nombre      String   @unique
+  descripcion String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relación con Modelos
+  modelos  Modelo[]
+  producto Producto[]
+
+  @@map("marca")
+  @@schema("dev")
+}
+
+// Modelos
+model Modelo {
+  id             String   @id @default(uuid()) @db.Uuid
+  nombre         String
+  almacenamiento String?
+  ram            String?
+  color          String?
+  marcaId        String   @map("marca_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relación con Marca
+  marca    Marca      @relation(fields: [marcaId], references: [id])
+  producto Producto[]
+
+  @@index([marcaId])
+  @@map("modelo")
+  @@schema("dev")
+}
+
+// Centros de Costo
+model CentroCostos {
+  id          String   @id @default(uuid()) @db.Uuid
+  nombre      String
+  descripcion String?
+  responsable String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relación con Empleados
+  usuarios Usuario[]
+
+  @@map("centro_costo")
+  @@schema("dev")
+}
+
+model Rol {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relación con Empleados
+  usuarios Usuario[]
+
+  @@map("rol")
+  @@schema("dev")
+}
+
+// Bodegas
+model Bodega {
+  id          String     @id @default(uuid()) @db.Uuid
+  codigo      String?
+  nombre      String
+  capacidad   String?
+  responsable String?
+  estado      Boolean    @default(true)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  producto    Producto[]
+
+  @@map("bodega")
+  @@schema("dev")
+}
+
+// Categorías de Productos
+model TipoProducto {
+  id          String   @id @default(uuid()) @db.Uuid
+  nombre      String
+  descripcion String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relación con Productos
+  productos Producto[]
+
+  @@map("tipo_producto")
+  @@schema("dev")
+}
+
+// Productos
+model Producto {
+  id             String   @id @default(uuid()) @db.Uuid
+  estado         Boolean  @default(true)
+  precio         Decimal  @db.Decimal(10, 2)
+  costo          Decimal  @db.Decimal(10, 2)
+  cantidad       Int      @default(0)
+  imei           String?
+  descripcion    String?
+  tipoProductoId String?  @map("tipo_producto_id") @db.Uuid
+  imagenUrl      String?  @map("imagen_url")
+  marcaId        String?  @map("marca_id") @db.Uuid
+  modeloId       String?  @map("modelo_id") @db.Uuid
+  bodegaId       String?  @map("bodega_id") @db.Uuid
+  proveedorId    String?  @map("proveedor_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relaciones
+  tipoProducto         TipoProducto?          @relation(fields: [tipoProductoId], references: [id])
+  marca                Marca?                 @relation(fields: [marcaId], references: [id])
+  modelo               Modelo?                @relation(fields: [modeloId], references: [id])
+  bodega               Bodega?                @relation(fields: [bodegaId], references: [id])
+  proveedor            Proveedor?             @relation(fields: [proveedorId], references: [id])
+  movimientoInventario MovimientoInventario[]
+  CompraProducto       CompraProducto[]
+  ProductoPrecio       ProductoPrecio[]
+
+  @@index([tipoProductoId])
+  @@map("producto")
+  @@schema("dev")
+}
+
+model ProductoPrecio {
+  id         String   @id @default(uuid()) @db.Uuid
+  precio     Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  productoId String   @map("producto_id") @db.Uuid
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  @@map("producto_precio")
+  @@schema("dev")
+}
+
+//// Movimientos del inventario
+
+model MovimientoInventario {
+  id       String  @id @default(uuid()) @db.Uuid
+  cantidad Int     @default(0)
+  estado   Boolean @default(true)
+
+  creadoPor        Usuario? @relation("MovimientosCreadosPor", fields: [creadoPorId], references: [id])
+  creadoPorId      String?  @map("creado_por_id") @db.Uuid
+  actualizadoPor   Usuario? @relation("MovimientosActualizadosPor", fields: [actualizadoPorId], references: [id])
+  actualizadoPorId String?  @map("actualizado_por_id") @db.Uuid
+
+  tipoMovimientoId String?                   @map("tipo_movimiento_id") @db.Uuid
+  tipoMovimiento   TipoMovimientoInventario? @relation(fields: [tipoMovimientoId], references: [id])
+  productoId       String                    @unique @map("producto_id") @db.Uuid
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  producto         Producto                  @relation(fields: [productoId], references: [id])
+
+  @@map("movimiento_inventario")
+  @@schema("dev")
+}
+
+model TipoMovimientoInventario {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  nombre               String
+  ingreso              Boolean                @default(false)
+  salida               Boolean                @default(false)
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  movimientoInventario MovimientoInventario[]
+
+  @@map("tipo_movimiento_inventario")
+  @@schema("dev")
+}
+
+model Cliente {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String
+  email     String   @unique
+  telefono  String?
+  whatsapp  String?
+  direccion String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  compra    Compra[]
+
+  @@map("cliente")
+  @@schema("dev")
+}
+
+model Compra {
+  id             String           @id @default(uuid()) @db.Uuid
+  clienteId      String?          @map("cliente_id") @db.Uuid
+  cliente        Cliente?         @relation(fields: [clienteId], references: [id])
+  total          Decimal          @default(0) @db.Decimal(10, 2)
+  estado         Boolean          @default(true)
+  compraProducto CompraProducto[]
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  metodoPagoId   String?          @map("metodo_pago_id") @db.Uuid
+  metodoPago     MetodoPago?      @relation(fields: [metodoPagoId], references: [id])
+  medioVentaId   String?          @map("medio_venta_id") @db.Uuid
+  medioVenta     MedioVenta?      @relation(fields: [medioVentaId], references: [id])
+
+  @@map("compra")
+  @@schema("dev")
+}
+
+model CompraProducto {
+  id       String @id @default(uuid()) @db.Uuid
+  compraId String @map("compra_id") @db.Uuid
+  compra   Compra @relation(fields: [compraId], references: [id])
+
+  productoId String   @map("producto_id") @db.Uuid
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  cantidad  Int     @default(0)
+  precio    Decimal @db.Decimal(10, 2)
+  descuento Decimal @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
+  total     Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("compra_producto")
+  @@schema("dev")
+}
+
+model MetodoPago {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  compra Compra[]
+
+  @@map("metodo_pago")
+  @@schema("dev")
+}
+
+//// Como presencial, redes sociales, etc.
+model MedioVenta {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  compra    Compra[]
+
+  @@map("medio_venta")
+  @@schema("dev")
+}

@@ -1,6 +1,12 @@
 "use client";
 
-import { LayoutDashboard, Package, ArrowRightLeft, Users, Settings } from "lucide-react";
+import {
+  ArrowRightLeft,
+  LayoutDashboard,
+  Package,
+  Settings,
+  Users,
+} from "lucide-react";
 import { cn } from "../ui/utils";
 
 interface MobileBottomNavProps {
@@ -49,13 +55,14 @@ export function MobileBottomNav({
 
           return (
             <button
+              type="button"
               key={item.href}
               onClick={() => onItemClick?.(item.href)}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-1 max-w-[100px]",
                 isActive
                   ? "text-primary"
-                  : "text-text-secondary hover:text-text-primary"
+                  : "text-text-secondary hover:text-text-primary",
               )}
             >
               <Icon className="h-5 w-5" />

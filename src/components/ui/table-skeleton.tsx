@@ -26,6 +26,7 @@ export function TableSkeleton({
           <TableHeader>
             <TableRow>
               {Array.from({ length: columns }).map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: Skeleton placeholder
                 <TableHead key={i}>
                   <Skeleton className="h-4 w-24" />
                 </TableHead>
@@ -35,9 +36,11 @@ export function TableSkeleton({
         )}
         <TableBody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: Skeleton placeholder
             <TableRow key={rowIndex}>
-              {Array.from({ length: columns }).map((_, colIndex) => (
-                <TableCell key={colIndex}>
+              {Array.from({ length: columns }).map((_, colIdx) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: Skeleton placeholder
+                <TableCell key={colIdx}>
                   <Skeleton className="h-4 w-full" />
                 </TableCell>
               ))}

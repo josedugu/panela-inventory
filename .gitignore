@@ -25,10 +25,8 @@ lerna-debug.log*
 .env
 .env*.local
 .env.development.local
-.env.test.local
 .env.production.local
 .env.example
-
 # Vercel
 .vercel
 
@@ -38,11 +36,13 @@ next-env.d.ts
 
 # IDE
 .vscode/
+.cursor
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+.serena
 
 # OS
 Thumbs.db
@@ -68,6 +68,7 @@ NEXT_STEPS.md
 SETUP_STATUS.md
 START_HERE.md
 STATUS.md
+AGENTS.md
 
 # Archivos de setup (mantener solo localmente)
 SUPABASE_SETUP.sql
@@ -78,4 +79,3 @@ QUICK_START.md
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
-
