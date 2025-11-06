@@ -186,7 +186,6 @@ export async function listBrands(): Promise<BrandDTO[]> {
       id: true,
       nombre: true,
       descripcion: true,
-      pais: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -197,7 +196,6 @@ export async function listBrands(): Promise<BrandDTO[]> {
     id: brand.id,
     nombre: brand.nombre,
     descripcion: brand.descripcion,
-    pais: brand.pais ?? null,
     createdAt: brand.createdAt,
     updatedAt: brand.updatedAt,
   }));
@@ -214,13 +212,11 @@ export async function createBrand(input: BrandInput): Promise<BrandDTO> {
     data: {
       nombre: input.nombre,
       descripcion: input.descripcion,
-      pais: input.pais,
     },
     select: {
       id: true,
       nombre: true,
       descripcion: true,
-      pais: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -230,7 +226,6 @@ export async function createBrand(input: BrandInput): Promise<BrandDTO> {
     id: brand.id,
     nombre: brand.nombre,
     descripcion: brand.descripcion,
-    pais: brand.pais ?? null,
     createdAt: brand.createdAt,
     updatedAt: brand.updatedAt,
   };
@@ -245,13 +240,11 @@ export async function updateBrand(
     data: {
       nombre: input.nombre,
       descripcion: input.descripcion,
-      pais: input.pais,
     },
     select: {
       id: true,
       nombre: true,
       descripcion: true,
-      pais: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -261,7 +254,6 @@ export async function updateBrand(
     id: brand.id,
     nombre: brand.nombre,
     descripcion: brand.descripcion,
-    pais: brand.pais ?? null,
     createdAt: brand.createdAt,
     updatedAt: brand.updatedAt,
   };

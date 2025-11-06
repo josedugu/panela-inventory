@@ -61,7 +61,6 @@ model Marca {
   id          String   @id @default(uuid()) @db.Uuid
   nombre      String   @unique
   descripcion String?
-  pais        String?
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

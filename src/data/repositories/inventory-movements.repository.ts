@@ -23,7 +23,15 @@ export type InventoryMovementWithRelations =
         include: {
           producto: {
             include: {
-              marca: true;
+              marca: {
+                select: {
+                  id: true;
+                  nombre: true;
+                  descripcion: true;
+                  createdAt: true;
+                  updatedAt: true;
+                };
+              };
               modelo: true;
               proveedor: true;
               tipoProducto: true;
@@ -233,7 +241,16 @@ export async function listInventoryMovements(): Promise<
         include: {
           producto: {
             include: {
-              marca: true,
+              marca: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  descripcion: true,
+                  createdAt: true,
+                  updatedAt: true,
+                  // Excluimos 'pais' porque no existe en la BD
+                },
+              },
               modelo: true,
               proveedor: true,
               tipoProducto: true,
