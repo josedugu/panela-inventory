@@ -43,7 +43,6 @@ interface WarehousesSectionProps {
 interface WarehouseFormState {
   codigo: string;
   nombre: string;
-  ubicacion: string;
   capacidad: string;
   responsable: string;
 }
@@ -53,7 +52,6 @@ type DialogMode = "create" | "edit" | null;
 const createEmptyFormState = (): WarehouseFormState => ({
   codigo: "",
   nombre: "",
-  ubicacion: "",
   capacidad: "",
   responsable: "",
 });
@@ -89,7 +87,6 @@ export function WarehousesSection({
     searchableFields: [
       (warehouse) => warehouse.nombre,
       (warehouse) => warehouse.codigo,
-      (warehouse) => warehouse.ubicacion ?? "",
       (warehouse) => warehouse.responsable ?? "",
     ],
   });
@@ -115,7 +112,6 @@ export function WarehousesSection({
     setFormData({
       codigo: warehouse.codigo,
       nombre: warehouse.nombre,
-      ubicacion: warehouse.ubicacion ?? "",
       capacidad: warehouse.capacidad ?? "",
       responsable: warehouse.responsable ?? "",
     });
@@ -152,9 +148,6 @@ export function WarehousesSection({
       id: editingWarehouse?.id,
       codigo: formData.codigo.trim(),
       nombre: formData.nombre.trim(),
-      ubicacion: formData.ubicacion.trim()
-        ? formData.ubicacion.trim()
-        : undefined,
       capacidad: formData.capacidad.trim()
         ? formData.capacidad.trim()
         : undefined,
@@ -209,11 +202,6 @@ export function WarehousesSection({
     {
       accessorKey: "nombre",
       header: "Nombre",
-    },
-    {
-      accessorKey: "ubicacion",
-      header: "Ubicación",
-      cell: ({ row }) => row.original.ubicacion ?? "—",
     },
     {
       accessorKey: "capacidad",
@@ -332,17 +320,6 @@ export function WarehousesSection({
                     handleFormChange("nombre", event.target.value)
                   }
                   required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="warehouse-ubicacion">Ubicación</Label>
-                <Input
-                  id="warehouse-ubicacion"
-                  value={formData.ubicacion}
-                  onChange={(event) =>
-                    handleFormChange("ubicacion", event.target.value)
-                  }
                   disabled={isSubmitting}
                 />
               </div>

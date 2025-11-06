@@ -18,7 +18,6 @@ export interface BrandDTO {
   id: string;
   nombre: string;
   descripcion?: string | null;
-  pais?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,8 +25,6 @@ export interface BrandDTO {
 export interface ModelDTO {
   id: string;
   nombre: string;
-  categoria?: string | null;
-  anio?: string | null;
   marcaId: string;
   marcaNombre: string;
   createdAt: Date;
@@ -36,7 +33,6 @@ export interface ModelDTO {
 
 export interface CostCenterDTO {
   id: string;
-  codigo: string;
   nombre: string;
   descripcion?: string | null;
   responsable?: string | null;
@@ -48,7 +44,6 @@ export interface WarehouseDTO {
   id: string;
   codigo: string;
   nombre: string;
-  ubicacion?: string | null;
   capacidad?: string | null;
   responsable?: string | null;
   estado: boolean;
@@ -204,7 +199,6 @@ export async function listBrands(): Promise<BrandDTO[]> {
 interface BrandInput {
   nombre: string;
   descripcion?: string | null;
-  pais?: string | null;
 }
 
 export async function createBrand(input: BrandInput): Promise<BrandDTO> {
@@ -276,8 +270,6 @@ export async function listModels(): Promise<ModelDTO[]> {
   return models.map((model) => ({
     id: model.id,
     nombre: model.nombre,
-    categoria: model.categoria,
-    anio: model.anio,
     marcaId: model.marcaId,
     marcaNombre: model.marca.nombre,
     createdAt: model.createdAt,
@@ -287,8 +279,6 @@ export async function listModels(): Promise<ModelDTO[]> {
 
 interface ModelInput {
   nombre: string;
-  categoria?: string | null;
-  anio?: string | null;
   marcaId: string;
 }
 
@@ -296,8 +286,6 @@ export async function createModel(input: ModelInput): Promise<ModelDTO> {
   const model = await prisma.modelo.create({
     data: {
       nombre: input.nombre,
-      categoria: input.categoria,
-      anio: input.anio,
       marcaId: input.marcaId,
     },
     include: {
@@ -308,8 +296,6 @@ export async function createModel(input: ModelInput): Promise<ModelDTO> {
   return {
     id: model.id,
     nombre: model.nombre,
-    categoria: model.categoria,
-    anio: model.anio,
     marcaId: model.marcaId,
     marcaNombre: model.marca.nombre,
     createdAt: model.createdAt,
@@ -325,8 +311,6 @@ export async function updateModel(
     where: { id },
     data: {
       nombre: input.nombre,
-      categoria: input.categoria,
-      anio: input.anio,
       marcaId: input.marcaId,
     },
     include: {
@@ -337,8 +321,6 @@ export async function updateModel(
   return {
     id: model.id,
     nombre: model.nombre,
-    categoria: model.categoria,
-    anio: model.anio,
     marcaId: model.marcaId,
     marcaNombre: model.marca.nombre,
     createdAt: model.createdAt,
@@ -359,7 +341,6 @@ export async function listCostCenters(): Promise<CostCenterDTO[]> {
 
   return costCenters.map((center) => ({
     id: center.id,
-    codigo: center.codigo,
     nombre: center.nombre,
     descripcion: center.descripcion,
     responsable: center.responsable,
@@ -369,7 +350,6 @@ export async function listCostCenters(): Promise<CostCenterDTO[]> {
 }
 
 interface CostCenterInput {
-  codigo: string;
   nombre: string;
   descripcion?: string | null;
   responsable?: string | null;
@@ -380,7 +360,6 @@ export async function createCostCenter(
 ): Promise<CostCenterDTO> {
   const center = await prisma.centroCostos.create({
     data: {
-      codigo: input.codigo,
       nombre: input.nombre,
       descripcion: input.descripcion,
       responsable: input.responsable,
@@ -389,7 +368,6 @@ export async function createCostCenter(
 
   return {
     id: center.id,
-    codigo: center.codigo,
     nombre: center.nombre,
     descripcion: center.descripcion,
     responsable: center.responsable,
@@ -405,7 +383,6 @@ export async function updateCostCenter(
   const center = await prisma.centroCostos.update({
     where: { id },
     data: {
-      codigo: input.codigo,
       nombre: input.nombre,
       descripcion: input.descripcion,
       responsable: input.responsable,
@@ -414,7 +391,6 @@ export async function updateCostCenter(
 
   return {
     id: center.id,
-    codigo: center.codigo,
     nombre: center.nombre,
     descripcion: center.descripcion,
     responsable: center.responsable,
@@ -438,7 +414,6 @@ export async function listWarehouses(): Promise<WarehouseDTO[]> {
     id: warehouse.id,
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
-    ubicacion: warehouse.ubicacion,
     capacidad: warehouse.capacidad,
     responsable: warehouse.responsable,
     estado: warehouse.estado,
@@ -450,7 +425,6 @@ export async function listWarehouses(): Promise<WarehouseDTO[]> {
 interface WarehouseInput {
   codigo: string;
   nombre: string;
-  ubicacion?: string | null;
   capacidad?: string | null;
   responsable?: string | null;
 }
@@ -462,7 +436,6 @@ export async function createWarehouse(
     data: {
       codigo: input.codigo,
       nombre: input.nombre,
-      ubicacion: input.ubicacion,
       capacidad: input.capacidad,
       responsable: input.responsable,
     },
@@ -472,7 +445,6 @@ export async function createWarehouse(
     id: warehouse.id,
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
-    ubicacion: warehouse.ubicacion,
     capacidad: warehouse.capacidad,
     responsable: warehouse.responsable,
     estado: warehouse.estado,
@@ -490,7 +462,6 @@ export async function updateWarehouse(
     data: {
       codigo: input.codigo,
       nombre: input.nombre,
-      ubicacion: input.ubicacion,
       capacidad: input.capacidad,
       responsable: input.responsable,
     },
@@ -500,7 +471,6 @@ export async function updateWarehouse(
     id: warehouse.id,
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
-    ubicacion: warehouse.ubicacion,
     capacidad: warehouse.capacidad,
     responsable: warehouse.responsable,
     estado: warehouse.estado,

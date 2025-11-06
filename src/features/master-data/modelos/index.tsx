@@ -53,8 +53,6 @@ interface ModelsSectionProps {
 
 interface ModelFormState {
   nombre: string;
-  categoria: string;
-  anio: string;
   marcaId: string;
 }
 
@@ -62,8 +60,6 @@ type DialogMode = "create" | "edit" | null;
 
 const createEmptyFormState = (): ModelFormState => ({
   nombre: "",
-  categoria: "",
-  anio: "",
   marcaId: "",
 });
 
@@ -96,12 +92,7 @@ export function ModelsSection({
   } = useMasterDataTable<ModelDTO>({
     items: models,
     filters: FILTER_DESCRIPTORS,
-    searchableFields: [
-      (model) => model.nombre,
-      (model) => model.marcaNombre,
-      (model) => model.categoria ?? "",
-      (model) => model.anio ?? "",
-    ],
+    searchableFields: [(model) => model.nombre, (model) => model.marcaNombre],
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
@@ -122,8 +113,6 @@ export function ModelsSection({
   const openEditDialog = (model: ModelDTO) => {
     setFormData({
       nombre: model.nombre,
-      categoria: model.categoria ?? "",
-      anio: model.anio ?? "",
       marcaId: model.marcaId,
     });
     setEditingModel(model);
@@ -162,10 +151,6 @@ export function ModelsSection({
     const payload = {
       id: editingModel?.id,
       nombre: formData.nombre.trim(),
-      categoria: formData.categoria.trim()
-        ? formData.categoria.trim()
-        : undefined,
-      anio: formData.anio.trim() ? formData.anio.trim() : undefined,
       marcaId: formData.marcaId,
     };
 
@@ -215,16 +200,6 @@ export function ModelsSection({
     {
       accessorKey: "marcaNombre",
       header: "Marca",
-    },
-    {
-      accessorKey: "categoria",
-      header: "Categoría",
-      cell: ({ row }) => row.original.categoria ?? "—",
-    },
-    {
-      accessorKey: "anio",
-      header: "Año",
-      cell: ({ row }) => row.original.anio ?? "—",
     },
     {
       id: "actions",
@@ -344,28 +319,6 @@ export function ModelsSection({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="model-categoria">Categoría</Label>
-                <Input
-                  id="model-categoria"
-                  value={formData.categoria}
-                  onChange={(event) =>
-                    handleFormChange("categoria", event.target.value)
-                  }
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="model-anio">Año</Label>
-                <Input
-                  id="model-anio"
-                  value={formData.anio}
-                  onChange={(event) =>
-                    handleFormChange("anio", event.target.value)
-                  }
-                  disabled={isSubmitting}
-                />
               </div>
             </div>
             <DialogFooter className="gap-2 sm:gap-3">

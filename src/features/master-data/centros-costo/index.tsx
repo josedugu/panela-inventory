@@ -42,7 +42,6 @@ interface CostCentersSectionProps {
 }
 
 interface CostCenterFormState {
-  codigo: string;
   nombre: string;
   descripcion: string;
   responsable: string;
@@ -51,7 +50,6 @@ interface CostCenterFormState {
 type DialogMode = "create" | "edit" | null;
 
 const createEmptyFormState = (): CostCenterFormState => ({
-  codigo: "",
   nombre: "",
   descripcion: "",
   responsable: "",
@@ -87,7 +85,6 @@ export function CostCentersSection({
     filters: FILTER_DESCRIPTORS,
     searchableFields: [
       (center) => center.nombre,
-      (center) => center.codigo,
       (center) => center.responsable ?? "",
     ],
   });
@@ -111,7 +108,6 @@ export function CostCentersSection({
 
   const openEditDialog = (center: CostCenterDTO) => {
     setFormData({
-      codigo: center.codigo,
       nombre: center.nombre,
       descripcion: center.descripcion ?? "",
       responsable: center.responsable ?? "",
@@ -150,7 +146,6 @@ export function CostCentersSection({
 
     const payload = {
       id: editingCenter?.id,
-      codigo: formData.codigo.trim(),
       nombre: formData.nombre.trim(),
       descripcion: formData.descripcion.trim()
         ? formData.descripcion.trim()
@@ -196,13 +191,6 @@ export function CostCentersSection({
   const isBusy = isSubmitting || isDeleting;
 
   const columns: ColumnDef<CostCenterDTO>[] = [
-    {
-      accessorKey: "codigo",
-      header: "Código",
-      cell: ({ row }) => (
-        <span className="font-mono text-sm">{row.original.codigo}</span>
-      ),
-    },
     {
       accessorKey: "nombre",
       header: "Nombre",
@@ -304,18 +292,6 @@ export function CostCentersSection({
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cost-center-codigo">Código *</Label>
-                <Input
-                  id="cost-center-codigo"
-                  value={formData.codigo}
-                  onChange={(event) =>
-                    handleFormChange("codigo", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="cost-center-nombre">Nombre *</Label>
                 <Input
