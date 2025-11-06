@@ -76,8 +76,6 @@ model Marca {
 model Modelo {
   id             String   @id @default(uuid()) @db.Uuid
   nombre         String
-  categoria      String?
-  anio           String?
   almacenamiento String?
   ram            String?
   color          String?
@@ -97,7 +95,6 @@ model Modelo {
 // Centros de Costo
 model CentroCostos {
   id          String   @id @default(uuid()) @db.Uuid
-  codigo      String   @unique
   nombre      String
   descripcion String?
   responsable String?
@@ -131,7 +128,6 @@ model Bodega {
   codigo        String
   nombre        String
   capacidad     String?
-  ubicacion     String?
   responsable   String?
   estado        Boolean       @default(true)
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)

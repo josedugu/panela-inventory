@@ -143,7 +143,6 @@ export async function deleteSupplierAction(
 const brandSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
   descripcion: z.string().optional(),
-  pais: z.string().optional(),
 });
 
 export async function upsertBrandAction(
@@ -178,8 +177,6 @@ export async function deleteBrandAction(id: string): Promise<ActionResponse> {
 // Models
 const modelSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
-  categoria: z.string().optional(),
-  anio: z.string().optional(),
   marcaId: z.string().uuid("Selecciona una marca válida"),
 });
 
@@ -214,7 +211,6 @@ export async function deleteModelAction(id: string): Promise<ActionResponse> {
 
 // Cost centers
 const costCenterSchema = z.object({
-  codigo: z.string().min(1, "El código es obligatorio"),
   nombre: z.string().min(1, "El nombre es obligatorio"),
   descripcion: z.string().optional(),
   responsable: z.string().optional(),
@@ -255,7 +251,6 @@ export async function deleteCostCenterAction(
 const warehouseSchema = z.object({
   codigo: z.string().min(1, "El código es obligatorio"),
   nombre: z.string().min(1, "El nombre es obligatorio"),
-  ubicacion: z.string().optional(),
   capacidad: z.string().optional(),
   responsable: z.string().optional(),
 });

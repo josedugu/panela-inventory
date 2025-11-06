@@ -44,7 +44,6 @@ interface BrandsSectionProps {
 interface BrandFormState {
   nombre: string;
   descripcion: string;
-  pais: string;
 }
 
 type DialogMode = "create" | "edit" | null;
@@ -52,7 +51,6 @@ type DialogMode = "create" | "edit" | null;
 const createEmptyFormState = (): BrandFormState => ({
   nombre: "",
   descripcion: "",
-  pais: "",
 });
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
@@ -82,7 +80,6 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
     filters: FILTER_DESCRIPTORS,
     searchableFields: [
       (brand) => brand.nombre,
-      (brand) => brand.pais ?? "",
       (brand) => brand.descripcion ?? "",
     ],
   });
@@ -106,7 +103,6 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
     setFormData({
       nombre: brand.nombre,
       descripcion: brand.descripcion ?? "",
-      pais: brand.pais ?? "",
     });
     setEditingBrand(brand);
     setDialogMode("edit");
@@ -143,7 +139,6 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
       descripcion: formData.descripcion.trim()
         ? formData.descripcion.trim()
         : undefined,
-      pais: formData.pais.trim() ? formData.pais.trim() : undefined,
     };
 
     startSubmitTransition(async () => {
@@ -291,17 +286,6 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
                     handleFormChange("nombre", event.target.value)
                   }
                   required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="brand-pais">País de origen</Label>
-                <Input
-                  id="brand-pais"
-                  value={formData.pais}
-                  onChange={(event) =>
-                    handleFormChange("pais", event.target.value)
-                  }
                   disabled={isSubmitting}
                 />
               </div>
