@@ -14,20 +14,14 @@ import {
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
-import { NotificationsPopover } from "./notifications-popover";
 import { useTheme } from "./theme-provider";
 
 interface TopNavProps {
   onMenuClick?: () => void;
-  onViewAllNotifications?: () => void;
   onLogout?: () => void;
 }
 
-export function TopNav({
-  onMenuClick,
-  onViewAllNotifications,
-  onLogout,
-}: TopNavProps) {
+export function TopNav({ onMenuClick, onLogout }: TopNavProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -94,9 +88,6 @@ export function TopNav({
               <Moon className="h-5 w-5" />
             </Button>
           )}
-
-          {/* Notifications */}
-          <NotificationsPopover onViewAll={onViewAllNotifications} />
 
           {/* Logout */}
           {onLogout && (

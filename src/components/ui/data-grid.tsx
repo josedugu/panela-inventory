@@ -2,13 +2,19 @@
 
 import {
   type ColumnDef,
-  type ColumnSizingInfoState,
   type ColumnSizingState,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Copy, Pencil, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +47,7 @@ interface DataGridProps<TData> {
   columns: ColumnDef<TData, unknown>[];
   isLoading?: boolean;
   pagination?: PaginationConfig;
+  onView?: (row: TData) => void;
   onEdit?: (row: TData) => void;
   onDelete?: (row: TData) => void;
   onDuplicate?: (row: TData) => void;
@@ -50,8 +57,9 @@ interface DataGridProps<TData> {
 export function DataGrid<TData>({
   data,
   columns,
-  isLoading = false,
+  isLoading: _isLoading = false,
   pagination,
+  onView,
   onEdit,
   onDelete,
   onDuplicate,
@@ -98,7 +106,9 @@ export function DataGrid<TData>({
     setSelectedRowId(rowId);
   };
 
-  const handleContextMenuAction = (action: "edit" | "delete" | "duplicate") => {
+  const handleContextMenuAction = (
+    action: "view" | "edit" | "delete" | "duplicate",
+  ) => {
     if (!contextMenu) return;
 
     const row = data.find((item) => {
@@ -108,6 +118,7 @@ export function DataGrid<TData>({
 
     if (!row) return;
 
+    if (action === "view" && onView) onView(row);
     if (action === "edit" && onEdit) onEdit(row);
     if (action === "delete" && onDelete) onDelete(row);
     if (action === "duplicate" && onDuplicate) onDuplicate(row);
@@ -145,6 +156,7 @@ export function DataGrid<TData>({
         <CardContent className="p-0 h-full">
           <div
             className="relative flex flex-col h-full"
+            role="application"
             onContextMenu={(e) => {
               if (!(e.target as HTMLElement).closest("tr")) {
                 e.preventDefault();
@@ -176,11 +188,13 @@ export function DataGrid<TData>({
                                 header.getContext(),
                               )}
                           {header.column.getCanResize() && (
-                            <div
+                            <button
+                              type="button"
+                              aria-label="Resize column"
                               onMouseDown={header.getResizeHandler()}
                               onTouchStart={header.getResizeHandler()}
                               className={cn(
-                                "absolute top-0 right-0 h-full w-1 cursor-col-resize select-none bg-border/0 transition-opacity",
+                                "absolute top-0 right-0 h-full w-1 cursor-col-resize select-none bg-border/0 transition-opacity border-0 p-0",
                                 header.column.getIsResizing()
                                   ? "bg-border"
                                   : "hover:bg-border/80",
@@ -214,7 +228,7 @@ export function DataGrid<TData>({
                           <td
                             key={cell.id}
                             className={cn(
-                              "p-4 align-middle whitespace-nowrap",
+                              "p-4 align-middle whitespace-nowrap text-center",
                               cellIndex !== row.getVisibleCells().length - 1 &&
                                 "border-r border-border/40",
                             )}
@@ -264,7 +278,7 @@ export function DataGrid<TData>({
                       <SelectTrigger className="w-[70px]">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent side="top">
                         <SelectItem value="5">5</SelectItem>
                         <SelectItem value="10">10</SelectItem>
                         <SelectItem value="20">20</SelectItem>
@@ -301,8 +315,7 @@ export function DataGrid<TData>({
                         pagination.onPageChange(pagination.page + 1)
                       }
                       disabled={
-                        pagination.total === 0 ||
-                        pagination.page >= totalPages
+                        pagination.total === 0 || pagination.page >= totalPages
                       }
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -331,6 +344,16 @@ export function DataGrid<TData>({
               left: contextMenu.x,
             }}
           >
+            {onView && (
+              <button
+                type="button"
+                className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={() => handleContextMenuAction("view")}
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                Ver cliente
+              </button>
+            )}
             {onEdit && (
               <button
                 type="button"

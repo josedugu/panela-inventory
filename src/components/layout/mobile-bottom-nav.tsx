@@ -7,6 +7,7 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+import type { ComponentType } from "react";
 import { cn } from "../ui/utils";
 
 interface MobileBottomNavProps {
@@ -14,36 +15,42 @@ interface MobileBottomNavProps {
   onItemClick?: (href: string) => void;
 }
 
-const navItems = [
+const navItems: Array<{
+  title: string;
+  icon: ComponentType<{ className?: string }>;
+  href: string;
+  match?: (pathname: string) => boolean;
+}> = [
   {
     title: "Panel",
     icon: LayoutDashboard,
-    href: "#dashboard",
+    href: "/dashboard",
   },
   {
     title: "Inventario",
     icon: Package,
-    href: "#inventory",
+    href: "/dashboard/inventory/manage",
+    match: (pathname) => pathname.startsWith("/dashboard/inventory"),
   },
   {
     title: "Ventas",
     icon: ArrowRightLeft,
-    href: "#sales",
+    href: "/dashboard/sales",
   },
   {
     title: "Clientes",
     icon: Users,
-    href: "#customers",
+    href: "/dashboard/customers",
   },
   {
     title: "Ajustes",
     icon: Settings,
-    href: "#settings",
+    href: "/dashboard/settings",
   },
 ];
 
 export function MobileBottomNav({
-  activeItem = "#dashboard",
+  activeItem = "/dashboard",
   onItemClick,
 }: MobileBottomNavProps) {
   return (
@@ -51,7 +58,9 @@ export function MobileBottomNav({
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeItem === item.href;
+          const isActive = item.match
+            ? item.match(activeItem ?? "")
+            : activeItem === item.href;
 
           return (
             <button

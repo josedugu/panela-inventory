@@ -58,6 +58,7 @@ export interface EntityTableConfig<TData> {
     onClick: () => void;
   };
   columns: ColumnDef<TData, unknown>[];
+  onView?: (row: TData) => void;
   onEdit?: (row: TData) => void;
   onDelete?: (row: TData) => void;
   onDuplicate?: (row: TData) => void;

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { MobileSidebar, SidebarNav } from "@/components/layout/sidebar-nav";
 import { TopNav } from "@/components/layout/top-nav";
@@ -14,27 +14,39 @@ export function DashboardLayoutClient({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  // Estado local para actualización inmediata del elemento activo
+  const [activeItem, setActiveItem] = useState(pathname);
+
+  // Sincronizar con pathname cuando cambie (después de navegación)
+  useEffect(() => {
+    setActiveItem(pathname);
+  }, [pathname]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
       <TopNav
         onMenuClick={() => setMobileMenuOpen(true)}
-        onViewAllNotifications={() => router.push("/notifications")}
         onLogout={() => router.push("/sign-in")}
       />
 
       <div className="flex-1 flex overflow-hidden">
         <SidebarNav
-          activeItem={pathname}
-          onItemClick={(href) => router.push(href)}
+          activeItem={activeItem}
+          onItemClick={(href) => {
+            setActiveItem(href); // Actualizar inmediatamente
+            router.push(href);
+          }}
           onLogout={() => router.push("/sign-in")}
         />
 
         <MobileSidebar
           isOpen={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
-          activeItem={pathname}
-          onItemClick={(href) => router.push(href)}
+          activeItem={activeItem}
+          onItemClick={(href) => {
+            setActiveItem(href); // Actualizar inmediatamente
+            router.push(href);
+          }}
           onLogout={() => router.push("/sign-in")}
         />
 
@@ -44,8 +56,11 @@ export function DashboardLayoutClient({
       </div>
 
       <MobileBottomNav
-        activeItem={pathname}
-        onItemClick={(href) => router.push(href)}
+        activeItem={activeItem}
+        onItemClick={(href) => {
+          setActiveItem(href); // Actualizar inmediatamente
+          router.push(href);
+        }}
       />
     </div>
   );

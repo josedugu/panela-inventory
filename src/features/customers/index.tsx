@@ -1,1 +1,1 @@
-export { CustomersScreen } from "./components/customers-screen";
+export { Customers } from "./components/customers";

@@ -11,15 +11,15 @@ export interface DashboardMetrics {
 
 export interface RecentActivityItem {
   id: string;
-  imei: string | null | undefined;
+  name: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  const [totalProducts, lowStockCount, inventoryRecords] = await Promise.all([
+  const [totalProducts, lowStockCount, products] = await Promise.all([
     prisma.producto.count(),
-    prisma.movimientoInventario.count({
+    prisma.producto.count({
       where: {
         cantidad: {
           lte: 10,
@@ -27,24 +27,20 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         estado: true,
       },
     }),
-    prisma.movimientoInventario.findMany({
+    prisma.producto.findMany({
       select: {
         cantidad: true,
-        producto: {
-          select: {
-            precio: true,
-          },
-        },
+        costo: true,
       },
     }),
   ]);
 
-  const { totalStock, inventoryValue } = inventoryRecords.reduce(
-    (acc, item) => {
-      const price = Number(item.producto.precio);
+  const { totalStock, inventoryValue } = products.reduce(
+    (acc, product) => {
+      const cost = product.costo ? Number(product.costo) : 0;
       return {
-        totalStock: acc.totalStock + item.cantidad,
-        inventoryValue: acc.inventoryValue + price * item.cantidad,
+        totalStock: acc.totalStock + product.cantidad,
+        inventoryValue: acc.inventoryValue + cost * product.cantidad,
       };
     },
     { totalStock: 0, inventoryValue: 0 },
@@ -62,7 +58,7 @@ export async function getRecentActivity(): Promise<RecentActivityItem[]> {
   const products = await prisma.producto.findMany({
     select: {
       id: true,
-      imei: true,
+      descripcion: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -72,7 +68,7 @@ export async function getRecentActivity(): Promise<RecentActivityItem[]> {
 
   return products.map((product) => ({
     id: product.id,
-    imei: product.imei ?? null,
+    name: product.descripcion ?? "Sin descripción",
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   }));

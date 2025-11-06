@@ -1,5 +1,5 @@
-import { SalesScreen } from "@/features/sales";
+import { Sales } from "@/features/sales";
 
 export default function SalesPage() {
-  return <SalesScreen />;
+  return <Sales />;
 }

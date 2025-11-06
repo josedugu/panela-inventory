@@ -19,7 +19,7 @@ export function ImageWithFallback(props: ImageWithFallbackProps) {
     setDidError(true);
   };
 
-  const { src, alt, style, className, width, height, fill, ...rest } = props;
+  const { src, alt, style, className, width, height, ...rest } = props;
 
   if (!src || typeof src !== "string") {
     return null;

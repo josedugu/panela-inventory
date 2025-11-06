@@ -57,7 +57,7 @@ function transformLowStockProduct(product: LowStockProductDTO): Product {
   return {
     id: product.id,
     name: product.name,
-    sku: product.sku,
+    imei: product.sku,
     category: product.category ?? "Sin categoría",
     price: product.price,
     stock,

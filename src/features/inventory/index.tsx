@@ -1,16 +1,12 @@
 // Componentes
 
-// Actions
-export {
-  createProductAction,
-  deleteProductAction,
-  getProductsAction,
-  updateProductAction,
-} from "./actions";
-export { AddProductModal } from "./components/add-product-modal";
-export { EmptyState } from "./components/empty-state";
-export { Inventory } from "./components/inventory";
-export { type Product, ProductCard } from "./components/product-card";
-export { StatCard } from "./components/stat-card";
-export { StockBadge, type StockStatus } from "./components/stock-badge";
-export { StockLevelIndicator } from "./components/stock-level-indicator";
+// Actions compartidas
+export * from "./actions/index";
+export { InventoryMovementModal } from "./general-ui/add-product-modal";
+export { EmptyState } from "./general-ui/empty-state";
+export { type Product, ProductCard } from "./general-ui/product-card";
+export { StatCard } from "./general-ui/stat-card";
+export { StockBadge, type StockStatus } from "./general-ui/stock-badge";
+export { StockLevelIndicator } from "./general-ui/stock-level-indicator";
+export { Inventory } from "./management/inventory";
+export { InventoryMovements } from "./movements/inventory-movements";

@@ -7,23 +7,11 @@ import { z } from "zod";
 export const productSchema = z.object({
   // Campos opcionales para creación (el id se genera automáticamente)
   estado: z.boolean().default(true).optional(),
-  precio: z.preprocess(
-    (val) => {
-      if (typeof val === "string") {
-        const parsed = parseFloat(val);
-        return isNaN(parsed) ? val : parsed;
-      }
-      return val;
-    },
-    z
-      .number({ required_error: "El precio es requerido" })
-      .positive("El precio debe ser positivo"),
-  ),
   costo: z.preprocess(
     (val) => {
       if (typeof val === "string") {
         const parsed = parseFloat(val);
-        return isNaN(parsed) ? val : parsed;
+        return Number.isNaN(parsed) ? val : parsed;
       }
       return val;
     },
@@ -32,7 +20,6 @@ export const productSchema = z.object({
       .nonnegative("El costo no puede ser negativo"),
   ),
   cantidad: z.number().int().nonnegative().default(0).optional(),
-  imei: z.string().optional(),
   descripcion: z.string().optional(),
   tipoProductoId: z.string().uuid("ID de tipo de producto inválido").optional(),
   imagenUrl: z
@@ -44,6 +31,9 @@ export const productSchema = z.object({
   modeloId: z.string().uuid("ID de modelo inválido").optional(),
   bodegaId: z.string().uuid("ID de bodega inválido").optional(),
   proveedorId: z.string().uuid("ID de proveedor inválido").optional(),
+  almacenamientoId: z.string().uuid("ID de almacenamiento inválido").optional(),
+  ramId: z.string().uuid("ID de RAM inválido").optional(),
+  colorId: z.string().uuid("ID de color inválido").optional(),
 });
 
 export type ProductInput = z.infer<typeof productSchema>;

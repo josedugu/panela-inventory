@@ -73,6 +73,7 @@ AGENTS.md
 # Archivos de setup (mantener solo localmente)
 SUPABASE_SETUP.sql
 QUICK_START.md
+GEMINI.md
 
 # Lock files (opcional - descomentar si no quieres trackear)
 # bun.lock

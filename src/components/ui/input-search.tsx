@@ -20,7 +20,7 @@ export interface InputSearchOption {
 }
 
 interface InputSearchProps {
-  label: string;
+  label?: string;
   placeholder?: string;
   value?: InputSearchOption;
   onChange: (option?: InputSearchOption) => void;
@@ -84,8 +84,10 @@ export function InputSearch({
     : false;
 
   return (
-    <div className={cn("space-y-2", className)}>
-      <span className="text-sm font-medium text-text-secondary">{label}</span>
+    <div className={cn(label ? "space-y-2" : "", className)}>
+      {label && (
+        <span className="text-sm font-medium text-text-secondary">{label}</span>
+      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -94,9 +96,14 @@ export function InputSearch({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="w-full justify-between"
+            className="w-full justify-between min-w-0"
           >
-            <span className={cn(!value && "text-text-secondary")}>
+            <span
+              className={cn(
+                "truncate min-w-0",
+                !value && "text-text-secondary",
+              )}
+            >
               {normalizedValue || placeholder}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

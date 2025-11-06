@@ -6,24 +6,35 @@ import {
   ChevronLeft,
   Database,
   FileText,
-  Grid3x3,
   LayoutDashboard,
-  LogOut,
   Package,
-  Palette,
   Settings,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { MASTER_DATA_SECTIONS } from "@/features/master-data/conts";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../ui/accordion";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "../ui/utils";
 
+interface NavChildItem {
+  title: string;
+  href: string;
+  badge?: string;
+}
+
 interface NavItem {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  href: string;
+  href?: string;
   badge?: string;
+  children?: NavChildItem[];
 }
 
 const navItems: NavItem[] = [
@@ -35,12 +46,24 @@ const navItems: NavItem[] = [
   {
     title: "Inventario",
     icon: Package,
-    href: "/dashboard/inventory",
+    children: [
+      {
+        title: "Gestión",
+        href: "/dashboard/inventory/manage",
+      },
+      {
+        title: "Movimientos",
+        href: "/dashboard/inventory/movements",
+      },
+    ],
   },
   {
     title: "Datos Maestros",
     icon: Database,
-    href: "/dashboard/master-data",
+    children: MASTER_DATA_SECTIONS.map((section) => ({
+      title: section.label,
+      href: `/dashboard/master-data/${section.slug}`,
+    })),
   },
   {
     title: "Ventas",
@@ -67,16 +90,6 @@ const navItems: NavItem[] = [
     icon: Settings,
     href: "/dashboard/settings",
   },
-  {
-    title: "Componentes",
-    icon: Grid3x3,
-    href: "/components",
-  },
-  {
-    title: "Guía de Estilo",
-    icon: Palette,
-    href: "/style-guide",
-  },
 ];
 
 interface SidebarNavProps {
@@ -91,23 +104,162 @@ interface SidebarNavProps {
 export function SidebarNav({
   activeItem = "#dashboard",
   onItemClick,
-  onLogout,
+  onLogout: _onLogout,
   className,
 }: SidebarNavProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const activeGroup = useMemo(
+    () =>
+      navItems.find((item) =>
+        item.children?.some((child) => child.href === activeItem),
+      )?.title,
+    [activeItem],
+  );
+  const [openGroups, setOpenGroups] = useState<string[]>(
+    activeGroup ? [activeGroup] : [],
+  );
+
+  useEffect(() => {
+    if (activeGroup) {
+      setOpenGroups((prev) =>
+        prev.includes(activeGroup) ? prev : [...prev, activeGroup],
+      );
+    }
+  }, [activeGroup]);
+
+  const handleNavigate = (href?: string) => {
+    if (href) {
+      onItemClick?.(href);
+    }
+  };
+
+  const handleGroupToggle = (group: string, isOpen: boolean) => {
+    setOpenGroups((prev) => {
+      if (isOpen) {
+        return prev.includes(group) ? prev : [...prev, group];
+      }
+      return prev.filter((item) => item !== group);
+    });
+  };
+
+  const renderCollapsedNav = () => (
+    <nav className="space-y-1">
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const hasChildren = Boolean(item.children?.length);
+        const targetHref = hasChildren ? item.children?.[0]?.href : item.href;
+
+        if (!targetHref) {
+          return null;
+        }
+
+        const isActive = hasChildren
+          ? item.children?.some((child) => child.href === activeItem)
+          : activeItem === item.href;
+
+        return (
+          <Button
+            key={item.title}
+            variant={isActive ? "secondary" : "ghost"}
+            className="w-full justify-center px-2"
+            onClick={() => handleNavigate(targetHref)}
+          >
+            <Icon className="h-5 w-5 shrink-0" />
+          </Button>
+        );
+      })}
+    </nav>
+  );
+
+  const renderExpandedNav = () => (
+    <div className="space-y-1">
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const hasChildren = Boolean(item.children?.length);
+
+        if (!hasChildren) {
+          const isActive = activeItem === item.href;
+          return (
+            <Button
+              key={item.href ?? item.title}
+              variant={isActive ? "secondary" : "ghost"}
+              className="w-full justify-start gap-3"
+              onClick={() => handleNavigate(item.href)}
+            >
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="flex-1 text-left">{item.title}</span>
+              {item.badge && (
+                <span className="ml-auto bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
+                  {item.badge}
+                </span>
+              )}
+            </Button>
+          );
+        }
+
+        const isGroupActive = item.children?.some(
+          (child) => child.href === activeItem,
+        );
+        const isOpen = openGroups.includes(item.title);
+
+        return (
+          <Accordion
+            key={item.title}
+            type="multiple"
+            value={isOpen ? [item.title] : []}
+            onValueChange={(value) =>
+              handleGroupToggle(item.title, value.includes(item.title))
+            }
+            className="border-none"
+          >
+            <AccordionItem value={item.title} className="border-none">
+              <AccordionTrigger
+                className={cn(
+                  "px-3 py-2 rounded-lg",
+                  isGroupActive && "text-primary",
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5 shrink-0" />
+                  <span className="flex-1 text-left">{item.title}</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-0">
+                <div className="flex flex-col gap-1 pl-11 pr-3">
+                  {item.children?.map((child) => {
+                    const isChildActive = child.href === activeItem;
+                    return (
+                      <Button
+                        key={child.href}
+                        variant={isChildActive ? "secondary" : "ghost"}
+                        className="justify-start"
+                        onClick={() => handleNavigate(child.href)}
+                      >
+                        {child.title}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        );
+      })}
+    </div>
+  );
 
   return (
     <aside
       className={cn(
         "border-r border-border bg-surface-1 transition-all duration-300",
         collapsed ? "w-16" : "w-64",
-        "hidden lg:block",
+        "hidden lg:block h-full",
         className,
       )}
     >
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col overflow-hidden">
         {/* Collapse toggle */}
-        <div className="flex items-center justify-end p-4">
+        <div className="flex items-center justify-end p-4 shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -124,42 +276,13 @@ export function SidebarNav({
         </div>
 
         {/* Navigation */}
-        <ScrollArea className="flex-1 px-3">
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeItem === item.href;
-
-              return (
-                <Button
-                  key={item.href}
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start gap-3",
-                    collapsed && "justify-center px-2",
-                  )}
-                  onClick={() => onItemClick?.(item.href)}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {!collapsed && (
-                    <>
-                      <span className="flex-1 text-left">{item.title}</span>
-                      {item.badge && (
-                        <span className="ml-auto bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
-                          {item.badge}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </Button>
-              );
-            })}
-          </nav>
+        <ScrollArea className="flex-1 min-h-0 px-3">
+          {collapsed ? renderCollapsedNav() : renderExpandedNav()}
         </ScrollArea>
 
         {/* User info and logout */}
         {!collapsed && (
-          <div className="border-t border-border p-4 space-y-3">
+          <div className="border-t border-border p-4 space-y-3 shrink-0">
             <div className="flex items-center gap-3 rounded-lg bg-surface-2 p-3">
               <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shrink-0">
                 <span className="text-sm text-primary-foreground font-medium">
@@ -189,8 +312,43 @@ export function MobileSidebar({
   onClose,
   activeItem,
   onItemClick,
-  onLogout,
+  onLogout: _onLogout,
 }: MobileSidebarProps) {
+  const activeGroup = useMemo(
+    () =>
+      navItems.find((item) =>
+        item.children?.some((child) => child.href === activeItem),
+      )?.title,
+    [activeItem],
+  );
+  const [openGroups, setOpenGroups] = useState<string[]>(
+    activeGroup ? [activeGroup] : [],
+  );
+
+  useEffect(() => {
+    if (activeGroup) {
+      setOpenGroups((prev) =>
+        prev.includes(activeGroup) ? prev : [...prev, activeGroup],
+      );
+    }
+  }, [activeGroup]);
+
+  const handleNavigate = (href?: string) => {
+    if (href) {
+      onItemClick?.(href);
+      onClose();
+    }
+  };
+
+  const handleGroupToggle = (group: string, isOpenGroup: boolean) => {
+    setOpenGroups((prev) => {
+      if (isOpenGroup) {
+        return prev.includes(group) ? prev : [...prev, group];
+      }
+      return prev.filter((item) => item !== group);
+    });
+  };
+
   return (
     <>
       {/* Overlay */}
@@ -209,9 +367,9 @@ export function MobileSidebar({
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col overflow-hidden">
           {/* Logo */}
-          <div className="flex items-center gap-2 p-4 border-b border-border">
+          <div className="flex items-center gap-2 p-4 border-b border-border shrink-0">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-primary-foreground font-semibold">IG</span>
             </div>
@@ -219,37 +377,85 @@ export function MobileSidebar({
           </div>
 
           {/* Navigation */}
-          <ScrollArea className="flex-1 px-3 py-4">
-            <nav className="space-y-1">
+          <ScrollArea className="flex-1 min-h-0 px-3 py-4">
+            <div className="space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = activeItem === item.href;
+                const hasChildren = Boolean(item.children?.length);
+
+                if (!hasChildren) {
+                  const isActive = activeItem === item.href;
+                  return (
+                    <Button
+                      key={item.href ?? item.title}
+                      variant={isActive ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-3"
+                      onClick={() => handleNavigate(item.href)}
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      <span className="flex-1 text-left">{item.title}</span>
+                      {item.badge && (
+                        <span className="ml-auto bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                }
+
+                const isGroupActive = item.children?.some(
+                  (child) => child.href === activeItem,
+                );
+                const isOpen = openGroups.includes(item.title);
 
                 return (
-                  <Button
-                    key={item.href}
-                    variant={isActive ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-3"
-                    onClick={() => {
-                      onItemClick?.(item.href);
-                      onClose();
-                    }}
+                  <Accordion
+                    key={item.title}
+                    type="multiple"
+                    value={isOpen ? [item.title] : []}
+                    onValueChange={(value) =>
+                      handleGroupToggle(item.title, value.includes(item.title))
+                    }
+                    className="border-none"
                   >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span className="flex-1 text-left">{item.title}</span>
-                    {item.badge && (
-                      <span className="ml-auto bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Button>
+                    <AccordionItem value={item.title} className="border-none">
+                      <AccordionTrigger
+                        className={cn(
+                          "px-3 py-2 rounded-lg",
+                          isGroupActive && "text-primary",
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="h-5 w-5 shrink-0" />
+                          <span className="flex-1 text-left">{item.title}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-0">
+                        <div className="flex flex-col gap-1 pl-11 pr-3">
+                          {item.children?.map((child) => {
+                            const isChildActive = child.href === activeItem;
+                            return (
+                              <Button
+                                key={child.href}
+                                variant={isChildActive ? "secondary" : "ghost"}
+                                className="justify-start"
+                                onClick={() => handleNavigate(child.href)}
+                              >
+                                {child.title}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 );
               })}
-            </nav>
+            </div>
           </ScrollArea>
 
           {/* User info and logout */}
-          <div className="border-t border-border p-4 space-y-3">
+          <div className="border-t border-border p-4 space-y-3 shrink-0">
             <div className="flex items-center gap-3 rounded-lg bg-surface-2 p-3">
               <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center shrink-0">
                 <span className="text-sm text-primary-foreground font-medium">

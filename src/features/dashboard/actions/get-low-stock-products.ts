@@ -26,15 +26,10 @@ export async function getLowStockProductsAction(
       product.modelo?.nombre ??
       product.tipoProducto?.nombre ??
       "Producto",
-    sku: product.imei ?? "-",
+    sku: product.productosDetalles[0]?.imei ?? "-",
     category: product.tipoProducto?.nombre ?? null,
-    price: Number(product.precio ?? 0),
-    quantity:
-      (Array.isArray(product.movimientoInventario)
-        ? product.movimientoInventario[0]?.cantidad
-        : product.movimientoInventario?.cantidad) ??
-      product.cantidad ??
-      0,
+    price: Number(product.costo ?? 0),
+    quantity: product.cantidad ?? 0,
     lowStockThreshold: threshold,
     imageUrl: product.imagenUrl ?? null,
     updatedAt: product.updatedAt.toISOString(),

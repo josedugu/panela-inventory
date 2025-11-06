@@ -1,0 +1,236 @@
+"use server";
+
+import {
+  getInventoryMovementFilterOptions,
+  type InventoryMovementWithRelations,
+  listInventoryMovements,
+} from "@/data/repositories/inventory-movements.repository";
+
+export type MovementOperation = "ingreso" | "salida";
+
+export type InventoryMovementDTO = {
+  id: string;
+  typeId?: string;
+  typeName: string;
+  operation: MovementOperation;
+  productId?: string;
+  productLabel: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  imeis: string[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+};
+
+function normalizeMovement(
+  movement: InventoryMovementWithRelations,
+): InventoryMovementDTO {
+  const { tipoMovimiento, productos, cantidad, costoUnitario } = movement;
+  const primaryDetail = productos[0];
+  const product = primaryDetail?.producto;
+
+  const imeis = productos
+    .map((detail) => detail.imei)
+    .filter((imei): imei is string => Boolean(imei?.trim().length));
+
+  const productLabel = product
+    ? [
+        product.marca?.nombre,
+        product.modelo?.nombre,
+        product.modelo?.almacenamiento,
+        product.modelo?.color,
+        product.descripcion,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : "Producto no especificado";
+
+  const operation: MovementOperation =
+    tipoMovimiento?.ingreso && !tipoMovimiento.salida ? "ingreso" : "salida";
+
+  const unitCost = costoUnitario ? Number(costoUnitario) : 0;
+
+  return {
+    id: movement.id,
+    typeId: movement.tipoMovimientoId ?? undefined,
+    typeName: tipoMovimiento?.nombre ?? "Movimiento",
+    operation,
+    productId: product ? product.id : undefined,
+    productLabel: productLabel.trim().length > 0 ? productLabel : "Producto",
+    quantity: cantidad,
+    unitCost,
+    totalCost: cantidad * unitCost,
+    imeis,
+    createdAt: movement.createdAt.toISOString(),
+    updatedAt: movement.updatedAt.toISOString(),
+    createdBy:
+      movement.creadoPor?.nombre ?? movement.creadoPor?.email ?? undefined,
+  };
+}
+
+type NumericOperator = ">=" | "<=" | "=";
+
+function parseNumericFilterValue(
+  rawValue: string | undefined,
+): { operator: NumericOperator; value: number } | null {
+  if (!rawValue) return null;
+  const match = rawValue.match(/^(>=|<=|=)\s*(\d+(?:\.\d*)?)$/);
+  if (!match) return null;
+  const numericValue = Number(match[2]);
+  if (Number.isNaN(numericValue)) return null;
+  return {
+    operator: match[1] as NumericOperator,
+    value: numericValue,
+  };
+}
+
+function applyNumericFilter(
+  data: InventoryMovementDTO[],
+  filterValue: string | undefined,
+  selector: (item: InventoryMovementDTO) => number,
+): InventoryMovementDTO[] {
+  const parsed = parseNumericFilterValue(filterValue);
+  if (!parsed) return data;
+
+  return data.filter((item) => {
+    const candidate = selector(item);
+    if (!Number.isFinite(candidate)) return false;
+
+    switch (parsed.operator) {
+      case ">=":
+        return candidate >= parsed.value;
+      case "<=":
+        return candidate <= parsed.value;
+      case "=":
+        return candidate === parsed.value;
+      default:
+        return true;
+    }
+  });
+}
+
+interface GetMovementsFilters {
+  type?: string;
+  product?: string;
+  operation?: MovementOperation;
+  user?: string;
+  quantity?: string;
+  unitCost?: string;
+}
+
+interface GetMovementsParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  filters?: GetMovementsFilters;
+}
+
+export interface GetInventoryMovementsSuccess {
+  success: true;
+  data: InventoryMovementDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
+  filterOptions: Awaited<ReturnType<typeof getInventoryMovementFilterOptions>>;
+}
+
+export interface GetInventoryMovementsError {
+  success: false;
+  error: string;
+}
+
+export type GetInventoryMovementsResult =
+  | GetInventoryMovementsSuccess
+  | GetInventoryMovementsError;
+
+export async function getInventoryMovementsAction(
+  params?: GetMovementsParams,
+): Promise<GetInventoryMovementsResult> {
+  try {
+    const page = params?.page ?? 1;
+    const pageSize = params?.pageSize ?? 10;
+    const offset = (page - 1) * pageSize;
+
+    const [movements, filterOptions] = await Promise.all([
+      listInventoryMovements(),
+      getInventoryMovementFilterOptions(),
+    ]);
+
+    let normalized = movements.map(normalizeMovement);
+
+    if (params?.search) {
+      const searchTerm = params.search.toLowerCase();
+      normalized = normalized.filter((movement) => {
+        const base = [
+          movement.typeName,
+          movement.productLabel,
+          movement.createdBy,
+          ...movement.imeis,
+        ]
+          .filter((value): value is string => Boolean(value))
+          .map((value) => value.toLowerCase());
+        return base.some((value) => value.includes(searchTerm));
+      });
+    }
+
+    const filters = params?.filters ?? {};
+
+    if (filters.type) {
+      const typeLower = filters.type.toLowerCase();
+      normalized = normalized.filter(
+        (movement) => movement.typeName.toLowerCase() === typeLower,
+      );
+    }
+
+    if (filters.product) {
+      const productLower = filters.product.toLowerCase();
+      normalized = normalized.filter(
+        (movement) => movement.productLabel.toLowerCase() === productLower,
+      );
+    }
+
+    if (filters.operation) {
+      normalized = normalized.filter(
+        (movement) => movement.operation === filters.operation,
+      );
+    }
+
+    if (filters.user) {
+      const userLower = filters.user.toLowerCase();
+      normalized = normalized.filter((movement) =>
+        (movement.createdBy ?? "").toLowerCase().includes(userLower),
+      );
+    }
+
+    normalized = applyNumericFilter(
+      normalized,
+      filters.quantity,
+      (movement) => movement.quantity,
+    );
+
+    normalized = applyNumericFilter(
+      normalized,
+      filters.unitCost,
+      (movement) => movement.unitCost,
+    );
+
+    const total = normalized.length;
+    const paginated = normalized.slice(offset, offset + pageSize);
+
+    return {
+      success: true,
+      data: paginated,
+      total,
+      page,
+      pageSize,
+      filterOptions,
+    };
+  } catch {
+    return {
+      success: false,
+      error: "No se pudieron obtener los movimientos de inventario",
+    };
+  }
+}

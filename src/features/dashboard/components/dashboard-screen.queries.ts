@@ -19,8 +19,8 @@ export function useDashboardMetrics() {
     queryFn: async () => {
       return await getDashboardMetricsAction();
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 2, // 2 minutos (Panel Principal se mantiene actualizado)
+    refetchOnWindowFocus: true, // Mantener actualizado al volver a la ventana
   });
 }
 
@@ -43,8 +43,8 @@ export function useLowStockProducts(threshold = 10) {
     queryFn: async () => {
       return await getLowStockProductsAction(threshold);
     },
-    staleTime: 1000 * 60 * 3, // 3 minutos
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 2, // 2 minutos (Panel Principal se mantiene actualizado)
+    refetchOnWindowFocus: true, // Mantener actualizado al volver a la ventana
   });
 }
 

@@ -1,5 +1,5 @@
-import { CustomersScreen } from "@/features/customers/components/customers-screen";
+import { Customers } from "@/features/customers";
 
 export default function CustomersPage() {
-  return <CustomersScreen />;
+  return <Customers />;
 }

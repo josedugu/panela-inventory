@@ -9,7 +9,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  schemas   = ["dev", "prod", "public"]
+  schemas   = ["dev", "prod"]
 }
 
 // Usuarios
@@ -29,6 +29,7 @@ model Usuario {
   rol                        Rol?                   @relation(fields: [rolId], references: [id])
   movimientosCreadosPor      MovimientoInventario[] @relation("MovimientosCreadosPor")
   movimientosActualizadosPor MovimientoInventario[] @relation("MovimientosActualizadosPor")
+  ventas                     Venta[]
 
   @@index([centroCostoId])
   @@index([email])
@@ -60,6 +61,7 @@ model Marca {
   id          String   @id @default(uuid()) @db.Uuid
   nombre      String   @unique
   descripcion String?
+  pais        String?
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -75,6 +77,8 @@ model Marca {
 model Modelo {
   id             String   @id @default(uuid()) @db.Uuid
   nombre         String
+  categoria      String?
+  anio           String?
   almacenamiento String?
   ram            String?
   color          String?
@@ -94,6 +98,7 @@ model Modelo {
 // Centros de Costo
 model CentroCostos {
   id          String   @id @default(uuid()) @db.Uuid
+  codigo      String   @unique
   nombre      String
   descripcion String?
   responsable String?
@@ -102,6 +107,7 @@ model CentroCostos {
 
   // Relación con Empleados
   usuarios Usuario[]
+  bodegas  Bodega[]
 
   @@map("centro_costo")
   @@schema("dev")
@@ -109,7 +115,7 @@ model CentroCostos {
 
 model Rol {
   id        String   @id @default(uuid()) @db.Uuid
-  nombre    String
+  nombre    String   @unique
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -122,15 +128,18 @@ model Rol {
 
 // Bodegas
 model Bodega {
-  id          String     @id @default(uuid()) @db.Uuid
-  codigo      String?
-  nombre      String
-  capacidad   String?
-  responsable String?
-  estado      Boolean    @default(true)
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  producto    Producto[]
+  id            String        @id @default(uuid()) @db.Uuid
+  codigo        String
+  nombre        String
+  capacidad     String?
+  ubicacion     String?
+  responsable   String?
+  estado        Boolean       @default(true)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  producto      Producto[]
+  centroCostoId String?       @map("centro_costo_id") @db.Uuid
+  centroCosto   CentroCostos? @relation(fields: [centroCostoId], references: [id])
 
   @@map("bodega")
   @@schema("dev")
@@ -152,56 +161,118 @@ model TipoProducto {
 
 // Productos
 model Producto {
-  id             String   @id @default(uuid()) @db.Uuid
-  estado         Boolean  @default(true)
-  precio         Decimal  @db.Decimal(10, 2)
-  costo          Decimal  @db.Decimal(10, 2)
-  cantidad       Int      @default(0)
-  imei           String?
-  descripcion    String?
-  tipoProductoId String?  @map("tipo_producto_id") @db.Uuid
-  imagenUrl      String?  @map("imagen_url")
-  marcaId        String?  @map("marca_id") @db.Uuid
-  modeloId       String?  @map("modelo_id") @db.Uuid
-  bodegaId       String?  @map("bodega_id") @db.Uuid
-  proveedorId    String?  @map("proveedor_id") @db.Uuid
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
+  id                String              @id @default(uuid()) @db.Uuid
+  estado            Boolean             @default(true)
+  costo             Decimal?            @db.Decimal(10, 2)
+  cantidad          Int                 @default(0)
+  descripcion       String?
+  tipoProductoId    String?             @map("tipo_producto_id") @db.Uuid
+  imagenUrl         String?             @map("imagen_url")
+  marcaId           String?             @map("marca_id") @db.Uuid
+  modeloId          String?             @map("modelo_id") @db.Uuid
+  bodegaId          String?             @map("bodega_id") @db.Uuid
+  proveedorId       String?             @map("proveedor_id") @db.Uuid
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  almacenamientoId  String?             @map("almacenamiento_id") @db.Uuid
+  almacenamiento    Almacenamiento?     @relation(fields: [almacenamientoId], references: [id])
+  ramId             String?             @map("ram_id") @db.Uuid
+  ram               Ram?                @relation(fields: [ramId], references: [id])
+  colorId           String?             @map("color_id") @db.Uuid
+  color             Color?              @relation(fields: [colorId], references: [id])
   // Relaciones
-  tipoProducto         TipoProducto?          @relation(fields: [tipoProductoId], references: [id])
-  marca                Marca?                 @relation(fields: [marcaId], references: [id])
-  modelo               Modelo?                @relation(fields: [modeloId], references: [id])
-  bodega               Bodega?                @relation(fields: [bodegaId], references: [id])
-  proveedor            Proveedor?             @relation(fields: [proveedorId], references: [id])
-  movimientoInventario MovimientoInventario[]
-  CompraProducto       CompraProducto[]
-  ProductoPrecio       ProductoPrecio[]
+  tipoProducto      TipoProducto?       @relation(fields: [tipoProductoId], references: [id])
+  marca             Marca?              @relation(fields: [marcaId], references: [id])
+  modelo            Modelo?             @relation(fields: [modeloId], references: [id])
+  bodega            Bodega?             @relation(fields: [bodegaId], references: [id])
+  proveedor         Proveedor?          @relation(fields: [proveedorId], references: [id])
+  productosDetalles ProductoDetalle[]
+  productoDescuento ProductoDescuento[]
 
   @@index([tipoProductoId])
   @@map("producto")
   @@schema("dev")
 }
 
-model ProductoPrecio {
-  id         String   @id @default(uuid()) @db.Uuid
-  precio     Decimal  @db.Decimal(10, 2)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  productoId String   @map("producto_id") @db.Uuid
-  producto   Producto @relation(fields: [productoId], references: [id])
+model ProductoDescuento {
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String?
+  fechaVigencia DateTime @map("fecha_vigencia") @db.Timestamptz(6) 
+  estado        Boolean  @default(true)
+  descuento     Decimal  @db.Decimal(10, 2)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  productoId    String   @map("producto_id") @db.Uuid
+  producto      Producto @relation(fields: [productoId], references: [id])
 
-  @@map("producto_precio")
+  @@map("producto_descuento")
+  @@schema("dev")
+}
+
+model ProductoDetalle {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  imei                 String?                @unique
+  estado               Boolean                @default(true)
+  nombre               String?                @map("nombre")
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  productoId           String                 @map("producto_id") @db.Uuid
+  producto             Producto               @relation(fields: [productoId], references: [id])
+  movimientoInventario MovimientoInventario[]
+  ventaProductoId      String?                @map("venta_producto_id") @db.Uuid
+  ventaProducto        VentaProducto?         @relation(fields: [ventaProductoId], references: [id])
+
+  @@map("producto_detalle")
+  @@schema("dev")
+}
+
+model Almacenamiento {
+  id        String     @id @default(uuid()) @db.Uuid
+  capacidad String     @map("capacidad")
+  tipo      String?
+  descripcion String?
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  productos Producto[]
+
+  @@map("almacenamiento")
+  @@schema("dev")
+}
+
+model Ram {
+  id        String     @id @default(uuid()) @db.Uuid
+  capacidad String     @map("capacidad")
+  tipo      String?
+  velocidad String?
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  productos Producto[]
+
+  @@map("ram")
+  @@schema("dev")
+}
+
+model Color {
+  id        String     @id @default(uuid()) @db.Uuid
+  nombre    String
+  codigoHex String     @map("codigo_hex")
+  descripcion String?
+  estado    Boolean    @default(true)
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  productos Producto[]
+
+  @@map("color")
   @@schema("dev")
 }
 
 //// Movimientos del inventario
 
 model MovimientoInventario {
-  id       String  @id @default(uuid()) @db.Uuid
-  cantidad Int     @default(0)
-  estado   Boolean @default(true)
-
+  id               String   @id @default(uuid()) @db.Uuid
+  cantidad         Int      @default(0)
+  estado           Boolean  @default(true)
+  costoUnitario    Decimal  @default(0) @map("costo_unitario") @db.Decimal(10, 2)
   creadoPor        Usuario? @relation("MovimientosCreadosPor", fields: [creadoPorId], references: [id])
   creadoPorId      String?  @map("creado_por_id") @db.Uuid
   actualizadoPor   Usuario? @relation("MovimientosActualizadosPor", fields: [actualizadoPorId], references: [id])
@@ -209,10 +280,9 @@ model MovimientoInventario {
 
   tipoMovimientoId String?                   @map("tipo_movimiento_id") @db.Uuid
   tipoMovimiento   TipoMovimientoInventario? @relation(fields: [tipoMovimientoId], references: [id])
-  productoId       String                    @unique @map("producto_id") @db.Uuid
   createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  producto         Producto                  @relation(fields: [productoId], references: [id])
+  productos        ProductoDetalle[]
 
   @@map("movimiento_inventario")
   @@schema("dev")
@@ -240,37 +310,39 @@ model Cliente {
   direccion String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  compra    Compra[]
+  venta     Venta[]
 
   @@map("cliente")
   @@schema("dev")
 }
 
-model Compra {
-  id             String           @id @default(uuid()) @db.Uuid
-  clienteId      String?          @map("cliente_id") @db.Uuid
-  cliente        Cliente?         @relation(fields: [clienteId], references: [id])
-  total          Decimal          @default(0) @db.Decimal(10, 2)
-  estado         Boolean          @default(true)
-  compraProducto CompraProducto[]
-  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  metodoPagoId   String?          @map("metodo_pago_id") @db.Uuid
-  metodoPago     MetodoPago?      @relation(fields: [metodoPagoId], references: [id])
-  medioVentaId   String?          @map("medio_venta_id") @db.Uuid
-  medioVenta     MedioVenta?      @relation(fields: [medioVentaId], references: [id])
+model Venta {
+  id            String          @id @default(uuid()) @db.Uuid
+  consecutivo   Int             @unique @default(autoincrement()) @map("consecutivo") @db.Integer
+  clienteId     String?         @map("cliente_id") @db.Uuid
+  cliente       Cliente?        @relation(fields: [clienteId], references: [id])
+  total         Decimal         @default(0) @db.Decimal(10, 2)
+  estado        Boolean         @default(true)
+  ventaProducto VentaProducto[]
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  metodoPagoId  String?         @map("metodo_pago_id") @db.Uuid
+  metodoPago    MetodoPago?     @relation(fields: [metodoPagoId], references: [id])
+  medioVentaId  String?         @map("medio_venta_id") @db.Uuid
+  medioVenta    MedioVenta?     @relation(fields: [medioVentaId], references: [id])
+  vendidoPor    Usuario?        @relation(fields: [vendidoPorId], references: [id])
+  vendidoPorId  String?         @map("vendido_por_id") @db.Uuid
 
-  @@map("compra")
+  @@map("venta")
   @@schema("dev")
 }
 
-model CompraProducto {
-  id       String @id @default(uuid()) @db.Uuid
-  compraId String @map("compra_id") @db.Uuid
-  compra   Compra @relation(fields: [compraId], references: [id])
+model VentaProducto {
+  id      String @id @default(uuid()) @db.Uuid
+  ventaId String @map("venta_id") @db.Uuid
+  venta   Venta  @relation(fields: [ventaId], references: [id])
 
-  productoId String   @map("producto_id") @db.Uuid
-  producto   Producto @relation(fields: [productoId], references: [id])
+  productosDetalles ProductoDetalle[]
 
   cantidad  Int     @default(0)
   precio    Decimal @db.Decimal(10, 2)
@@ -281,7 +353,7 @@ model CompraProducto {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@map("compra_producto")
+  @@map("venta_producto")
   @@schema("dev")
 }
 
@@ -291,7 +363,7 @@ model MetodoPago {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  compra Compra[]
+  venta Venta[]
 
   @@map("metodo_pago")
   @@schema("dev")
@@ -303,7 +375,7 @@ model MedioVenta {
   nombre    String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  compra    Compra[]
+  venta     Venta[]
 
   @@map("medio_venta")
   @@schema("dev")

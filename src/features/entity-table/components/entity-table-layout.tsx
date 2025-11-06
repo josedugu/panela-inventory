@@ -53,8 +53,7 @@ export function EntityTableLayout<TData>({
   const activeFiltersCount = activeFilters.length;
 
   const searchPlaceholder = config.searchPlaceholder ?? "Buscar...";
-  const filterDialogTitle =
-    config.filterDialogTitle ?? "Filtrar resultados";
+  const filterDialogTitle = config.filterDialogTitle ?? "Filtrar resultados";
   const filterDialogDescription =
     config.filterDialogDescription ??
     "Selecciona uno o varios filtros y aplica para actualizar la tabla.";
@@ -95,8 +94,9 @@ export function EntityTableLayout<TData>({
         <div>
           <h1
             className={cn(
-              "flex items-center gap-2 text-2xl font-semibold transition-colors",
-              isLoading && "animate-[entityTitlePulse_1.6s_ease-in-out_infinite]",
+              "flex items-center gap-2 text-2xl font-semibold transition-[color,opacity]",
+              isLoading &&
+                "animate-[entityTitlePulse_1.6s_ease-in-out_infinite]",
             )}
           >
             {config.title}
@@ -199,13 +199,13 @@ export function EntityTableLayout<TData>({
       )}
 
       <Dialog open={isFilterDialogOpen} onOpenChange={handleDialogChange}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto px-4 py-5 sm:px-8 sm:py-6">
           <DialogHeader>
             <DialogTitle>{filterDialogTitle}</DialogTitle>
             <DialogDescription>{filterDialogDescription}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             {filters.map((filter) => {
               if (filter.type === "custom" && filter.render) {
                 return (
@@ -252,20 +252,21 @@ export function EntityTableLayout<TData>({
             })}
           </div>
 
-          <DialogFooter className="sm:justify-between">
+          <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
             <Button
               type="button"
               variant="ghost"
               onClick={onResetPendingFilters}
-              className="sm:mr-auto"
+              className="w-full sm:w-auto sm:mr-auto"
             >
               Limpiar selección
             </Button>
-            <div className="flex w-full sm:w-auto gap-2">
+            <div className="flex w-full flex-col-reverse sm:flex-row sm:w-auto gap-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setFilterDialogOpen(false)}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
@@ -273,6 +274,7 @@ export function EntityTableLayout<TData>({
                 type="button"
                 onClick={onApplyFilters}
                 disabled={isLoadingFilterOptions}
+                className="w-full sm:w-auto"
               >
                 Aplicar filtros
               </Button>
@@ -292,6 +294,7 @@ export function EntityTableLayout<TData>({
           onPageChange,
           onPageSizeChange,
         }}
+        onView={config.onView}
         onEdit={config.onEdit}
         onDelete={config.onDelete}
         onDuplicate={config.onDuplicate}

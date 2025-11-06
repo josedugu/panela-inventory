@@ -1,5 +1,6 @@
-import { MasterDataScreen } from "@/features/master-data";
+import { redirect } from "next/navigation";
+import { DEFAULT_MASTER_DATA_SECTION } from "@/features/master-data/conts";
 
 export default function MasterDataPage() {
-  return <MasterDataScreen />;
+  redirect(`/dashboard/master-data/${DEFAULT_MASTER_DATA_SECTION}`);
 }
