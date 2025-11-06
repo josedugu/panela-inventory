@@ -192,7 +192,7 @@ model Producto {
 model ProductoDescuento {
   id            String   @id @default(uuid()) @db.Uuid
   nombre        String?
-  fechaVigencia DateTime @map("fecha_vigencia") @db.Timestamptz(6) 
+  fechaVigencia DateTime @map("fecha_vigencia") @db.Timestamptz(6)
   estado        Boolean  @default(true)
   descuento     Decimal  @db.Decimal(10, 2)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -222,13 +222,13 @@ model ProductoDetalle {
 }
 
 model Almacenamiento {
-  id        String     @id @default(uuid()) @db.Uuid
-  capacidad String     @map("capacidad")
-  tipo      String?
+  id          String     @id @default(uuid()) @db.Uuid
+  capacidad   String     @map("capacidad")
+  tipo        String?
   descripcion String?
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  productos Producto[]
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  productos   Producto[]
 
   @@map("almacenamiento")
   @@schema("dev")
@@ -248,14 +248,14 @@ model Ram {
 }
 
 model Color {
-  id        String     @id @default(uuid()) @db.Uuid
-  nombre    String
-  codigoHex String     @map("codigo_hex")
+  id          String     @id @default(uuid()) @db.Uuid
+  nombre      String
+  codigoHex   String     @map("codigo_hex")
   descripcion String?
-  estado    Boolean    @default(true)
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  productos Producto[]
+  estado      Boolean    @default(true)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  productos   Producto[]
 
   @@map("color")
   @@schema("dev")
