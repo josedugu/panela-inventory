@@ -26,8 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import type { StorageDTO } from "@/data/repositories/master-data.repository";
+import type { StorageDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {
@@ -43,16 +42,12 @@ interface StorageSectionProps {
 
 interface StorageFormState {
   capacidad: string;
-  tipo: string;
-  descripcion: string;
 }
 
 type DialogMode = "create" | "edit" | null;
 
 const createEmptyFormState = (): StorageFormState => ({
   capacidad: "",
-  tipo: "",
-  descripcion: "",
 });
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
@@ -83,11 +78,7 @@ export function StorageSection({
   } = useMasterDataTable<StorageDTO>({
     items: storageOptions,
     filters: FILTER_DESCRIPTORS,
-    searchableFields: [
-      (option) => option.capacidad,
-      (option) => option.tipo ?? "",
-      (option) => option.descripcion ?? "",
-    ],
+    searchableFields: [(option) => option.capacidad.toString()],
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
@@ -107,9 +98,7 @@ export function StorageSection({
 
   const openEditDialog = (option: StorageDTO) => {
     setFormData({
-      capacidad: option.capacidad,
-      tipo: option.tipo ?? "",
-      descripcion: option.descripcion ?? "",
+      capacidad: option.capacidad.toString(),
     });
     setEditingOption(option);
     setDialogMode("edit");
@@ -140,13 +129,15 @@ export function StorageSection({
     event.preventDefault();
     if (isSubmitting) return;
 
+    const capacidadNumber = parseInt(formData.capacidad.trim(), 10);
+    if (isNaN(capacidadNumber) || capacidadNumber <= 0) {
+      toast.error("La capacidad debe ser un número positivo");
+      return;
+    }
+
     const payload = {
       id: editingOption?.id,
-      capacidad: formData.capacidad.trim(),
-      tipo: formData.tipo.trim() ? formData.tipo.trim() : undefined,
-      descripcion: formData.descripcion.trim()
-        ? formData.descripcion.trim()
-        : undefined,
+      capacidad: capacidadNumber,
     };
 
     startSubmitTransition(async () => {
@@ -188,16 +179,11 @@ export function StorageSection({
     {
       accessorKey: "capacidad",
       header: "Capacidad",
-    },
-    {
-      accessorKey: "tipo",
-      header: "Tipo",
-      cell: ({ row }) => row.original.tipo ?? "—",
-    },
-    {
-      accessorKey: "descripcion",
-      header: "Descripción",
-      cell: ({ row }) => row.original.descripcion ?? "—",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          {row.original.capacidad} GB
+        </div>
+      ),
     },
     {
       id: "actions",
@@ -287,42 +273,19 @@ export function StorageSection({
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="storage-capacidad">Capacidad *</Label>
-                <Input
-                  id="storage-capacidad"
-                  value={formData.capacidad}
-                  onChange={(event) =>
-                    handleFormChange("capacidad", event.target.value)
-                  }
-                  placeholder="Ej: 128 GB"
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="storage-tipo">Tipo</Label>
-                <Input
-                  id="storage-tipo"
-                  value={formData.tipo}
-                  onChange={(event) =>
-                    handleFormChange("tipo", event.target.value)
-                  }
-                  placeholder="Ej: SSD, eUFS"
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="storage-descripcion">Descripción</Label>
-              <Textarea
-                id="storage-descripcion"
-                rows={3}
-                value={formData.descripcion}
+              <Label htmlFor="storage-capacidad">Capacidad (GB) *</Label>
+              <Input
+                id="storage-capacidad"
+                type="number"
+                min="1"
+                step="1"
+                value={formData.capacidad}
                 onChange={(event) =>
-                  handleFormChange("descripcion", event.target.value)
+                  handleFormChange("capacidad", event.target.value)
                 }
+                placeholder="Ej: 128"
+                required
                 disabled={isSubmitting}
               />
             </div>

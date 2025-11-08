@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { RamDTO } from "@/data/repositories/master-data.repository";
+import type { RamDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {
@@ -42,16 +42,12 @@ interface RamSectionProps {
 
 interface RamFormState {
   capacidad: string;
-  tipo: string;
-  velocidad: string;
 }
 
 type DialogMode = "create" | "edit" | null;
 
 const createEmptyFormState = (): RamFormState => ({
   capacidad: "",
-  tipo: "",
-  velocidad: "",
 });
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
@@ -79,11 +75,7 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
   } = useMasterDataTable<RamDTO>({
     items: ramOptions,
     filters: FILTER_DESCRIPTORS,
-    searchableFields: [
-      (option) => option.capacidad,
-      (option) => option.tipo ?? "",
-      (option) => option.velocidad ?? "",
-    ],
+    searchableFields: [(option) => option.capacidad.toString()],
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
@@ -103,9 +95,7 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
 
   const openEditDialog = (option: RamDTO) => {
     setFormData({
-      capacidad: option.capacidad,
-      tipo: option.tipo ?? "",
-      velocidad: option.velocidad ?? "",
+      capacidad: option.capacidad.toString(),
     });
     setEditingOption(option);
     setDialogMode("edit");
@@ -136,13 +126,15 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
     event.preventDefault();
     if (isSubmitting) return;
 
+    const capacidadNumber = parseInt(formData.capacidad.trim(), 10);
+    if (isNaN(capacidadNumber) || capacidadNumber <= 0) {
+      toast.error("La capacidad debe ser un número positivo");
+      return;
+    }
+
     const payload = {
       id: editingOption?.id,
-      capacidad: formData.capacidad.trim(),
-      tipo: formData.tipo.trim() ? formData.tipo.trim() : undefined,
-      velocidad: formData.velocidad.trim()
-        ? formData.velocidad.trim()
-        : undefined,
+      capacidad: capacidadNumber,
     };
 
     startSubmitTransition(async () => {
@@ -186,16 +178,11 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
     {
       accessorKey: "capacidad",
       header: "Capacidad",
-    },
-    {
-      accessorKey: "tipo",
-      header: "Tipo",
-      cell: ({ row }) => row.original.tipo ?? "—",
-    },
-    {
-      accessorKey: "velocidad",
-      header: "Velocidad",
-      cell: ({ row }) => row.original.velocidad ?? "—",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          {row.original.capacidad} GB
+        </div>
+      ),
     },
     {
       id: "actions",
@@ -285,44 +272,21 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="ram-capacidad">Capacidad *</Label>
-                <Input
-                  id="ram-capacidad"
-                  value={formData.capacidad}
-                  onChange={(event) =>
-                    handleFormChange("capacidad", event.target.value)
-                  }
-                  placeholder="Ej: 8 GB"
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ram-tipo">Tipo</Label>
-                <Input
-                  id="ram-tipo"
-                  value={formData.tipo}
-                  onChange={(event) =>
-                    handleFormChange("tipo", event.target.value)
-                  }
-                  placeholder="Ej: LPDDR5X"
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ram-velocidad">Velocidad</Label>
-                <Input
-                  id="ram-velocidad"
-                  value={formData.velocidad}
-                  onChange={(event) =>
-                    handleFormChange("velocidad", event.target.value)
-                  }
-                  placeholder="Ej: 6400 MHz"
-                  disabled={isSubmitting}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="ram-capacidad">Capacidad (GB) *</Label>
+              <Input
+                id="ram-capacidad"
+                type="number"
+                min="1"
+                step="1"
+                value={formData.capacidad}
+                onChange={(event) =>
+                  handleFormChange("capacidad", event.target.value)
+                }
+                placeholder="Ej: 8"
+                required
+                disabled={isSubmitting}
+              />
             </div>
             <DialogFooter className="gap-2 sm:gap-3">
               <Button

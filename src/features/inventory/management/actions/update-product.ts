@@ -14,8 +14,6 @@ export async function updateProductAction(id: string, formData: FormData) {
     imagenUrl: formData.get("imagenUrl") as string | undefined,
     marcaId: formData.get("marcaId") as string | undefined,
     modeloId: formData.get("modeloId") as string | undefined,
-    bodegaId: formData.get("bodegaId") as string | undefined,
-    proveedorId: formData.get("proveedorId") as string | undefined,
     cantidad: formData.get("cantidad")
       ? parseInt(formData.get("cantidad") as string, 10)
       : undefined,
@@ -53,10 +51,6 @@ export async function updateProductAction(id: string, formData: FormData) {
       updateData.marcaId = validatedData.data.marcaId;
     if (validatedData.data.modeloId !== undefined)
       updateData.modeloId = validatedData.data.modeloId;
-    if (validatedData.data.bodegaId !== undefined)
-      updateData.bodegaId = validatedData.data.bodegaId;
-    if (validatedData.data.proveedorId !== undefined)
-      updateData.proveedorId = validatedData.data.proveedorId;
     if (validatedData.data.cantidad !== undefined)
       updateData.cantidad = validatedData.data.cantidad;
     if (validatedData.data.estado !== undefined)

@@ -22,8 +22,6 @@ export async function createProductAction(formData: FormData) {
     imagenUrl: formData.get("imagenUrl") as string | undefined,
     marcaId: formData.get("marcaId") as string | undefined,
     modeloId: formData.get("modeloId") as string | undefined,
-    bodegaId: formData.get("bodegaId") as string | undefined,
-    proveedorId: formData.get("proveedorId") as string | undefined,
     cantidad: formData.get("cantidad")
       ? parseInt(formData.get("cantidad") as string, 10)
       : undefined,
@@ -64,8 +62,6 @@ export async function createProductAction(formData: FormData) {
       imagenUrl: validatedData.data.imagenUrl,
       marcaId: validatedData.data.marcaId,
       modeloId: validatedData.data.modeloId,
-      bodegaId: validatedData.data.bodegaId,
-      proveedorId: validatedData.data.proveedorId,
       estado: validatedData.data.estado,
     });
 

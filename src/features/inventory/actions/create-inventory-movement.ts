@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   createInventoryMovementWithDetails,
   getInventoryMovementTypeById,
-} from "@/data/repositories/inventory-movements.repository";
+} from "@/data/repositories/inventory.movements.repository";
 
 const schema = z.object({
   product: z.string().uuid("El producto es requerido"),

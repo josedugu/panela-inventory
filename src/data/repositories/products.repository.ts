@@ -8,8 +8,6 @@ export type ProductWithRelations = Prisma.ProductoGetPayload<{
     tipoProducto: true;
     marca: true;
     modelo: true;
-    proveedor: true;
-    bodega: true;
     productoDescuento: true;
     productosDetalles: {
       include: {
@@ -26,15 +24,17 @@ export type ProductDetailWithRelations = Prisma.ProductoDetalleGetPayload<{
         tipoProducto: true;
         marca: true;
         modelo: true;
-        proveedor: true;
-        bodega: true;
         productoDescuento: true;
         almacenamiento: true;
         ram: true;
         color: true;
       };
     };
-    movimientoInventario: true;
+    movimientoInventario: {
+      include: {
+        proveedor: true;
+      };
+    };
   };
 }>;
 
@@ -47,8 +47,6 @@ export async function getAllProducts(): Promise<ProductWithRelations[]> {
       tipoProducto: true,
       marca: true,
       modelo: true,
-      proveedor: true,
-      bodega: true,
       productoDescuento: true,
       productosDetalles: {
         where: {
@@ -138,15 +136,17 @@ export async function getAllProductDetails(
           tipoProducto: true,
           marca: true,
           modelo: true,
-          proveedor: true,
-          bodega: true,
           productoDescuento: true,
           almacenamiento: true,
           ram: true,
           color: true,
         },
       },
-      movimientoInventario: true,
+      movimientoInventario: {
+        include: {
+          proveedor: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -170,8 +170,6 @@ export async function getProductById(
       tipoProducto: true,
       marca: true,
       modelo: true,
-      proveedor: true,
-      bodega: true,
       productoDescuento: true,
       productosDetalles: {
         where: {
@@ -222,8 +220,6 @@ export async function searchProducts(
       tipoProducto: true,
       marca: true,
       modelo: true,
-      proveedor: true,
-      bodega: true,
       productoDescuento: true,
       productosDetalles: {
         where: {
@@ -252,8 +248,6 @@ export async function getLowStockProducts(
       tipoProducto: true,
       marca: true,
       modelo: true,
-      proveedor: true,
-      bodega: true,
       productoDescuento: true,
       productosDetalles: {
         where: {
@@ -277,8 +271,6 @@ type CreateProductInput = Pick<
   | "imagenUrl"
   | "marcaId"
   | "modeloId"
-  | "bodegaId"
-  | "proveedorId"
 >;
 
 export async function createProduct(productData: CreateProductInput) {
@@ -304,8 +296,6 @@ type UpdateProductInput = Partial<
     | "imagenUrl"
     | "marcaId"
     | "modeloId"
-    | "bodegaId"
-    | "proveedorId"
     | "estado"
   >
 >;
@@ -370,8 +360,6 @@ export async function findOrCreateProduct(productData: {
   imagenUrl?: string | null;
   marcaId?: string | null;
   modeloId?: string | null;
-  bodegaId?: string | null;
-  proveedorId?: string | null;
   estado?: boolean;
 }): Promise<{ id: string }> {
   // Construir el where clause dinámicamente para manejar nulls correctamente
@@ -387,12 +375,6 @@ export async function findOrCreateProduct(productData: {
   }
   if (productData.tipoProductoId !== undefined) {
     whereClause.tipoProductoId = productData.tipoProductoId;
-  }
-  if (productData.bodegaId !== undefined) {
-    whereClause.bodegaId = productData.bodegaId;
-  }
-  if (productData.proveedorId !== undefined) {
-    whereClause.proveedorId = productData.proveedorId;
   }
 
   // Buscar producto existente con las mismas características
@@ -428,8 +410,6 @@ export async function findOrCreateProduct(productData: {
     imagenUrl: productData.imagenUrl ?? undefined,
     marcaId: productData.marcaId ?? undefined,
     modeloId: productData.modeloId ?? undefined,
-    bodegaId: productData.bodegaId ?? undefined,
-    proveedorId: productData.proveedorId ?? undefined,
     estado: productData.estado ?? true,
     cantidad: 0, // La cantidad se maneja a través de los detalles
   });
@@ -467,6 +447,11 @@ export async function getInventoryFilterOptions(): Promise<InventoryFilterOption
           color: true,
         },
       },
+    },
+  });
+
+  const movements = await prisma.movimientoInventario.findMany({
+    select: {
       proveedor: {
         select: {
           nombre: true,
@@ -498,8 +483,11 @@ export async function getInventoryFilterOptions(): Promise<InventoryFilterOption
     if (product.modelo?.color) {
       colors.add(product.modelo.color);
     }
-    if (product.proveedor?.nombre) {
-      suppliers.add(product.proveedor.nombre);
+  }
+
+  for (const movement of movements) {
+    if (movement.proveedor?.nombre) {
+      suppliers.add(movement.proveedor.nombre);
     }
   }
 

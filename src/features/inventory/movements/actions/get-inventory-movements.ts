@@ -4,7 +4,7 @@ import {
   getInventoryMovementFilterOptions,
   type InventoryMovementWithRelations,
   listInventoryMovements,
-} from "@/data/repositories/inventory-movements.repository";
+} from "@/data/repositories/inventory.movements.repository";
 
 export type MovementOperation = "ingreso" | "salida";
 

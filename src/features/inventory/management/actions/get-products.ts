@@ -99,7 +99,7 @@ function normalizeProduct(
     color,
     cost: computedCost,
     quantity,
-    supplier: product.proveedor?.nombre ?? "Sin proveedor",
+    supplier: latestMovement?.proveedor?.nombre ?? "Sin proveedor",
     status,
     lastUpdated: detail.updatedAt.toISOString(),
     createdAt: detail.createdAt.toISOString(),

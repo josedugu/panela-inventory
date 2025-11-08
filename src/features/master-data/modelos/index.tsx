@@ -33,10 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  BrandDTO,
-  ModelDTO,
-} from "@/data/repositories/master-data.repository";
+import type { BrandDTO, ModelDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {

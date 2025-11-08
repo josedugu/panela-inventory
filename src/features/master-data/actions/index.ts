@@ -2,27 +2,41 @@
 
 import { z } from "zod";
 import {
+  createBrand,
+  deleteBrand,
+  updateBrand,
+} from "@/data/repositories/brands.repository";
+import {
+  createColor,
+  deleteColor,
+  updateColor,
+} from "@/data/repositories/colors.repository";
+import {
+  createCostCenter,
+  deleteCostCenter,
+  updateCostCenter,
+} from "@/data/repositories/costCenters.repository";
+import {
+  createProduct,
+  deleteProduct,
+  listProducts,
+  type ProductDTO,
+  updateProduct,
+} from "@/data/repositories/master.products.repository";
+import {
+  createModel,
+  deleteModel,
+  updateModel,
+} from "@/data/repositories/models.repository";
+import {
+  createRamOption,
+  deleteRamOption,
+  updateRamOption,
+} from "@/data/repositories/ram.repository";
+import {
   type BrandDTO,
   type ColorDTO,
   type CostCenterDTO,
-  createBrand,
-  createColor,
-  createCostCenter,
-  createModel,
-  createRamOption,
-  createStorageOption,
-  createSupplier,
-  createUser,
-  createWarehouse,
-  deleteBrand,
-  deleteColor,
-  deleteCostCenter,
-  deleteModel,
-  deleteRamOption,
-  deleteStorageOption,
-  deleteSupplier,
-  deleteUser,
-  deleteWarehouse,
   isPrismaKnownError,
   listBrands,
   listColors,
@@ -30,25 +44,38 @@ import {
   listModels,
   listRamOptions,
   listStorageOptions,
-  listSuppliers,
-  listUsers,
-  listWarehouses,
+  listTipoProductos,
   type ModelDTO,
   type RamDTO,
   type StorageDTO,
-  type SupplierDTO,
-  type UserDTO,
-  updateBrand,
-  updateColor,
-  updateCostCenter,
-  updateModel,
-  updateRamOption,
+  type TipoProductoDTO,
+} from "@/data/repositories/shared.repository";
+import {
+  createStorageOption,
+  deleteStorageOption,
   updateStorageOption,
+} from "@/data/repositories/storage.repository";
+import {
+  createSupplier,
+  deleteSupplier,
+  listSuppliers,
+  type SupplierDTO,
   updateSupplier,
+} from "@/data/repositories/suppliers.repository";
+import {
+  createUser,
+  deleteUser,
+  listUsers,
+  type UserDTO,
   updateUser,
+} from "@/data/repositories/users.repository";
+import {
+  createWarehouse,
+  deleteWarehouse,
+  listWarehouses,
   updateWarehouse,
   type WarehouseDTO,
-} from "@/data/repositories/master-data.repository";
+} from "@/data/repositories/warehouses.repository";
 import type { MasterDataSection } from "@/features/master-data/conts";
 
 type ActionResponse =
@@ -332,11 +359,6 @@ export async function deleteUserAction(id: string): Promise<ActionResponse> {
 // Colors
 const colorSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
-  codigoHex: z
-    .string()
-    .regex(/^#([0-9A-Fa-f]{3}){1,2}$/, "Ingresa un código HEX válido"),
-  descripcion: z.string().optional(),
-  estado: z.boolean().optional(),
 });
 
 export async function upsertColorAction(
@@ -370,9 +392,10 @@ export async function deleteColorAction(id: string): Promise<ActionResponse> {
 
 // Storage
 const storageSchema = z.object({
-  capacidad: z.string().min(1, "La capacidad es obligatoria"),
-  tipo: z.string().optional(),
-  descripcion: z.string().optional(),
+  capacidad: z
+    .number()
+    .int()
+    .positive("La capacidad debe ser un número positivo"),
 });
 
 export async function upsertStorageAction(
@@ -406,9 +429,10 @@ export async function deleteStorageAction(id: string): Promise<ActionResponse> {
 
 // RAM
 const ramSchema = z.object({
-  capacidad: z.string().min(1, "La capacidad es obligatoria"),
-  tipo: z.string().optional(),
-  velocidad: z.string().optional(),
+  capacidad: z
+    .number()
+    .int()
+    .positive("La capacidad debe ser un número positivo"),
 });
 
 export async function upsertRamAction(
@@ -440,6 +464,45 @@ export async function deleteRamAction(id: string): Promise<ActionResponse> {
   }
 }
 
+// Products
+const productSchema = z.object({
+  tipoProductoId: z.string().uuid("Selecciona un tipo de producto válido"),
+  marcaId: z.string().uuid("Selecciona una marca válida"),
+  modeloId: z.string().uuid("Selecciona un modelo válido"),
+  almacenamientoId: z.string().uuid("Selecciona un almacenamiento válido"),
+  ramId: z.string().uuid("Selecciona una RAM válida"),
+  colorId: z.string().uuid("Selecciona un color válido"),
+});
+
+export async function upsertProductAction(
+  values: z.infer<typeof productSchema> & { id?: string },
+): Promise<ActionResponse> {
+  const parsed = productSchema.safeParse(values);
+  if (!parsed.success) {
+    return validationError(parsed.error.flatten().fieldErrors);
+  }
+
+  try {
+    if (values.id) {
+      await updateProduct(values.id, parsed.data);
+    } else {
+      await createProduct(parsed.data);
+    }
+    return { success: true };
+  } catch (error) {
+    return prismaError(error);
+  }
+}
+
+export async function deleteProductAction(id: string): Promise<ActionResponse> {
+  try {
+    await deleteProduct(id);
+    return { success: true };
+  } catch (error) {
+    return prismaError(error);
+  }
+}
+
 export type MasterDataPayload = {
   suppliers?: SupplierDTO[];
   brands?: BrandDTO[];
@@ -450,6 +513,8 @@ export type MasterDataPayload = {
   colors?: ColorDTO[];
   storageOptions?: StorageDTO[];
   ramOptions?: RamDTO[];
+  tipoProductos?: TipoProductoDTO[];
+  products?: ProductDTO[];
 };
 
 export async function getSectionData(
@@ -495,6 +560,38 @@ export async function getSectionData(
       return {
         ramOptions: await listRamOptions(),
       };
+    case "tipo-productos":
+      return {
+        tipoProductos: await listTipoProductos(),
+      };
+    case "productos": {
+      const [
+        products,
+        tipoProductos,
+        brands,
+        models,
+        storageOptions,
+        ramOptions,
+        colors,
+      ] = await Promise.all([
+        listProducts(),
+        listTipoProductos(),
+        listBrands(),
+        listModels(),
+        listStorageOptions(),
+        listRamOptions(),
+        listColors(),
+      ]);
+      return {
+        products,
+        tipoProductos,
+        brands,
+        models,
+        storageOptions,
+        ramOptions,
+        colors,
+      };
+    }
     default:
       return {};
   }

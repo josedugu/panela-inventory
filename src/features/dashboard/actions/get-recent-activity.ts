@@ -3,7 +3,7 @@
 import {
   getRecentActivity as getActivity,
   type RecentActivityItem,
-} from "@/data/queries/dashboard.queries";
+} from "@/data/repositories/dashboard.repository";
 
 export type RecentActivityDTO = RecentActivityItem;
 

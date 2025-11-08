@@ -1,13 +1,15 @@
 export const MASTER_DATA_SECTIONS = [
-  { slug: "proveedores", label: "Proveedores" },
+  { slug: "almacenamiento", label: "Almacenamiento" },
+  { slug: "bodegas", label: "Bodegas" },
+  { slug: "centros-costo", label: "Centros de costo" },
+  { slug: "colores", label: "Colores" },
   { slug: "marcas", label: "Marcas" },
   { slug: "modelos", label: "Modelos" },
-  { slug: "usuarios", label: "Usuarios" },
-  { slug: "centros-costo", label: "Centros de costo" },
-  { slug: "bodegas", label: "Bodegas" },
-  { slug: "colores", label: "Colores" },
-  { slug: "almacenamiento", label: "Almacenamiento" },
+  { slug: "productos", label: "Productos" },
+  { slug: "proveedores", label: "Proveedores" },
   { slug: "ram", label: "RAM" },
+  { slug: "tipo-productos", label: "Tipos de Producto" },
+  { slug: "usuarios", label: "Usuarios" },
 ] as const;
 
 export type MasterDataSection = (typeof MASTER_DATA_SECTIONS)[number]["slug"];

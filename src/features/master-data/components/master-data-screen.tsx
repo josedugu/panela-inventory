@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
-
+import type { ProductDTO } from "@/data/repositories/master.products.repository";
 import type {
   BrandDTO,
   ColorDTO,
@@ -10,10 +10,11 @@ import type {
   ModelDTO,
   RamDTO,
   StorageDTO,
-  SupplierDTO,
-  UserDTO,
-  WarehouseDTO,
-} from "@/data/repositories/master-data.repository";
+  TipoProductoDTO,
+} from "@/data/repositories/shared.repository";
+import type { SupplierDTO } from "@/data/repositories/suppliers.repository";
+import type { UserDTO } from "@/data/repositories/users.repository";
+import type { WarehouseDTO } from "@/data/repositories/warehouses.repository";
 import { StorageSection } from "@/features/master-data/almacenamiento";
 import { WarehousesSection } from "@/features/master-data/bodegas";
 import { CostCentersSection } from "@/features/master-data/centros-costo";
@@ -21,8 +22,10 @@ import { ColorsSection } from "@/features/master-data/colores";
 import type { MasterDataSection } from "@/features/master-data/conts";
 import { BrandsSection } from "@/features/master-data/marcas";
 import { ModelsSection } from "@/features/master-data/modelos";
+import { ProductsSection } from "@/features/master-data/productos";
 import { SuppliersSection } from "@/features/master-data/proveedores";
 import { RamSection } from "@/features/master-data/ram";
+import { TipoProductosSection } from "@/features/master-data/tipo-productos";
 import { UsersSection } from "@/features/master-data/usuarios";
 
 interface MasterDataScreenData {
@@ -35,6 +38,8 @@ interface MasterDataScreenData {
   colors?: ColorDTO[];
   storageOptions?: StorageDTO[];
   ramOptions?: RamDTO[];
+  tipoProductos?: TipoProductoDTO[];
+  products?: ProductDTO[];
 }
 
 type SectionRenderer = (props: {
@@ -47,6 +52,8 @@ type SectionRenderer = (props: {
   colors?: ColorDTO[];
   storageOptions?: StorageDTO[];
   ramOptions?: RamDTO[];
+  tipoProductos?: TipoProductoDTO[];
+  products?: ProductDTO[];
   onRefresh: () => void;
 }) => React.ReactNode;
 
@@ -82,6 +89,30 @@ const SECTION_RENDERERS: Record<MasterDataSection, SectionRenderer> = {
   ram: ({ ramOptions = [], onRefresh }) => (
     <RamSection ramOptions={ramOptions} onRefresh={onRefresh} />
   ),
+  "tipo-productos": ({ tipoProductos = [], onRefresh }) => (
+    <TipoProductosSection tipoProductos={tipoProductos} onRefresh={onRefresh} />
+  ),
+  productos: ({
+    products = [],
+    tipoProductos = [],
+    brands = [],
+    models = [],
+    storageOptions = [],
+    ramOptions = [],
+    colors = [],
+    onRefresh,
+  }) => (
+    <ProductsSection
+      products={products}
+      tipoProductos={tipoProductos}
+      brands={brands}
+      models={models}
+      storageOptions={storageOptions}
+      ramOptions={ramOptions}
+      colors={colors}
+      onRefresh={onRefresh}
+    />
+  ),
 };
 
 interface MasterDataScreenProps {
@@ -101,6 +132,8 @@ export function MasterDataScreen({ section, data }: MasterDataScreenProps) {
   const colors = data.colors ?? [];
   const storageOptions = data.storageOptions ?? [];
   const ramOptions = data.ramOptions ?? [];
+  const tipoProductos = data.tipoProductos ?? [];
+  const products = data.products ?? [];
 
   const handleRefresh = useCallback(() => {
     router.refresh();
@@ -119,6 +152,8 @@ export function MasterDataScreen({ section, data }: MasterDataScreenProps) {
       colors,
       storageOptions,
       ramOptions,
+      tipoProductos,
+      products,
       onRefresh: handleRefresh,
     });
   }, [
@@ -127,12 +162,14 @@ export function MasterDataScreen({ section, data }: MasterDataScreenProps) {
     costCenters,
     handleRefresh,
     models,
+    products,
+    ramOptions,
     section,
     storageOptions,
     suppliers,
+    tipoProductos,
     users,
     warehouses,
-    ramOptions,
   ]);
 
   return <>{sectionContent}</>;
