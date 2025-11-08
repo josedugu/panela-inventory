@@ -41,7 +41,7 @@ function getProductName(producto: {
     almacenamiento: string | null;
     color: string | null;
   } | null;
-  almacenamiento: { capacidad: string } | null;
+  almacenamiento: { capacidad: number } | null;
   color: { nombre: string } | null;
   descripcion: string | null;
 }): string {
@@ -62,7 +62,7 @@ function getProductName(producto: {
   }
 
   if (producto.almacenamiento) {
-    parts.push(producto.almacenamiento.capacidad);
+    parts.push(String(producto.almacenamiento.capacidad));
   }
 
   if (producto.color) {

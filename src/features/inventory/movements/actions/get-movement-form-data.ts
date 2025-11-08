@@ -3,7 +3,7 @@
 import {
   listInventoryMovementProducts,
   listInventoryMovementTypes,
-} from "@/data/repositories/inventory-movements.repository";
+} from "@/data/repositories/inventory.movements.repository";
 
 export interface InventoryMovementFormData {
   products: Awaited<ReturnType<typeof listInventoryMovementProducts>>;

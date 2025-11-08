@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma/client";
@@ -33,7 +33,6 @@ export type InventoryMovementWithRelations =
                 };
               };
               modelo: true;
-              proveedor: true;
               tipoProducto: true;
             };
           };
@@ -252,7 +251,6 @@ export async function listInventoryMovements(): Promise<
                 },
               },
               modelo: true,
-              proveedor: true,
               tipoProducto: true,
             },
           },

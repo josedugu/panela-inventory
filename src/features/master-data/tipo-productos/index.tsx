@@ -27,44 +27,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { SupplierDTO } from "@/data/repositories/suppliers.repository";
+import type { TipoProductoDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {
-  deleteSupplierAction,
-  upsertSupplierAction,
-} from "@/features/master-data/actions";
+  deleteTipoProductoAction,
+  upsertTipoProductoAction,
+} from "@/features/master-data/actions/tipo-producto.actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
 
-interface SuppliersSectionProps {
-  suppliers: SupplierDTO[];
+interface TipoProductosSectionProps {
+  tipoProductos: TipoProductoDTO[];
   onRefresh: () => void;
 }
 
-interface SupplierFormState {
+interface TipoProductoFormState {
   nombre: string;
-  contacto: string;
-  email: string;
-  telefono: string;
-  direccion: string;
+  descripcion: string;
 }
 
 type DialogMode = "create" | "edit" | null;
 
-const createEmptyFormState = (): SupplierFormState => ({
+const createEmptyFormState = (): TipoProductoFormState => ({
   nombre: "",
-  contacto: "",
-  email: "",
-  telefono: "",
-  direccion: "",
+  descripcion: "",
 });
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
-export function SuppliersSection({
-  suppliers,
+export function TipoProductosSection({
+  tipoProductos,
   onRefresh,
-}: SuppliersSectionProps) {
+}: TipoProductosSectionProps) {
   const {
     data,
     total,
@@ -84,62 +78,57 @@ export function SuppliersSection({
     filterOptions,
     onPageChange,
     onPageSizeChange,
-  } = useMasterDataTable<SupplierDTO>({
-    items: suppliers,
+  } = useMasterDataTable<TipoProductoDTO>({
+    items: tipoProductos,
     filters: FILTER_DESCRIPTORS,
-    searchableFields: [
-      (supplier) => supplier.nombre,
-      (supplier) => supplier.contacto,
-      (supplier) => supplier.email,
-      (supplier) => supplier.telefono,
-      (supplier) => supplier.direccion ?? "",
-    ],
+    searchableFields: [(tipo) => tipo.nombre, (tipo) => tipo.descripcion ?? ""],
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<SupplierFormState>(
+  const [formData, setFormData] = useState<TipoProductoFormState>(
     createEmptyFormState(),
   );
-  const [editingSupplier, setEditingSupplier] = useState<SupplierDTO | null>(
+  const [editingTipoProducto, setEditingTipoProducto] =
+    useState<TipoProductoDTO | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TipoProductoDTO | null>(
     null,
   );
-  const [deleteTarget, setDeleteTarget] = useState<SupplierDTO | null>(null);
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
   const openCreateDialog = () => {
     setFormData(createEmptyFormState());
-    setEditingSupplier(null);
+    setEditingTipoProducto(null);
     setDialogMode("create");
   };
 
-  const openEditDialog = (supplier: SupplierDTO) => {
+  const openEditDialog = (tipoProducto: TipoProductoDTO) => {
     setFormData({
-      nombre: supplier.nombre,
-      contacto: supplier.contacto,
-      email: supplier.email,
-      telefono: supplier.telefono,
-      direccion: supplier.direccion ?? "",
+      nombre: tipoProducto.nombre,
+      descripcion: tipoProducto.descripcion ?? "",
     });
-    setEditingSupplier(supplier);
+    setEditingTipoProducto(tipoProducto);
     setDialogMode("edit");
   };
 
   const closeDialog = () => {
     setDialogMode(null);
-    setEditingSupplier(null);
+    setEditingTipoProducto(null);
     setFormData(createEmptyFormState());
   };
 
-  const openDeleteDialog = (supplier: SupplierDTO) => {
-    setDeleteTarget(supplier);
+  const openDeleteDialog = (tipoProducto: TipoProductoDTO) => {
+    setDeleteTarget(tipoProducto);
   };
 
   const closeDeleteDialog = () => {
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof SupplierFormState, value: string) => {
+  const handleFormChange = (
+    field: keyof TipoProductoFormState,
+    value: string,
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -151,27 +140,24 @@ export function SuppliersSection({
     if (isSubmitting) return;
 
     const payload = {
-      id: editingSupplier?.id,
+      id: editingTipoProducto?.id,
       nombre: formData.nombre.trim(),
-      contacto: formData.contacto.trim(),
-      email: formData.email.trim(),
-      telefono: formData.telefono.trim(),
-      direccion: formData.direccion.trim()
-        ? formData.direccion.trim()
+      descripcion: formData.descripcion.trim()
+        ? formData.descripcion.trim()
         : undefined,
     };
 
     startSubmitTransition(async () => {
-      const result = await upsertSupplierAction(payload);
+      const result = await upsertTipoProductoAction(payload);
       if (!result.success) {
-        toast.error(result.error ?? "Error al guardar el proveedor");
+        toast.error(result.error ?? "Error al guardar el tipo de producto");
         return;
       }
 
       toast.success(
-        editingSupplier
-          ? "Proveedor actualizado exitosamente"
-          : "Proveedor agregado exitosamente",
+        editingTipoProducto
+          ? "Tipo de producto actualizado exitosamente"
+          : "Tipo de producto agregado exitosamente",
       );
       closeDialog();
       onRefresh();
@@ -182,13 +168,13 @@ export function SuppliersSection({
     if (!deleteTarget || isDeleting) return;
 
     startDeleteTransition(async () => {
-      const result = await deleteSupplierAction(deleteTarget.id);
+      const result = await deleteTipoProductoAction(deleteTarget.id);
       if (!result.success) {
-        toast.error(result.error ?? "Error al eliminar el proveedor");
+        toast.error(result.error ?? "Error al eliminar el tipo de producto");
         return;
       }
 
-      toast.success("Proveedor eliminado exitosamente");
+      toast.success("Tipo de producto eliminado exitosamente");
       closeDeleteDialog();
       onRefresh();
     });
@@ -196,7 +182,7 @@ export function SuppliersSection({
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<SupplierDTO>[] = [
+  const columns: ColumnDef<TipoProductoDTO>[] = [
     {
       accessorKey: "nombre",
       header: "Nombre",
@@ -205,21 +191,9 @@ export function SuppliersSection({
       ),
     },
     {
-      accessorKey: "contacto",
-      header: "Contacto",
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "telefono",
-      header: "Teléfono",
-    },
-    {
-      id: "direccion",
-      header: "Dirección",
-      cell: ({ row }) => row.original.direccion ?? "—",
+      accessorKey: "descripcion",
+      header: "Descripción",
+      cell: ({ row }) => row.original.descripcion ?? "—",
     },
     {
       id: "actions",
@@ -250,24 +224,26 @@ export function SuppliersSection({
   ];
 
   const config = {
-    title: "Proveedores",
-    description: `${suppliers.length} proveedores registrados`,
+    title: "Tipos de Producto",
+    description: `${tipoProductos.length} tipos de producto registrados`,
     addAction: {
-      label: "Agregar proveedor",
+      label: "Agregar tipo de producto",
       onClick: openCreateDialog,
     },
     columns,
-    onDelete: (supplier: SupplierDTO) => openDeleteDialog(supplier),
-    getRowId: (supplier: SupplierDTO) => supplier.id,
+    onDelete: (tipoProducto: TipoProductoDTO) => openDeleteDialog(tipoProducto),
+    getRowId: (tipoProducto: TipoProductoDTO) => tipoProducto.id,
   };
 
   const isDialogOpen = dialogMode !== null;
   const dialogTitle =
-    dialogMode === "edit" ? "Editar proveedor" : "Nuevo proveedor";
+    dialogMode === "edit"
+      ? "Editar tipo de producto"
+      : "Nuevo tipo de producto";
   const dialogDescription =
     dialogMode === "edit"
-      ? "Actualiza la información del proveedor seleccionado."
-      : "Ingresa los datos del nuevo proveedor.";
+      ? "Actualiza la información del tipo de producto seleccionado."
+      : "Ingresa los datos del nuevo tipo de producto.";
 
   return (
     <>
@@ -311,9 +287,9 @@ export function SuppliersSection({
           <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="supplier-nombre">Nombre *</Label>
+                <Label htmlFor="tipo-producto-nombre">Nombre *</Label>
                 <Input
-                  id="supplier-nombre"
+                  id="tipo-producto-nombre"
                   value={formData.nombre}
                   onChange={(event) =>
                     handleFormChange("nombre", event.target.value)
@@ -322,52 +298,15 @@ export function SuppliersSection({
                   disabled={isSubmitting}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-contacto">Persona de contacto *</Label>
-                <Input
-                  id="supplier-contacto"
-                  value={formData.contacto}
-                  onChange={(event) =>
-                    handleFormChange("contacto", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-email">Email *</Label>
-                <Input
-                  id="supplier-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(event) =>
-                    handleFormChange("email", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-telefono">Teléfono *</Label>
-                <Input
-                  id="supplier-telefono"
-                  value={formData.telefono}
-                  onChange={(event) =>
-                    handleFormChange("telefono", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="supplier-direccion">Dirección</Label>
+              <Label htmlFor="tipo-producto-descripcion">Descripción</Label>
               <Textarea
-                id="supplier-direccion"
+                id="tipo-producto-descripcion"
                 rows={3}
-                value={formData.direccion}
+                value={formData.descripcion}
                 onChange={(event) =>
-                  handleFormChange("direccion", event.target.value)
+                  handleFormChange("descripcion", event.target.value)
                 }
                 disabled={isSubmitting}
               />
@@ -399,11 +338,11 @@ export function SuppliersSection({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar proveedor</AlertDialogTitle>
+            <AlertDialogTitle>Eliminar tipo de producto</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteTarget
-                ? `¿Seguro que deseas eliminar a ${deleteTarget.nombre}? Esta acción no se puede deshacer.`
-                : "¿Seguro que deseas eliminar este proveedor?"}
+                ? `¿Seguro que deseas eliminar el tipo de producto ${deleteTarget.nombre}? Esta acción no se puede deshacer.`
+                : "¿Seguro que deseas eliminar este tipo de producto?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

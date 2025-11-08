@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { DashboardMetrics } from "@/data/queries/dashboard.queries";
+import type { DashboardMetrics } from "@/data/repositories/dashboard.repository";
 import { getDashboardMetricsAction } from "@/features/dashboard/actions/get-dashboard-metrics";
 import {
   getLowStockProductsAction,

@@ -122,7 +122,7 @@ export type CustomerSaleWithDetails = {
           color: string | null;
         } | null;
         almacenamiento: {
-          capacidad: string;
+          capacidad: number;
         } | null;
         color: {
           nombre: string;
@@ -206,14 +206,7 @@ export async function getCustomerSalesWithDetails(
           costo: pd.producto.costo ? Number(pd.producto.costo) : null,
           marca: pd.producto.marca,
           modelo: pd.producto.modelo,
-          almacenamiento: pd.producto.almacenamiento
-            ? {
-                capacidad:
-                  typeof pd.producto.almacenamiento.capacidad === "number"
-                    ? String(pd.producto.almacenamiento.capacidad)
-                    : pd.producto.almacenamiento.capacidad,
-              }
-            : null,
+          almacenamiento: pd.producto.almacenamiento,
           color: pd.producto.color,
         },
       })),

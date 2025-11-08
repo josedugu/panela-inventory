@@ -34,10 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/components/ui/utils";
-import type {
-  CostCenterDTO,
-  UserDTO,
-} from "@/data/repositories/master-data.repository";
+import type { CostCenterDTO } from "@/data/repositories/shared.repository";
+import type { UserDTO } from "@/data/repositories/users.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {

@@ -21,11 +21,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  listInventoryMovementProducts,
-  listInventoryMovementTypes,
-} from "@/data/repositories/inventory-movements.repository";
 import { createInventoryMovementAction } from "@/features/inventory/actions/create-inventory-movement";
+import {
+  getMovementFormProducts,
+  getMovementFormTypes,
+} from "@/features/inventory/actions/get-movement-form-options";
 
 type FormField = "product" | "movementType" | "cost" | "quantity" | "imeis";
 type FieldErrors = Partial<Record<FormField, string[]>>;
@@ -78,13 +78,13 @@ export function InventoryMovementModal({
 
   const { data: products, isLoading: isLoadingProducts } = useQuery({
     queryKey: ["inventory-movement-products"],
-    queryFn: listInventoryMovementProducts,
+    queryFn: getMovementFormProducts,
     enabled: isOpen,
   });
 
   const { data: movementTypes, isLoading: isLoadingMovementTypes } = useQuery({
     queryKey: ["inventory-movement-types"],
-    queryFn: listInventoryMovementTypes,
+    queryFn: getMovementFormTypes,
     enabled: isOpen,
   });
 

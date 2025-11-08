@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/utils";
-import type { ColorDTO } from "@/data/repositories/master-data.repository";
+import type { ColorDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {
@@ -56,18 +56,12 @@ interface ColorsSectionProps {
 
 interface ColorFormState {
   nombre: string;
-  codigoHex: string;
-  descripcion: string;
-  estado: "activo" | "inactivo";
 }
 
 type DialogMode = "create" | "edit" | null;
 
 const createEmptyFormState = (): ColorFormState => ({
   nombre: "",
-  codigoHex: "#000000",
-  descripcion: "",
-  estado: "activo",
 });
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
@@ -95,11 +89,7 @@ export function ColorsSection({ colors, onRefresh }: ColorsSectionProps) {
   } = useMasterDataTable<ColorDTO>({
     items: colors,
     filters: FILTER_DESCRIPTORS,
-    searchableFields: [
-      (color) => color.nombre,
-      (color) => color.codigoHex,
-      (color) => color.descripcion ?? "",
-    ],
+    searchableFields: [(color) => color.nombre],
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
@@ -120,9 +110,6 @@ export function ColorsSection({ colors, onRefresh }: ColorsSectionProps) {
   const openEditDialog = (color: ColorDTO) => {
     setFormData({
       nombre: color.nombre,
-      codigoHex: color.codigoHex,
-      descripcion: color.descripcion ?? "",
-      estado: color.estado ? "activo" : "inactivo",
     });
     setEditingColor(color);
     setDialogMode("edit");
@@ -149,10 +136,6 @@ export function ColorsSection({ colors, onRefresh }: ColorsSectionProps) {
     }));
   };
 
-  const handleColorChange = (event: ChangeEvent<HTMLInputElement>) => {
-    handleFormChange("codigoHex", event.target.value);
-  };
-
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSubmitting) return;
@@ -160,11 +143,6 @@ export function ColorsSection({ colors, onRefresh }: ColorsSectionProps) {
     const payload = {
       id: editingColor?.id,
       nombre: formData.nombre.trim(),
-      codigoHex: formData.codigoHex.trim(),
-      descripcion: formData.descripcion.trim()
-        ? formData.descripcion.trim()
-        : undefined,
-      estado: formData.estado === "activo",
     };
 
     startSubmitTransition(async () => {
@@ -206,43 +184,6 @@ export function ColorsSection({ colors, onRefresh }: ColorsSectionProps) {
     {
       accessorKey: "nombre",
       header: "Nombre",
-    },
-    {
-      accessorKey: "codigoHex",
-      header: "Código HEX",
-      cell: ({ row }) => (
-        <span className="inline-flex items-center gap-2 font-mono">
-          <span
-            className="h-4 w-4 rounded-full border border-border"
-            style={{ backgroundColor: row.original.codigoHex }}
-          />
-          {row.original.codigoHex}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "descripcion",
-      header: "Descripción",
-      cell: ({ row }) => row.original.descripcion ?? "—",
-    },
-    {
-      id: "estado",
-      header: "Estado",
-      cell: ({ row }) => {
-        const isActive = row.original.estado;
-        return (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-              isActive
-                ? "bg-success-light text-success-foreground"
-                : "bg-destructive/10 text-destructive",
-            )}
-          >
-            {isActive ? "Activo" : "Inactivo"}
-          </span>
-        );
-      },
     },
     {
       id: "actions",
@@ -329,58 +270,17 @@ export function ColorsSection({ colors, onRefresh }: ColorsSectionProps) {
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="color-nombre">Nombre *</Label>
-                <Input
-                  id="color-nombre"
-                  value={formData.nombre}
-                  onChange={(event) =>
-                    handleFormChange("nombre", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="color-codigo">Código HEX *</Label>
-                <Input
-                  id="color-codigo"
-                  type="color"
-                  value={formData.codigoHex}
-                  onChange={handleColorChange}
-                  className="h-10 w-full cursor-pointer"
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="color-descripcion">Descripción</Label>
-              <Textarea
-                id="color-descripcion"
-                rows={3}
-                value={formData.descripcion}
+              <Label htmlFor="color-nombre">Nombre *</Label>
+              <Input
+                id="color-nombre"
+                value={formData.nombre}
                 onChange={(event) =>
-                  handleFormChange("descripcion", event.target.value)
+                  handleFormChange("nombre", event.target.value)
                 }
+                required
                 disabled={isSubmitting}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="color-estado">Estado *</Label>
-              <Select
-                value={formData.estado}
-                onValueChange={(value) => handleFormChange("estado", value)}
-                disabled={isSubmitting}
-              >
-                <SelectTrigger id="color-estado">
-                  <SelectValue placeholder="Selecciona un estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="activo">Activo</SelectItem>
-                  <SelectItem value="inactivo">Inactivo</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <DialogFooter className="gap-2 sm:gap-3">
               <Button
