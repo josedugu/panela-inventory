@@ -187,7 +187,7 @@ export function Customers() {
         accessorKey: "totalVentas",
         header: "Total Ventas",
         cell: ({ row }) => (
-          <div className="text-right font-medium">
+          <div className="text-center font-medium">
             {currencyFormatter.format(row.original.totalVentas)}
           </div>
         ),
@@ -200,12 +200,14 @@ export function Customers() {
   const handlePageChange = useCallback(
     (nextPage: number) => {
       const normalizedPage = Math.max(1, nextPage);
-      setPage(normalizedPage);
-      queueMicrotask(() => {
-        void refetch();
-      });
+      if (normalizedPage !== page) {
+        setPage(normalizedPage);
+        queueMicrotask(() => {
+          void refetch();
+        });
+      }
     },
-    [refetch],
+    [refetch, page],
   );
 
   const handlePageSizeChange = useCallback(
@@ -384,7 +386,7 @@ export function Customers() {
         searchValue={searchValue}
         onSearchChange={(value) => {
           setSearchValue(value);
-          setPage(1);
+          // El filtrado es local, no necesitamos cambiar la página ni hacer refetch
         }}
         filters={filterDescriptors}
         filterState={filterState}

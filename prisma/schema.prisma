@@ -14,15 +14,15 @@ datasource db {
 
 // Usuarios
 model Usuario {
-  id            String   @id @default(uuid()) @db.Uuid
-  nombre        String
-  email         String   @unique
-  telefono      String?
-  rolId         String?  @map("rol_id") @db.Uuid
-  centroCostoId String?  @map("centro_costo_id") @db.Uuid
-  estado        Boolean  @default(true)
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                         String                 @id @default(uuid()) @db.Uuid
+  nombre                     String
+  email                      String                 @unique
+  telefono                   String?
+  rolId                      String?                @map("rol_id") @db.Uuid
+  centroCostoId              String?                @map("centro_costo_id") @db.Uuid
+  estado                     Boolean                @default(true)
+  createdAt                  DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
   // Relación con Centro de Costo
   centroCostos               CentroCostos?          @relation(fields: [centroCostoId], references: [id])
   rol                        Rol?                   @relation(fields: [rolId], references: [id])
@@ -126,14 +126,13 @@ model Bodega {
   id                    String                 @id @default(uuid()) @db.Uuid
   codigo                String
   nombre                String
-  capacidad             String?
-  responsable           String?
   estado                Boolean                @default(true)
   createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
   centroCostoId         String?                @map("centro_costo_id") @db.Uuid
   centroCosto           CentroCostos?          @relation(fields: [centroCostoId], references: [id])
   movimientoInventarios MovimientoInventario[]
+  productoDetalles      ProductoDetalle[]
 
   @@map("bodega")
   @@schema("dev")
@@ -141,13 +140,12 @@ model Bodega {
 
 // Categorías de Productos
 model TipoProducto {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String     @id @default(uuid()) @db.Uuid
   nombre      String
   descripcion String?
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   // Relación con Productos
-  productos Producto[]
+  productos   Producto[]
 
   @@map("tipo_producto")
   @@schema("dev")
@@ -158,6 +156,7 @@ model Producto {
   id                String              @id @default(uuid()) @db.Uuid
   estado            Boolean             @default(true)
   costo             Decimal?            @db.Decimal(10, 2)
+  pvp              Decimal?                   @default(0) @map("pvp") @db.Decimal(10, 2)
   cantidad          Int                 @default(0)
   descripcion       String?
   tipoProductoId    String?             @map("tipo_producto_id") @db.Uuid
@@ -211,6 +210,8 @@ model ProductoDetalle {
   movimientoInventario MovimientoInventario[]
   ventaProductoId      String?                @map("venta_producto_id") @db.Uuid
   ventaProducto        VentaProducto?         @relation(fields: [ventaProductoId], references: [id])
+  bodegaId             String?                @map("bodega_id") @db.Uuid
+  bodega               Bodega?                @relation(fields: [bodegaId], references: [id])
 
   @@map("producto_detalle")
   @@schema("dev")
@@ -253,6 +254,7 @@ model Color {
 
 model MovimientoInventario {
   id               String                    @id @default(uuid()) @db.Uuid
+  consecutivo      Int                       @unique @default(autoincrement()) @map("consecutivo") @db.Integer
   cantidad         Int                       @default(0)
   estado           Boolean                   @default(true)
   costoUnitario    Decimal                   @default(0) @map("costo_unitario") @db.Decimal(10, 2)

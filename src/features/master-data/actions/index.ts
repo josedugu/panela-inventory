@@ -278,8 +278,6 @@ export async function deleteCostCenterAction(
 const warehouseSchema = z.object({
   codigo: z.string().min(1, "El código es obligatorio"),
   nombre: z.string().min(1, "El nombre es obligatorio"),
-  capacidad: z.string().optional(),
-  responsable: z.string().optional(),
 });
 
 export async function upsertWarehouseAction(

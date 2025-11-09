@@ -214,10 +214,7 @@ export function InventoryMovements() {
         accessorKey: "productLabel",
         header: "Producto",
         cell: ({ row }) => (
-          <div
-            className="max-w-[240px] truncate"
-            title={row.original.productLabel}
-          >
+          <div className="wrap-break-word" title={row.original.productLabel}>
             {row.original.productLabel}
           </div>
         ),
@@ -227,15 +224,16 @@ export function InventoryMovements() {
         accessorKey: "quantity",
         header: "Cantidad",
         cell: ({ row }) => (
-          <div className="text-right font-medium">{row.original.quantity}</div>
+          <div className="text-center font-medium">{row.original.quantity}</div>
         ),
         size: 120,
+        minSize: 80,
       },
       {
         accessorKey: "unitCost",
         header: "Costo unitario",
         cell: ({ row }) => (
-          <div className="text-right">
+          <div className="text-center">
             {currencyFormatter.format(row.original.unitCost)}
           </div>
         ),
@@ -245,7 +243,7 @@ export function InventoryMovements() {
         accessorKey: "totalCost",
         header: "Total",
         cell: ({ row }) => (
-          <div className="text-right">
+          <div className="text-center">
             {currencyFormatter.format(row.original.totalCost)}
           </div>
         ),
@@ -264,12 +262,14 @@ export function InventoryMovements() {
   const handlePageChange = useCallback(
     (nextPage: number) => {
       const normalizedPage = Math.max(1, nextPage);
-      setPage(normalizedPage);
-      queueMicrotask(() => {
-        void refetch();
-      });
+      if (normalizedPage !== page) {
+        setPage(normalizedPage);
+        queueMicrotask(() => {
+          void refetch();
+        });
+      }
     },
-    [refetch],
+    [refetch, page],
   );
 
   const handlePageSizeChange = useCallback(
@@ -352,7 +352,8 @@ export function InventoryMovements() {
         searchValue={searchValue}
         onSearchChange={(value) => {
           setSearchValue(value);
-          setPage(1);
+          // El searchValue está en el queryKey, React Query hará refetch automáticamente
+          // No necesitamos cambiar la página manualmente aquí
         }}
         filters={filterDescriptors}
         filterState={filterState}

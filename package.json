@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "check-file-lengths": "bun check-file-lengths.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

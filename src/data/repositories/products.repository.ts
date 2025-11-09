@@ -90,66 +90,81 @@ export async function getAllProducts(): Promise<ProductWithRelations[]> {
 //   });
 // }
 
+export type AggregatedProductData = {
+  id: string;
+  nombre: string;
+  cantidad: number;
+  pvp: number;
+  costo: number;
+  categoria: string;
+};
+
 export async function getAllProductDetails(
   limit?: number,
   offset?: number,
-): Promise<ProductDetailWithRelations[]> {
-  // Ejecutar función SQL que filtra productos físicamente activos con paginación
-  // Si limit es undefined, pasar NULL explícitamente
-  // Hacer cast explícito a INTEGER porque Prisma envía bigint
+): Promise<AggregatedProductData[]> {
+  // Ejecutar función SQL que retorna datos agregados por producto
   const limitParam = limit !== undefined ? limit : null;
   const offsetParam = offset ?? 0;
 
-  // Construir la query con cast explícito, manejando NULL para limit
-  const detailIds =
+  // Construir la query - la función SQL ya retorna los tipos correctos
+  const results =
     limitParam === null
-      ? await prisma.$queryRaw<Array<{ id: string }>>`
-          SELECT id FROM "dev"."getAllProductDetails"(
+      ? await prisma.$queryRaw<
+          Array<{
+            id: string;
+            nombre: string;
+            cantidad: number;
+            pvp: number;
+            costo: number;
+            categoria: string;
+          }>
+        >`
+          SELECT 
+            id,
+            nombre,
+            cantidad,
+            pvp,
+            costo,
+            categoria
+          FROM "dev"."getAllProductDetails"(
             NULL, 
             ${offsetParam}::INTEGER
           )
         `
-      : await prisma.$queryRaw<Array<{ id: string }>>`
-          SELECT id FROM "dev"."getAllProductDetails"(
+      : await prisma.$queryRaw<
+          Array<{
+            id: string;
+            nombre: string;
+            cantidad: number;
+            pvp: number;
+            costo: number;
+            categoria: string;
+          }>
+        >`
+          SELECT 
+            id,
+            nombre,
+            cantidad,
+            pvp,
+            costo,
+            categoria
+          FROM "dev"."getAllProductDetails"(
             ${limitParam}::INTEGER, 
             ${offsetParam}::INTEGER
           )
         `;
 
-  const ids = detailIds.map((row) => row.id);
-
-  // Si no hay resultados, retornar array vacío
-  if (ids.length === 0) {
-    return [];
-  }
-
-  // Obtener los detalles completos con todas las relaciones usando Prisma
-  return prisma.productoDetalle.findMany({
-    where: {
-      id: {
-        in: ids,
-      },
-    },
-    include: {
-      producto: {
-        include: {
-          tipoProducto: true,
-          marca: true,
-          modelo: true,
-          productoDescuento: true,
-          almacenamiento: true,
-          ram: true,
-          color: true,
-        },
-      },
-      movimientoInventario: {
-        include: {
-          proveedor: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  // Convertir Decimal a number si es necesario
+  return results.map((row) => ({
+    id: row.id,
+    nombre: row.nombre,
+    cantidad:
+      typeof row.cantidad === "number" ? row.cantidad : Number(row.cantidad),
+    pvp: typeof row.pvp === "number" ? row.pvp : Number(row.pvp),
+    costo: typeof row.costo === "number" ? row.costo : Number(row.costo),
+    categoria: row.categoria,
+  }));
 }
 
 export async function getAllProductDetailsCount(): Promise<number> {

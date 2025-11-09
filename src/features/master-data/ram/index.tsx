@@ -127,7 +127,7 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
     if (isSubmitting) return;
 
     const capacidadNumber = parseInt(formData.capacidad.trim(), 10);
-    if (isNaN(capacidadNumber) || capacidadNumber <= 0) {
+    if (Number.isNaN(capacidadNumber) || capacidadNumber <= 0) {
       toast.error("La capacidad debe ser un número positivo");
       return;
     }

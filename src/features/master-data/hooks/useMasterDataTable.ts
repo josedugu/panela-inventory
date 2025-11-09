@@ -107,9 +107,12 @@ export function useMasterDataTable<T>({
       const safeTotalPages =
         totalItems === 0 ? 1 : Math.ceil(totalItems / safePageSize);
       const clamped = Math.max(1, Math.min(nextPage, safeTotalPages));
-      setPage(clamped);
+      // Solo actualizar si la página realmente cambió
+      if (clamped !== currentPage) {
+        setPage(clamped);
+      }
     },
-    [safePageSize, totalItems],
+    [safePageSize, totalItems, currentPage],
   );
 
   const handlePageSizeChange = useCallback((nextPageSize: number) => {

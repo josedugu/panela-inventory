@@ -43,8 +43,6 @@ interface WarehousesSectionProps {
 interface WarehouseFormState {
   codigo: string;
   nombre: string;
-  capacidad: string;
-  responsable: string;
 }
 
 type DialogMode = "create" | "edit" | null;
@@ -52,8 +50,6 @@ type DialogMode = "create" | "edit" | null;
 const createEmptyFormState = (): WarehouseFormState => ({
   codigo: "",
   nombre: "",
-  capacidad: "",
-  responsable: "",
 });
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
@@ -87,7 +83,6 @@ export function WarehousesSection({
     searchableFields: [
       (warehouse) => warehouse.nombre,
       (warehouse) => warehouse.codigo,
-      (warehouse) => warehouse.responsable ?? "",
     ],
   });
 
@@ -112,8 +107,6 @@ export function WarehousesSection({
     setFormData({
       codigo: warehouse.codigo,
       nombre: warehouse.nombre,
-      capacidad: warehouse.capacidad ?? "",
-      responsable: warehouse.responsable ?? "",
     });
     setEditingWarehouse(warehouse);
     setDialogMode("edit");
@@ -148,12 +141,6 @@ export function WarehousesSection({
       id: editingWarehouse?.id,
       codigo: formData.codigo.trim(),
       nombre: formData.nombre.trim(),
-      capacidad: formData.capacidad.trim()
-        ? formData.capacidad.trim()
-        : undefined,
-      responsable: formData.responsable.trim()
-        ? formData.responsable.trim()
-        : undefined,
     };
 
     startSubmitTransition(async () => {
@@ -202,16 +189,6 @@ export function WarehousesSection({
     {
       accessorKey: "nombre",
       header: "Nombre",
-    },
-    {
-      accessorKey: "capacidad",
-      header: "Capacidad",
-      cell: ({ row }) => row.original.capacidad ?? "—",
-    },
-    {
-      accessorKey: "responsable",
-      header: "Responsable",
-      cell: ({ row }) => row.original.responsable ?? "—",
     },
     {
       id: "actions",
@@ -323,28 +300,6 @@ export function WarehousesSection({
                   disabled={isSubmitting}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="warehouse-capacidad">Capacidad</Label>
-                <Input
-                  id="warehouse-capacidad"
-                  value={formData.capacidad}
-                  onChange={(event) =>
-                    handleFormChange("capacidad", event.target.value)
-                  }
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="warehouse-responsable">Responsable</Label>
-              <Input
-                id="warehouse-responsable"
-                value={formData.responsable}
-                onChange={(event) =>
-                  handleFormChange("responsable", event.target.value)
-                }
-                disabled={isSubmitting}
-              />
             </div>
             <DialogFooter className="gap-2 sm:gap-3">
               <Button

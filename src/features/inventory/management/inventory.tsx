@@ -2,9 +2,17 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { MapPin } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,6 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  type TableAction,
+  TableActionsCell,
+} from "@/components/ui/table-actions-cell";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import { useEntityFilters } from "@/features/entity-table/hooks/use-entity-filters";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
@@ -30,8 +50,11 @@ import {
   type InventoryMovementInitialData,
   InventoryMovementModal,
 } from "../general-ui/add-product-modal";
-import { deleteProductAction } from "./actions/delete-product";
 import { getInventoryFilterOptionsAction } from "./actions/get-filter-options";
+import {
+  getProductLocationsAction,
+  type ProductLocation,
+} from "./actions/get-product-locations";
 import {
   type GetProductsSuccess,
   getProductsAction,
@@ -119,6 +142,11 @@ export function Inventory() {
   const [movementModalInitialData, setMovementModalInitialData] =
     useState<InventoryMovementInitialData>();
   const [movementModalKey, setMovementModalKey] = useState(0);
+  const [isLocationsModalOpen, setIsLocationsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] =
+    useState<InventoryProduct | null>(null);
+  const [locations, setLocations] = useState<ProductLocation[]>([]);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [clientSearch, setClientSearch] = useState("");
@@ -253,26 +281,6 @@ export function Inventory() {
         label: value,
         value,
       }));
-      base.brand = filterOptions.brands.map((value) => ({
-        label: value,
-        value,
-      }));
-      base.model = filterOptions.models.map((value) => ({
-        label: value,
-        value,
-      }));
-      base.storage = filterOptions.storages.map((value) => ({
-        label: value,
-        value,
-      }));
-      base.color = filterOptions.colors.map((value) => ({
-        label: value,
-        value,
-      }));
-      base.supplier = filterOptions.suppliers.map((value) => ({
-        label: value,
-        value,
-      }));
       base.status = filterOptions.statuses.map((value) => ({
         value,
         label: STATUS_LABELS[value as InventoryStatus] ?? value,
@@ -291,12 +299,6 @@ export function Inventory() {
     }));
 
     base.category ??= [];
-    base.brand ??= [];
-    base.model ??= [];
-    base.storage ??= [];
-    base.color ??= [];
-    base.imei ??= [];
-    base.supplier ??= [];
 
     return base;
   }, [filterOptions, normalizedOptions]);
@@ -305,31 +307,16 @@ export function Inventory() {
 
   const filteredData = useMemo(() => {
     const base = data?.data ?? [];
-    const sorted = base
-      .slice()
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
 
     if (!clientSearch.trim()) {
-      return sorted;
+      return base;
     }
 
     const term = clientSearch.trim().toLowerCase();
-    return sorted.filter((product) => {
-      const brand = product.brand?.toLowerCase() ?? "";
-      const model = product.model?.toLowerCase() ?? "";
-      const imei = product.imei?.toLowerCase() ?? "";
+    return base.filter((product) => {
       const name = product.name?.toLowerCase() ?? "";
       const category = product.category?.toLowerCase() ?? "";
-      return (
-        brand.includes(term) ||
-        model.includes(term) ||
-        imei.includes(term) ||
-        name.includes(term) ||
-        category.includes(term)
-      );
+      return name.includes(term) || category.includes(term);
     });
   }, [clientSearch, data?.data]);
 
@@ -339,117 +326,97 @@ export function Inventory() {
 
   const columns: ColumnDef<InventoryProduct>[] = [
     {
-      accessorKey: "brand",
-      header: "Marca",
+      accessorKey: "name",
+      header: "Nombre",
+      cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+      size: 300,
+    },
+    {
+      accessorKey: "quantity",
+      header: "Cantidad",
       cell: ({ row }) => (
-        <div className="font-medium">{row.original.brand}</div>
+        <div className="text-center">{row.original.quantity}</div>
       ),
-      size: 140,
+      size: 100,
     },
     {
-      accessorKey: "model",
-      header: "Modelo",
+      accessorKey: "pvp",
+      header: "PVP",
       cell: ({ row }) => (
-        <div className="font-mono text-sm">{row.original.model}</div>
+        <div className="text-center">${row.original.pvp.toFixed(2)}</div>
       ),
-      size: 140,
-    },
-    {
-      accessorKey: "storage",
-      header: "Almacenamiento",
-      cell: ({ row }) => row.original.storage || "-",
-      size: 140,
-    },
-    {
-      accessorKey: "color",
-      header: "Color",
-      cell: ({ row }) => row.original.color || "-",
       size: 120,
-    },
-    {
-      accessorKey: "imei",
-      header: "IMEI",
-      cell: ({ row }) => (
-        <div className="font-mono text-sm">{row.original.imei}</div>
-      ),
-      size: 180,
-    },
-    {
-      accessorKey: "category",
-      header: "Categoría",
-      size: 160,
     },
     {
       accessorKey: "cost",
       header: "Costo",
       cell: ({ row }) => (
-        <div className="text-right">${row.original.cost.toFixed(2)}</div>
+        <div className="text-center">${row.original.cost.toFixed(2)}</div>
       ),
       size: 120,
     },
     {
-      accessorKey: "quantity",
-      header: "Cant",
-      cell: ({ row }) => (
-        <div className="text-right">{row.original.quantity}</div>
-      ),
-      size: 80,
+      accessorKey: "category",
+      header: "Categoría",
+      cell: ({ row }) => <div>{row.original.category}</div>,
+      size: 160,
     },
     {
-      accessorKey: "supplier",
-      header: "Proveedor",
-      cell: ({ row }) => (
-        <div className="font-mono text-sm">{row.original.supplier}</div>
-      ),
-      size: 180,
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => {
+        const actions: TableAction<InventoryProduct>[] = [
+          {
+            label: "Ubicaciones",
+            icon: <MapPin className="h-4 w-4" />,
+            onClick: () => handleViewLocations(row.original),
+          },
+        ];
+
+        return <TableActionsCell row={row.original} actions={actions} />;
+      },
+      size: 100,
     },
   ];
 
-  const handleDelete = async (product: InventoryProduct) => {
-    // Usar el ID del detalle, no del producto
-    const result = await deleteProductAction(product.id);
-    if (result.success) {
-      toast.success("Producto eliminado exitosamente");
-      refetch();
-    } else {
-      toast.error(result.error || "Error al eliminar producto");
+  const handleViewLocations = async (product: InventoryProduct) => {
+    setSelectedProduct(product);
+    setIsLocationsModalOpen(true);
+    setIsLoadingLocations(true);
+
+    try {
+      const result = await getProductLocationsAction(product.id);
+      if (result.success) {
+        setLocations(result.data);
+      } else {
+        toast.error(result.error || "Error al obtener las ubicaciones");
+        setLocations([]);
+      }
+    } catch (_error) {
+      toast.error("Error al obtener las ubicaciones");
+      setLocations([]);
+    } finally {
+      setIsLoadingLocations(false);
     }
   };
 
-  const handleDuplicate = (product: InventoryProduct) => {
-    const latestMovement = product.latestMovement;
-    const costValue = latestMovement?.cost ?? product.cost;
-    const quantityValue =
-      latestMovement && typeof latestMovement.quantity === "number"
-        ? latestMovement.quantity.toString()
-        : "";
-    const imeiList =
-      latestMovement && latestMovement.imeis.length > 0
-        ? latestMovement.imeis.join(", ")
-        : product.imei !== "-" && product.imei !== "" && product.imei !== "N/A"
-          ? product.imei
-          : "";
-
-    setMovementModalInitialData({
-      product: product.productId,
-      movementType: latestMovement?.typeId ?? "",
-      cost: Number.isFinite(costValue) ? costValue.toFixed(2) : "",
-      quantity: quantityValue,
-      imeis: imeiList,
-    });
-    setMovementModalKey((prev) => prev + 1);
-    setIsMovementModalOpen(true);
+  const handleCloseLocationsModal = () => {
+    setIsLocationsModalOpen(false);
+    setSelectedProduct(null);
+    setLocations([]);
   };
 
   const handlePageChange = useCallback(
     (nextPage: number) => {
       const normalizedPage = Math.max(1, nextPage);
-      setPage(normalizedPage);
-      queueMicrotask(() => {
-        void refetch();
-      });
+      if (normalizedPage !== page) {
+        setPage(normalizedPage);
+        queueMicrotask(() => {
+          void refetch();
+        });
+      }
     },
-    [refetch],
+    [refetch, page],
   );
 
   const handlePageSizeChange = useCallback(
@@ -469,7 +436,7 @@ export function Inventory() {
 
   const handleSearchChange = (value: string) => {
     setClientSearch(value);
-    setPage(1);
+    // El filtrado es local, no necesitamos cambiar la página ni hacer refetch
   };
 
   return (
@@ -478,7 +445,7 @@ export function Inventory() {
         config={{
           title: "Gestión de Inventario",
           description: "Administre su catálogo de productos y niveles de stock",
-          searchPlaceholder: "Buscar por marca, modelo o IMEI...",
+          searchPlaceholder: "Buscar por nombre o categoría...",
           filterDialogTitle: "Filtrar inventario",
           filterDialogDescription:
             "Selecciona uno o varios filtros y aplica para actualizar la tabla.",
@@ -495,9 +462,8 @@ export function Inventory() {
             onClick: () => toast.info("Función de exportar en desarrollo"),
           },
           columns,
-          onDelete: handleDelete,
-          onDuplicate: handleDuplicate,
           getRowId: (row: InventoryProduct) => row.id,
+          showIndexColumn: false,
         }}
         data={filteredData}
         total={displayTotal}
@@ -507,7 +473,11 @@ export function Inventory() {
         onPageSizeChange={handlePageSizeChange}
         isLoading={isLoading || isFetching}
         searchValue={clientSearch}
-        onSearchChange={handleSearchChange}
+        onSearchChange={(value) => {
+          handleSearchChange(value);
+          // No llamar a onPageChange aquí porque el filtrado es local
+          // EntityTableLayout lo llama automáticamente, pero lo ignoramos si ya estamos en página 1
+        }}
         filters={filterDescriptors}
         filterState={filterState}
         onFilterStateChange={(next) => {
@@ -538,6 +508,58 @@ export function Inventory() {
         onSuccess={handleMovementSuccess}
         initialData={movementModalInitialData}
       />
+
+      <Dialog
+        open={isLocationsModalOpen}
+        onOpenChange={handleCloseLocationsModal}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Ubicaciones del Producto</DialogTitle>
+            <DialogDescription>
+              {selectedProduct
+                ? `Distribución del producto "${selectedProduct.name}" por bodega`
+                : "Distribución del producto por bodega"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            {isLoadingLocations ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-text-secondary">
+                  Cargando ubicaciones...
+                </div>
+              </div>
+            ) : locations.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-text-secondary">
+                  No se encontraron ubicaciones para este producto
+                </div>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bodega</TableHead>
+                    <TableHead className="text-center">Cantidad</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {locations.map((location) => (
+                    <TableRow key={location.bodega}>
+                      <TableCell className="font-medium">
+                        {location.bodega}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {location.cantidad}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

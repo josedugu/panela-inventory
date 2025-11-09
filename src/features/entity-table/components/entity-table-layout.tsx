@@ -299,6 +299,8 @@ export function EntityTableLayout<TData>({
         onDelete={config.onDelete}
         onDuplicate={config.onDuplicate}
         getRowId={config.getRowId}
+        showIndexColumn={config.showIndexColumn ?? true}
+        getIndexValue={config.getIndexValue}
       />
     </div>
   );
