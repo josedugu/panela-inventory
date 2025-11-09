@@ -2,12 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import {
-  type ChangeEvent,
-  type FormEvent,
-  useState,
-  useTransition,
-} from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -31,8 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/components/ui/utils";
 import type { ColorDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
@@ -41,13 +34,6 @@ import {
   upsertColorAction,
 } from "@/features/master-data/actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../components/ui/select";
 
 interface ColorsSectionProps {
   colors: ColorDTO[];

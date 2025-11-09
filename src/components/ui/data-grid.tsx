@@ -52,6 +52,8 @@ interface DataGridProps<TData> {
   onDelete?: (row: TData) => void;
   onDuplicate?: (row: TData) => void;
   getRowId?: (row: TData) => string;
+  showIndexColumn?: boolean;
+  getIndexValue?: (row: TData, index: number) => number | string;
 }
 
 export function DataGrid<TData>({
@@ -64,25 +66,38 @@ export function DataGrid<TData>({
   onDelete,
   onDuplicate,
   getRowId,
+  showIndexColumn = true,
+  getIndexValue,
 }: DataGridProps<TData>) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
 
-  const columnsWithIndex: ColumnDef<TData, unknown>[] = [
-    {
-      id: "#",
-      header: "#",
-      cell: ({ row }) => {
-        const index = pagination
-          ? (pagination.page - 1) * pagination.pageSize + row.index + 1
-          : row.index + 1;
-        return <div className="text-text-secondary font-medium">{index}</div>;
-      },
-      size: 50,
-    },
-    ...columns,
-  ];
+  const columnsWithIndex: ColumnDef<TData, unknown>[] = showIndexColumn
+    ? [
+        {
+          id: "#",
+          header: "#",
+          cell: ({ row }) => {
+            const calculatedIndex = pagination
+              ? (pagination.page - 1) * pagination.pageSize + row.index + 1
+              : row.index + 1;
+
+            const displayValue = getIndexValue
+              ? getIndexValue(row.original, calculatedIndex)
+              : calculatedIndex;
+
+            return (
+              <div className="text-text-secondary font-medium">
+                {displayValue}
+              </div>
+            );
+          },
+          size: 50,
+        },
+        ...columns,
+      ]
+    : columns;
 
   const table = useReactTable({
     data,
@@ -245,7 +260,7 @@ export function DataGrid<TData>({
                   {isEmpty && (
                     <tr>
                       <td
-                        colSpan={columnsWithIndex.length}
+                        colSpan={table.getAllColumns().length}
                         className="h-[320px]"
                       />
                     </tr>

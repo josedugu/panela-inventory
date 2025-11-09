@@ -6,8 +6,6 @@ export interface WarehouseDTO {
   id: string;
   codigo: string;
   nombre: string;
-  capacidad?: string | null;
-  responsable?: string | null;
   estado: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -16,8 +14,6 @@ export interface WarehouseDTO {
 interface WarehouseInput {
   codigo: string;
   nombre: string;
-  capacidad?: string | null;
-  responsable?: string | null;
 }
 
 export async function listWarehouses(): Promise<WarehouseDTO[]> {
@@ -29,8 +25,6 @@ export async function listWarehouses(): Promise<WarehouseDTO[]> {
     id: warehouse.id,
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
-    capacidad: warehouse.capacidad,
-    responsable: warehouse.responsable,
     estado: warehouse.estado,
     createdAt: warehouse.createdAt,
     updatedAt: warehouse.updatedAt,
@@ -44,8 +38,6 @@ export async function createWarehouse(
     data: {
       codigo: input.codigo,
       nombre: input.nombre,
-      capacidad: input.capacidad,
-      responsable: input.responsable,
     },
   });
 
@@ -53,8 +45,6 @@ export async function createWarehouse(
     id: warehouse.id,
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
-    capacidad: warehouse.capacidad,
-    responsable: warehouse.responsable,
     estado: warehouse.estado,
     createdAt: warehouse.createdAt,
     updatedAt: warehouse.updatedAt,
@@ -70,8 +60,6 @@ export async function updateWarehouse(
     data: {
       codigo: input.codigo,
       nombre: input.nombre,
-      capacidad: input.capacidad,
-      responsable: input.responsable,
     },
   });
 
@@ -79,8 +67,6 @@ export async function updateWarehouse(
     id: warehouse.id,
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
-    capacidad: warehouse.capacidad,
-    responsable: warehouse.responsable,
     estado: warehouse.estado,
     createdAt: warehouse.createdAt,
     updatedAt: warehouse.updatedAt,

@@ -281,8 +281,8 @@ export function CustomersScreen() {
     {
       header: "Total Compras",
       accessor: (row: Customer) => `$${row.totalCompras.toFixed(2)}`,
-      headerClassName: "min-w-[140px] text-right",
-      className: "text-right font-medium",
+      headerClassName: "min-w-[140px] text-center",
+      className: "text-center font-medium",
     },
     {
       header: "Última Compra",
@@ -321,7 +321,7 @@ export function CustomersScreen() {
           </Button>
         </div>
       ),
-      headerClassName: "min-w-[120px] text-right",
+      headerClassName: "min-w-[120px] text-center",
       sticky: true,
     },
   ];

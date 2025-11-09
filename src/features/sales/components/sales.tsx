@@ -184,10 +184,12 @@ export function Sales() {
         pageSize={pageSize}
         onPageChange={(next) => {
           const normalized = Math.max(1, next);
-          setPage(normalized);
-          queueMicrotask(() => {
-            void refetch();
-          });
+          if (normalized !== page) {
+            setPage(normalized);
+            queueMicrotask(() => {
+              void refetch();
+            });
+          }
         }}
         onPageSizeChange={(nextSize) => {
           setPageSize(nextSize);
@@ -200,7 +202,8 @@ export function Sales() {
         searchValue={search}
         onSearchChange={(value) => {
           setSearch(value);
-          setPage(1);
+          // El search está en el queryKey, React Query hará refetch automáticamente
+          // No necesitamos cambiar la página manualmente aquí
         }}
         filters={filterDescriptors}
         filterState={filterState}

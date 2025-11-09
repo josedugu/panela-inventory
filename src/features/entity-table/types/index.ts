@@ -63,6 +63,8 @@ export interface EntityTableConfig<TData> {
   onDelete?: (row: TData) => void;
   onDuplicate?: (row: TData) => void;
   getRowId?: (row: TData) => string;
+  showIndexColumn?: boolean;
+  getIndexValue?: (row: TData, index: number) => number | string;
 }
 
 export interface EntityTableLayoutProps<TData> {
