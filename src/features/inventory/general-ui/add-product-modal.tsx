@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import {
   Dialog,
   DialogContent,
@@ -24,10 +25,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { createInventoryMovementAction } from "@/features/inventory/actions/create-inventory-movement";
 import {
   getMovementFormProducts,
+  getMovementFormSuppliers,
   getMovementFormTypes,
+  getMovementFormWarehouses,
 } from "@/features/inventory/actions/get-movement-form-options";
 
-type FormField = "product" | "movementType" | "cost" | "quantity" | "imeis";
+type FormField =
+  | "product"
+  | "movementType"
+  | "cost"
+  | "quantity"
+  | "imeis"
+  | "warehouse"
+  | "supplier";
 type FieldErrors = Partial<Record<FormField, string[]>>;
 
 export interface InventoryMovementInitialData {
@@ -36,6 +46,8 @@ export interface InventoryMovementInitialData {
   cost?: string;
   quantity?: string;
   imeis?: string;
+  warehouse?: string;
+  supplier?: string;
 }
 
 interface InventoryMovementModalProps {
@@ -71,6 +83,8 @@ export function InventoryMovementModal({
       cost: initialData?.cost ?? "",
       quantity: initialQuantity,
       imeis: initialData?.imeis ?? "",
+      warehouse: initialData?.warehouse ?? "",
+      supplier: initialData?.supplier ?? "",
     };
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -85,6 +99,18 @@ export function InventoryMovementModal({
   const { data: movementTypes, isLoading: isLoadingMovementTypes } = useQuery({
     queryKey: ["inventory-movement-types"],
     queryFn: getMovementFormTypes,
+    enabled: isOpen,
+  });
+
+  const { data: warehouses, isLoading: isLoadingWarehouses } = useQuery({
+    queryKey: ["inventory-movement-warehouses"],
+    queryFn: getMovementFormWarehouses,
+    enabled: isOpen,
+  });
+
+  const { data: suppliers, isLoading: isLoadingSuppliers } = useQuery({
+    queryKey: ["inventory-movement-suppliers"],
+    queryFn: getMovementFormSuppliers,
     enabled: isOpen,
   });
 
@@ -103,6 +129,8 @@ export function InventoryMovementModal({
       payload.set("cost", formData.cost);
       payload.set("quantity", formData.quantity);
       payload.set("imeis", formData.imeis);
+      payload.set("warehouse", formData.warehouse);
+      payload.set("supplier", formData.supplier);
 
       const result = await createInventoryMovementAction(payload);
 
@@ -119,6 +147,8 @@ export function InventoryMovementModal({
         cost: "",
         quantity: "",
         imeis: "",
+        warehouse: "",
+        supplier: "",
       });
       toast.success("Movimiento creado exitosamente");
       onSuccess?.();
@@ -239,14 +269,68 @@ export function InventoryMovementModal({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="warehouse">Bodega</Label>
+                <Select
+                  value={formData.warehouse}
+                  onValueChange={(value) => handleChange("warehouse", value)}
+                  disabled={isReadOnly}
+                >
+                  <SelectTrigger
+                    id="warehouse"
+                    disabled={isLoadingWarehouses || isReadOnly}
+                  >
+                    <SelectValue placeholder="Seleccionar bodega" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {warehouses?.map((warehouse) => (
+                      <SelectItem key={warehouse.id} value={warehouse.id}>
+                        {warehouse.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldErrors.warehouse ? (
+                  <p className="text-xs text-error">
+                    {fieldErrors.warehouse[0]}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="supplier">Proveedor</Label>
+                <Select
+                  value={formData.supplier}
+                  onValueChange={(value) => handleChange("supplier", value)}
+                  disabled={isReadOnly}
+                >
+                  <SelectTrigger
+                    id="supplier"
+                    disabled={isLoadingSuppliers || isReadOnly}
+                  >
+                    <SelectValue placeholder="Seleccionar proveedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers?.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldErrors.supplier ? (
+                  <p className="text-xs text-error">
+                    {fieldErrors.supplier[0]}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="cost">Costo Unitario *</Label>
-                <Input
+                <CurrencyInput
                   id="cost"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
+                  placeholder="0"
                   value={formData.cost}
-                  onChange={(e) => handleChange("cost", e.target.value)}
+                  onChange={(value) => handleChange("cost", value)}
                   required
                   readOnly={isReadOnly}
                   disabled={isReadOnly}
