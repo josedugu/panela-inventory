@@ -1,12 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import {
   AlertDialog,
@@ -19,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +44,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import type { ProductDTO } from "@/data/repositories/master.products.repository";
 import type {
   BrandDTO,
@@ -62,6 +62,11 @@ import {
   upsertProductAction,
 } from "@/features/master-data/actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
+import { getProductColumns } from "@/features/master-data/productos/columns";
+import {
+  type ProductFormValues,
+  productFormSchema,
+} from "@/features/master-data/productos/schemas";
 
 interface ProductsSectionProps {
   products: ProductDTO[];
@@ -73,17 +78,6 @@ interface ProductsSectionProps {
   colors: ColorDTO[];
   onRefresh: () => void;
 }
-
-const productFormSchema = z.object({
-  tipoProductoId: z.string().uuid("Selecciona un tipo de producto válido"),
-  marcaId: z.string().uuid("Selecciona una marca válida"),
-  modeloId: z.string().uuid("Selecciona un modelo válido"),
-  almacenamientoId: z.string().uuid("Selecciona un almacenamiento válido"),
-  ramId: z.string().uuid("Selecciona una RAM válida"),
-  colorId: z.string().uuid("Selecciona un color válido"),
-});
-
-type ProductFormValues = z.infer<typeof productFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
 
@@ -151,6 +145,9 @@ export function ProductsSection({
       almacenamientoId: "",
       ramId: "",
       colorId: "",
+      pvp: "",
+      descripcion: "",
+      estado: true,
     },
   });
 
@@ -202,6 +199,9 @@ export function ProductsSection({
       almacenamientoId: "",
       ramId: "",
       colorId: "",
+      pvp: "",
+      descripcion: "",
+      estado: true,
     });
     setEditingProduct(null);
     setDialogMode("create");
@@ -215,6 +215,9 @@ export function ProductsSection({
       almacenamientoId: product.almacenamientoId ?? "",
       ramId: product.ramId ?? "",
       colorId: product.colorId ?? "",
+      pvp: product.pvp?.toString() ?? "",
+      descripcion: product.descripcion ?? "",
+      estado: product.estado ?? true,
     });
     setEditingProduct(product);
     setDialogMode("edit");
@@ -243,6 +246,9 @@ export function ProductsSection({
   const onSubmit = (data: ProductFormValues) => {
     if (isSubmitting) return;
 
+    const pvpNumber =
+      data.pvp && data.pvp !== "" ? Number.parseFloat(data.pvp) : undefined;
+
     const payload = {
       id: editingProduct?.id,
       tipoProductoId: data.tipoProductoId,
@@ -251,6 +257,9 @@ export function ProductsSection({
       almacenamientoId: data.almacenamientoId,
       ramId: data.ramId,
       colorId: data.colorId,
+      pvp: !Number.isNaN(pvpNumber) ? pvpNumber : undefined,
+      descripcion: data.descripcion,
+      estado: data.estado,
     };
 
     startSubmitTransition(async () => {
@@ -288,81 +297,11 @@ export function ProductsSection({
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<ProductDTO>[] = [
-    {
-      accessorKey: "tipoProductoNombre",
-      header: "Tipo",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.tipoProductoNombre ?? "—"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "marcaNombre",
-      header: "Marca",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.marcaNombre ?? "—"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "modeloNombre",
-      header: "Modelo",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.modeloNombre ?? "—"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "costo",
-      header: "Costo",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.costo
-            ? `$${row.original.costo.toLocaleString("es-CO")}`
-            : "—"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "cantidad",
-      header: "Cantidad",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.cantidad}
-        </div>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openDeleteDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4 text-error" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const columns = getProductColumns({
+    onEdit: openEditDialog,
+    onDelete: openDeleteDialog,
+    isBusy,
+  });
 
   const config = {
     title: "Productos",
@@ -582,6 +521,64 @@ export function ProductsSection({
                   )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="pvp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Precio de Venta al Público (PVP)</FormLabel>
+                    <FormControl>
+                      <CurrencyInput
+                        placeholder="Ingresa el precio de venta"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="descripcion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Ingresa una descripción del producto"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={isSubmitting}
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="estado"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Estado</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        El producto estará activo o inactivo
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               <DialogFooter className="gap-2 sm:gap-3">
                 <Button
                   type="button"

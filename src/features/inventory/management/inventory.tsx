@@ -1,8 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
-import { MapPin } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -29,10 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  type TableAction,
-  TableActionsCell,
-} from "@/components/ui/table-actions-cell";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import { useEntityFilters } from "@/features/entity-table/hooks/use-entity-filters";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
@@ -59,6 +53,7 @@ import {
   type GetProductsSuccess,
   getProductsAction,
 } from "./actions/get-products";
+import { getInventoryColumns } from "./columns";
 
 interface NumericFilterFieldProps {
   label: string;
@@ -324,61 +319,6 @@ export function Inventory() {
     ? filteredData.length
     : (data?.total ?? filteredData.length);
 
-  const columns: ColumnDef<InventoryProduct>[] = [
-    {
-      accessorKey: "name",
-      header: "Nombre",
-      cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
-      size: 300,
-    },
-    {
-      accessorKey: "quantity",
-      header: "Cantidad",
-      cell: ({ row }) => (
-        <div className="text-center">{row.original.quantity}</div>
-      ),
-      size: 100,
-    },
-    {
-      accessorKey: "pvp",
-      header: "PVP",
-      cell: ({ row }) => (
-        <div className="text-center">${row.original.pvp.toFixed(2)}</div>
-      ),
-      size: 120,
-    },
-    {
-      accessorKey: "cost",
-      header: "Costo",
-      cell: ({ row }) => (
-        <div className="text-center">${row.original.cost.toFixed(2)}</div>
-      ),
-      size: 120,
-    },
-    {
-      accessorKey: "category",
-      header: "Categoría",
-      cell: ({ row }) => <div>{row.original.category}</div>,
-      size: 160,
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => {
-        const actions: TableAction<InventoryProduct>[] = [
-          {
-            label: "Ubicaciones",
-            icon: <MapPin className="h-4 w-4" />,
-            onClick: () => handleViewLocations(row.original),
-          },
-        ];
-
-        return <TableActionsCell row={row.original} actions={actions} />;
-      },
-      size: 100,
-    },
-  ];
-
   const handleViewLocations = async (product: InventoryProduct) => {
     setSelectedProduct(product);
     setIsLocationsModalOpen(true);
@@ -399,6 +339,10 @@ export function Inventory() {
       setIsLoadingLocations(false);
     }
   };
+
+  const columns = getInventoryColumns({
+    onViewLocations: handleViewLocations,
+  });
 
   const handleCloseLocationsModal = () => {
     setIsLocationsModalOpen(false);

@@ -1,12 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import {
   AlertDialog,
@@ -43,7 +40,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/components/ui/utils";
 import type { CostCenterDTO } from "@/data/repositories/shared.repository";
 import type { RoleDTO, UserDTO } from "@/data/repositories/users.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
@@ -53,6 +49,11 @@ import {
   upsertUserAction,
 } from "@/features/master-data/actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
+import { getUserColumns } from "@/features/master-data/usuarios/columns";
+import {
+  type UserFormValues,
+  userFormSchema,
+} from "@/features/master-data/usuarios/schemas";
 
 interface UsersSectionProps {
   users: UserDTO[];
@@ -60,17 +61,6 @@ interface UsersSectionProps {
   roles: RoleDTO[];
   onRefresh: () => void;
 }
-
-const userFormSchema = z.object({
-  nombre: z.string().min(1, "Nombre requerido"),
-  email: z.string().email("Email inválido"),
-  telefono: z.string().optional(),
-  rolId: z.string().uuid("Selecciona un rol válido"),
-  centroCostoId: z.string().optional(),
-  estado: z.enum(["activo", "inactivo"]),
-});
-
-type UserFormValues = z.infer<typeof userFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
 
@@ -218,79 +208,11 @@ export function UsersSection({
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<UserDTO>[] = [
-    {
-      accessorKey: "nombre",
-      header: "Nombre",
-      cell: ({ row }) => (
-        <span className="font-medium text-text">{row.original.nombre}</span>
-      ),
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "telefono",
-      header: "Teléfono",
-      cell: ({ row }) => row.original.telefono ?? "—",
-    },
-    {
-      accessorKey: "rolNombre",
-      header: "Rol",
-      cell: ({ row }) => row.original.rolNombre ?? "Sin rol",
-    },
-    {
-      accessorKey: "centroCostoNombre",
-      header: "Centro de costo",
-      cell: ({ row }) => row.original.centroCostoNombre ?? "Sin asignar",
-    },
-    {
-      id: "estado",
-      header: "Estado",
-      cell: ({ row }) => {
-        const isActive = row.original.estado;
-        return (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-              isActive
-                ? "bg-success-light text-success-foreground"
-                : "bg-destructive/10 text-destructive",
-            )}
-          >
-            {isActive ? "Activo" : "Inactivo"}
-          </span>
-        );
-      },
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openDeleteDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4 text-error" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const columns = getUserColumns({
+    onEdit: openEditDialog,
+    onDelete: openDeleteDialog,
+    isBusy,
+  });
 
   const config = {
     title: "Usuarios",

@@ -1,12 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,10 +32,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  type TableAction,
-  TableActionsCell,
-} from "@/components/ui/table-actions-cell";
 import { Textarea } from "@/components/ui/textarea";
 import type { TipoProductoDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
@@ -48,18 +41,16 @@ import {
   upsertTipoProductoAction,
 } from "@/features/master-data/actions/tipo-producto.actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
+import { getTipoProductoColumns } from "@/features/master-data/tipo-productos/columns";
+import {
+  type TipoProductoFormValues,
+  tipoProductoFormSchema,
+} from "@/features/master-data/tipo-productos/schemas";
 
 interface TipoProductosSectionProps {
   tipoProductos: TipoProductoDTO[];
   onRefresh: () => void;
 }
-
-const tipoProductoFormSchema = z.object({
-  nombre: z.string().min(1, "Nombre requerido"),
-  descripcion: z.string().optional(),
-});
-
-type TipoProductoFormValues = z.infer<typeof tipoProductoFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
 
@@ -189,43 +180,11 @@ export function TipoProductosSection({
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<TipoProductoDTO>[] = [
-    {
-      accessorKey: "nombre",
-      header: "Nombre",
-      cell: ({ row }) => (
-        <span className="font-medium text-text">{row.original.nombre}</span>
-      ),
-    },
-    {
-      accessorKey: "descripcion",
-      header: "Descripción",
-      cell: ({ row }) => row.original.descripcion ?? "—",
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => {
-        const actions: TableAction<TipoProductoDTO>[] = [
-          {
-            label: "Editar",
-            icon: <Pencil className="h-4 w-4" />,
-            onClick: () => openEditDialog(row.original),
-            disabled: isBusy,
-          },
-          {
-            label: "Eliminar",
-            icon: <Trash2 className="h-4 w-4" />,
-            onClick: () => openDeleteDialog(row.original),
-            disabled: isBusy,
-            variant: "destructive",
-          },
-        ];
-
-        return <TableActionsCell row={row.original} actions={actions} />;
-      },
-    },
-  ];
+  const columns = getTipoProductoColumns({
+    onEdit: openEditDialog,
+    onDelete: openDeleteDialog,
+    isBusy,
+  });
 
   const config = {
     title: "Tipos de Producto",

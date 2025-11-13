@@ -80,8 +80,12 @@ const SECTION_RENDERERS: Record<MasterDataSection, SectionRenderer> = {
   "centros-costo": ({ costCenters = [], onRefresh }) => (
     <CostCentersSection costCenters={costCenters} onRefresh={onRefresh} />
   ),
-  bodegas: ({ warehouses = [], onRefresh }) => (
-    <WarehousesSection warehouses={warehouses} onRefresh={onRefresh} />
+  bodegas: ({ warehouses = [], costCenters = [], onRefresh }) => (
+    <WarehousesSection
+      warehouses={warehouses}
+      costCenters={costCenters}
+      onRefresh={onRefresh}
+    />
   ),
   colores: ({ colors = [], onRefresh }) => (
     <ColorsSection colors={colors} onRefresh={onRefresh} />

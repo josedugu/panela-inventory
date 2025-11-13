@@ -7,6 +7,7 @@ export interface WarehouseDTO {
   codigo: string;
   nombre: string;
   estado: boolean;
+  centroCostoId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -14,6 +15,7 @@ export interface WarehouseDTO {
 interface WarehouseInput {
   codigo: string;
   nombre: string;
+  centroCostoId?: string | null;
 }
 
 export async function listWarehouses(): Promise<WarehouseDTO[]> {
@@ -26,6 +28,7 @@ export async function listWarehouses(): Promise<WarehouseDTO[]> {
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
     estado: warehouse.estado,
+    centroCostoId: warehouse.centroCostoId,
     createdAt: warehouse.createdAt,
     updatedAt: warehouse.updatedAt,
   }));
@@ -38,6 +41,7 @@ export async function createWarehouse(
     data: {
       codigo: input.codigo,
       nombre: input.nombre,
+      centroCostoId: input.centroCostoId || undefined,
     },
   });
 
@@ -46,6 +50,7 @@ export async function createWarehouse(
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
     estado: warehouse.estado,
+    centroCostoId: warehouse.centroCostoId,
     createdAt: warehouse.createdAt,
     updatedAt: warehouse.updatedAt,
   };
@@ -60,6 +65,7 @@ export async function updateWarehouse(
     data: {
       codigo: input.codigo,
       nombre: input.nombre,
+      centroCostoId: input.centroCostoId || undefined,
     },
   });
 
@@ -68,6 +74,7 @@ export async function updateWarehouse(
     codigo: warehouse.codigo,
     nombre: warehouse.nombre,
     estado: warehouse.estado,
+    centroCostoId: warehouse.centroCostoId,
     createdAt: warehouse.createdAt,
     updatedAt: warehouse.updatedAt,
   };

@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
@@ -18,6 +17,7 @@ import {
   type InventoryMovementDTO,
   type MovementOperation,
 } from "./actions/get-inventory-movements";
+import { getInventoryMovementColumns } from "./columns";
 
 const OPERATION_LABELS: Record<MovementOperation, string> = {
   ingreso: "Ingreso",
@@ -25,17 +25,6 @@ const OPERATION_LABELS: Record<MovementOperation, string> = {
 };
 
 type InventoryMovement = InventoryMovementDTO;
-
-const currencyFormatter = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-});
-
-const dateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
 
 export function InventoryMovements() {
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
@@ -198,66 +187,7 @@ export function InventoryMovements() {
     return base;
   }, [filterOptions, normalizedOptions]);
 
-  const columns: ColumnDef<InventoryMovement>[] = useMemo(
-    () => [
-      {
-        accessorKey: "createdAt",
-        header: "Fecha",
-        cell: ({ row }) => (
-          <div className="text-sm text-text-secondary">
-            {dateTimeFormatter.format(new Date(row.original.createdAt))}
-          </div>
-        ),
-        size: 200,
-      },
-      {
-        accessorKey: "productLabel",
-        header: "Producto",
-        cell: ({ row }) => (
-          <div className="wrap-break-word" title={row.original.productLabel}>
-            {row.original.productLabel}
-          </div>
-        ),
-        size: 240,
-      },
-      {
-        accessorKey: "quantity",
-        header: "Cantidad",
-        cell: ({ row }) => (
-          <div className="text-center font-medium">{row.original.quantity}</div>
-        ),
-        size: 120,
-        minSize: 80,
-      },
-      {
-        accessorKey: "unitCost",
-        header: "Costo unitario",
-        cell: ({ row }) => (
-          <div className="text-center">
-            {currencyFormatter.format(row.original.unitCost)}
-          </div>
-        ),
-        size: 150,
-      },
-      {
-        accessorKey: "totalCost",
-        header: "Total",
-        cell: ({ row }) => (
-          <div className="text-center">
-            {currencyFormatter.format(row.original.totalCost)}
-          </div>
-        ),
-        size: 150,
-      },
-      {
-        accessorKey: "createdBy",
-        header: "Creado por",
-        cell: ({ row }) => row.original.createdBy ?? "-",
-        size: 200,
-      },
-    ],
-    [],
-  );
+  const columns = useMemo(() => getInventoryMovementColumns(), []);
 
   const handlePageChange = useCallback(
     (nextPage: number) => {

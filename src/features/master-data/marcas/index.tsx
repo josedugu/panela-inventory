@@ -1,12 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import {
   AlertDialog,
@@ -45,18 +42,16 @@ import {
   upsertBrandAction,
 } from "@/features/master-data/actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
+import { getBrandColumns } from "@/features/master-data/marcas/columns";
+import {
+  type BrandFormValues,
+  brandFormSchema,
+} from "@/features/master-data/marcas/schemas";
 
 interface BrandsSectionProps {
   brands: BrandDTO[];
   onRefresh: () => void;
 }
-
-const brandFormSchema = z.object({
-  nombre: z.string().min(1, "Nombre requerido"),
-  descripcion: z.string().optional(),
-});
-
-type BrandFormValues = z.infer<typeof brandFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
 
@@ -183,46 +178,11 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<BrandDTO>[] = [
-    {
-      accessorKey: "nombre",
-      header: "Nombre",
-      cell: ({ row }) => (
-        <span className="font-medium text-text">{row.original.nombre}</span>
-      ),
-    },
-    {
-      accessorKey: "descripcion",
-      header: "Descripción",
-      cell: ({ row }) => row.original.descripcion ?? "—",
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openDeleteDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4 text-error" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const columns = getBrandColumns({
+    onEdit: openEditDialog,
+    onDelete: openDeleteDialog,
+    isBusy,
+  });
 
   const config = {
     title: "Marcas",

@@ -280,6 +280,11 @@ export async function deleteCostCenterAction(
 const warehouseSchema = z.object({
   codigo: z.string().min(1, "El código es obligatorio"),
   nombre: z.string().min(1, "El nombre es obligatorio"),
+  centroCostoId: z
+    .string()
+    .uuid()
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 export async function upsertWarehouseAction(
@@ -472,6 +477,16 @@ const productSchema = z.object({
   almacenamientoId: z.string().uuid("Selecciona un almacenamiento válido"),
   ramId: z.string().uuid("Selecciona una RAM válida"),
   colorId: z.string().uuid("Selecciona un color válido"),
+  pvp: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val || val === "") return undefined;
+      const num = Number.parseFloat(val);
+      return Number.isNaN(num) ? undefined : num;
+    }),
+  descripcion: z.string().optional(),
+  estado: z.boolean().optional(),
 });
 
 export async function upsertProductAction(
@@ -546,10 +561,13 @@ export async function getSectionData(
       return {
         costCenters: await listCostCenters(),
       };
-    case "bodegas":
-      return {
-        warehouses: await listWarehouses(),
-      };
+    case "bodegas": {
+      const [warehouses, costCenters] = await Promise.all([
+        listWarehouses(),
+        listCostCenters(),
+      ]);
+      return { warehouses, costCenters };
+    }
     case "colores":
       return {
         colors: await listColors(),

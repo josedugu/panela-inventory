@@ -1,7 +1,9 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -9,11 +11,19 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -29,16 +39,10 @@ import {
   getMovementFormTypes,
   getMovementFormWarehouses,
 } from "@/features/inventory/actions/get-movement-form-options";
-
-type FormField =
-  | "product"
-  | "movementType"
-  | "cost"
-  | "quantity"
-  | "imeis"
-  | "warehouse"
-  | "supplier";
-type FieldErrors = Partial<Record<FormField, string[]>>;
+import {
+  type InventoryMovementFormValues,
+  inventoryMovementFormSchema,
+} from "@/features/inventory/schemas/movement-form.schemas";
 
 export interface InventoryMovementInitialData {
   product?: string;
@@ -65,7 +69,9 @@ export function InventoryMovementModal({
   initialData,
   isReadOnly = false,
 }: InventoryMovementModalProps) {
-  const [formData, setFormData] = useState(() => {
+  const [isPending, startTransition] = useTransition();
+
+  const defaultValues = useMemo(() => {
     const imeisList = initialData?.imeis
       ? initialData.imeis
           .split(",")
@@ -86,9 +92,12 @@ export function InventoryMovementModal({
       warehouse: initialData?.warehouse ?? "",
       supplier: initialData?.supplier ?? "",
     };
+  }, [initialData]);
+
+  const form = useForm<InventoryMovementFormValues>({
+    resolver: zodResolver(inventoryMovementFormSchema),
+    defaultValues,
   });
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [isPending, startTransition] = useTransition();
 
   const { data: products, isLoading: isLoadingProducts } = useQuery({
     queryKey: ["inventory-movement-products"],
@@ -114,9 +123,40 @@ export function InventoryMovementModal({
     enabled: isOpen,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Resetear formulario cuando cambia initialData o isOpen
+  useEffect(() => {
+    if (isOpen) {
+      form.reset(defaultValues);
+    }
+  }, [isOpen, defaultValues, form]);
 
+  // Observar cambios en movementType e imeis para calcular quantity automáticamente
+  const movementType = form.watch("movementType");
+  const imeis = form.watch("imeis");
+
+  const selectedMovementType = useMemo(
+    () => movementTypes?.find((type) => type.id === movementType),
+    [movementTypes, movementType],
+  );
+
+  const isIngresoMovement = Boolean(selectedMovementType?.ingreso);
+
+  // Calcular quantity automáticamente cuando es ingreso y hay IMEIs
+  useEffect(() => {
+    if (isIngresoMovement && imeis) {
+      const imeiCount = imeis
+        .split(",")
+        .map((imei) => imei.trim())
+        .filter(Boolean).length;
+      if (imeiCount > 0) {
+        form.setValue("quantity", imeiCount.toString(), {
+          shouldValidate: true,
+        });
+      }
+    }
+  }, [isIngresoMovement, imeis, form]);
+
+  const onSubmit = (data: InventoryMovementFormValues) => {
     if (isReadOnly || isPending) {
       onClose();
       return;
@@ -124,81 +164,33 @@ export function InventoryMovementModal({
 
     startTransition(async () => {
       const payload = new FormData();
-      payload.set("product", formData.product);
-      payload.set("movementType", formData.movementType);
-      payload.set("cost", formData.cost);
-      payload.set("quantity", formData.quantity);
-      payload.set("imeis", formData.imeis);
-      payload.set("warehouse", formData.warehouse);
-      payload.set("supplier", formData.supplier);
+      payload.set("product", data.product);
+      payload.set("movementType", data.movementType);
+      payload.set("cost", data.cost);
+      payload.set("quantity", data.quantity);
+      payload.set("imeis", data.imeis ?? "");
+      payload.set("warehouse", data.warehouse ?? "");
+      payload.set("supplier", data.supplier ?? "");
 
       const result = await createInventoryMovementAction(payload);
 
       if (!result.success) {
-        setFieldErrors(result.errors ?? {});
+        // Manejar errores del servidor
+        if (result.errors) {
+          Object.entries(result.errors).forEach(([field, errors]) => {
+            form.setError(field as keyof InventoryMovementFormValues, {
+              message: errors?.[0] ?? "Error de validación",
+            });
+          });
+        }
         toast.error(result.error ?? "No se pudo crear el movimiento");
         return;
       }
 
-      setFieldErrors({});
-      setFormData({
-        product: "",
-        movementType: "",
-        cost: "",
-        quantity: "",
-        imeis: "",
-        warehouse: "",
-        supplier: "",
-      });
+      form.reset();
       toast.success("Movimiento creado exitosamente");
       onSuccess?.();
       onClose();
-    });
-  };
-
-  const selectedMovementType = movementTypes?.find(
-    (type) => type.id === formData.movementType,
-  );
-  const isIngresoMovement = Boolean(selectedMovementType?.ingreso);
-
-  const handleChange = (field: FormField, value: string) => {
-    if (isReadOnly) {
-      return;
-    }
-
-    setFormData((prev) => {
-      const next = { ...prev, [field]: value };
-      const activeMovementType = movementTypes?.find(
-        (type) => type.id === next.movementType,
-      );
-
-      if (activeMovementType?.ingreso) {
-        const imeiCount = next.imeis
-          .split(",")
-          .map((imei) => imei.trim())
-          .filter(Boolean).length;
-        next.quantity = imeiCount > 0 ? imeiCount.toString() : "";
-      }
-
-      return next;
-    });
-
-    setFieldErrors((prev) => {
-      if (!prev[field] && field !== "imeis" && field !== "movementType") {
-        return prev;
-      }
-
-      const { [field]: _, ...rest } = prev;
-
-      if (field === "imeis" || field === "movementType") {
-        if ("quantity" in rest) {
-          const { quantity: __, ...restWithoutQuantity } = rest;
-          return restWithoutQuantity;
-        }
-        return rest;
-      }
-
-      return rest;
     });
   };
 
@@ -211,182 +203,199 @@ export function InventoryMovementModal({
             Seleccione un producto y los detalles del movimiento.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="product">Producto *</Label>
-                <Select
-                  value={formData.product}
-                  onValueChange={(value) => handleChange("product", value)}
-                  disabled={isReadOnly}
-                >
-                  <SelectTrigger
-                    id="product"
-                    disabled={isLoadingProducts || isReadOnly}
-                  >
-                    <SelectValue placeholder="Seleccionar producto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products?.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fieldErrors.product ? (
-                  <p className="text-xs text-error">{fieldErrors.product[0]}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="movementType">Tipo de Movimiento *</Label>
-                <Select
-                  value={formData.movementType}
-                  onValueChange={(value) => handleChange("movementType", value)}
-                  disabled={isReadOnly}
-                >
-                  <SelectTrigger
-                    id="movementType"
-                    disabled={isLoadingMovementTypes || isReadOnly}
-                  >
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {movementTypes?.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fieldErrors.movementType ? (
-                  <p className="text-xs text-error">
-                    {fieldErrors.movementType[0]}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="warehouse">Bodega</Label>
-                <Select
-                  value={formData.warehouse}
-                  onValueChange={(value) => handleChange("warehouse", value)}
-                  disabled={isReadOnly}
-                >
-                  <SelectTrigger
-                    id="warehouse"
-                    disabled={isLoadingWarehouses || isReadOnly}
-                  >
-                    <SelectValue placeholder="Seleccionar bodega" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {warehouses?.map((warehouse) => (
-                      <SelectItem key={warehouse.id} value={warehouse.id}>
-                        {warehouse.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fieldErrors.warehouse ? (
-                  <p className="text-xs text-error">
-                    {fieldErrors.warehouse[0]}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Proveedor</Label>
-                <Select
-                  value={formData.supplier}
-                  onValueChange={(value) => handleChange("supplier", value)}
-                  disabled={isReadOnly}
-                >
-                  <SelectTrigger
-                    id="supplier"
-                    disabled={isLoadingSuppliers || isReadOnly}
-                  >
-                    <SelectValue placeholder="Seleccionar proveedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers?.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fieldErrors.supplier ? (
-                  <p className="text-xs text-error">
-                    {fieldErrors.supplier[0]}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cost">Costo Unitario *</Label>
-                <CurrencyInput
-                  id="cost"
-                  placeholder="0"
-                  value={formData.cost}
-                  onChange={(value) => handleChange("cost", value)}
-                  required
-                  readOnly={isReadOnly}
-                  disabled={isReadOnly}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="product"
+                  render={({ field }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>Producto *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isReadOnly || isLoadingProducts}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar producto" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {products?.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {fieldErrors.cost ? (
-                  <p className="text-xs text-error">{fieldErrors.cost[0]}</p>
-                ) : null}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Cantidad *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  placeholder="0"
-                  value={formData.quantity}
-                  onChange={(e) => handleChange("quantity", e.target.value)}
-                  required
-                  disabled={isIngresoMovement || isReadOnly}
-                  readOnly={isReadOnly}
+                <FormField
+                  control={form.control}
+                  name="movementType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Movimiento *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isReadOnly || isLoadingMovementTypes}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {movementTypes?.map((type) => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {type.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {fieldErrors.quantity ? (
-                  <p className="text-xs text-error">
-                    {fieldErrors.quantity[0]}
-                  </p>
-                ) : null}
+
+                <FormField
+                  control={form.control}
+                  name="warehouse"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bodega</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
+                        disabled={isReadOnly || isLoadingWarehouses}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar bodega" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {warehouses?.map((warehouse) => (
+                            <SelectItem key={warehouse.id} value={warehouse.id}>
+                              {warehouse.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="supplier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Proveedor</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
+                        disabled={isReadOnly || isLoadingSuppliers}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar proveedor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {suppliers?.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Costo Unitario *</FormLabel>
+                      <FormControl>
+                        <CurrencyInput
+                          placeholder="0"
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          readOnly={isReadOnly}
+                          disabled={isReadOnly}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cantidad *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          disabled={isIngresoMovement || isReadOnly}
+                          readOnly={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="imeis">IMEIs (separados por coma)</Label>
-              <Textarea
-                id="imeis"
-                placeholder="ej. 123..., 456..."
-                value={formData.imeis}
-                onChange={(e) => handleChange("imeis", e.target.value)}
-                className="min-h-[80px]"
-                readOnly={isReadOnly}
-                disabled={isReadOnly}
+              <FormField
+                control={form.control}
+                name="imeis"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>IMEIs (separados por coma)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="ej. 123..., 456..."
+                        className="min-h-[80px]"
+                        readOnly={isReadOnly}
+                        disabled={isReadOnly}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {fieldErrors.imeis ? (
-                <p className="text-xs text-error">{fieldErrors.imeis[0]}</p>
-              ) : null}
             </div>
-          </div>
 
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
-              {isReadOnly ? "Cerrar" : "Cancelar"}
-            </Button>
-            {isReadOnly ? null : (
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "Guardando..." : "Guardar Movimiento"}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                {isReadOnly ? "Cerrar" : "Cancelar"}
               </Button>
-            )}
-          </div>
-        </form>
+              {isReadOnly ? null : (
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? "Guardando..." : "Guardar Movimiento"}
+                </Button>
+              )}
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
