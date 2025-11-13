@@ -1,12 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import {
   AlertDialog,
@@ -44,26 +41,16 @@ import {
   upsertRamAction,
 } from "@/features/master-data/actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
+import { getRamColumns } from "@/features/master-data/ram/columns";
+import {
+  type RamFormValues,
+  ramFormSchema,
+} from "@/features/master-data/ram/schemas";
 
 interface RamSectionProps {
   ramOptions: RamDTO[];
   onRefresh: () => void;
 }
-
-const ramFormSchema = z.object({
-  capacidad: z
-    .string()
-    .min(1, "Capacidad requerida")
-    .refine(
-      (val) => {
-        const num = Number.parseInt(val, 10);
-        return !Number.isNaN(num) && num > 0;
-      },
-      { message: "La capacidad debe ser un número positivo" },
-    ),
-});
-
-type RamFormValues = z.infer<typeof ramFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
 
@@ -185,43 +172,11 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<RamDTO>[] = [
-    {
-      accessorKey: "capacidad",
-      header: "Capacidad",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.capacidad} GB
-        </div>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openDeleteDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4 text-error" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const columns = getRamColumns({
+    onEdit: openEditDialog,
+    onDelete: openDeleteDialog,
+    isBusy,
+  });
 
   const config = {
     title: "RAM",

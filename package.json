@@ -9,7 +9,7 @@
     "lint": "biome check",
     "format": "biome format --write",
     "postinstall": "prisma generate",
-    "check-file-lengths": "bun check-file-lengths.ts"
+    "lengths": "bun check-file-lengths.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

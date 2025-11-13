@@ -1,12 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import {
   AlertDialog,
@@ -36,6 +33,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { CostCenterDTO } from "@/data/repositories/shared.repository";
 import type { WarehouseDTO } from "@/data/repositories/warehouses.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
@@ -43,19 +48,18 @@ import {
   deleteWarehouseAction,
   upsertWarehouseAction,
 } from "@/features/master-data/actions";
+import { getWarehouseColumns } from "@/features/master-data/bodegas/columns";
+import {
+  type WarehouseFormValues,
+  warehouseFormSchema,
+} from "@/features/master-data/bodegas/schemas";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
 
 interface WarehousesSectionProps {
   warehouses: WarehouseDTO[];
+  costCenters: CostCenterDTO[];
   onRefresh: () => void;
 }
-
-const warehouseFormSchema = z.object({
-  codigo: z.string().min(1, "Código requerido"),
-  nombre: z.string().min(1, "Nombre requerido"),
-});
-
-type WarehouseFormValues = z.infer<typeof warehouseFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
 
@@ -63,6 +67,7 @@ const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
 export function WarehousesSection({
   warehouses,
+  costCenters,
   onRefresh,
 }: WarehousesSectionProps) {
   const {
@@ -106,6 +111,7 @@ export function WarehousesSection({
     defaultValues: {
       codigo: "",
       nombre: "",
+      centroCostoId: "",
     },
   });
 
@@ -113,6 +119,7 @@ export function WarehousesSection({
     form.reset({
       codigo: "",
       nombre: "",
+      centroCostoId: "",
     });
     setEditingWarehouse(null);
     setDialogMode("create");
@@ -122,6 +129,7 @@ export function WarehousesSection({
     form.reset({
       codigo: warehouse.codigo,
       nombre: warehouse.nombre,
+      centroCostoId: warehouse.centroCostoId ?? "",
     });
     setEditingWarehouse(warehouse);
     setDialogMode("edit");
@@ -148,6 +156,7 @@ export function WarehousesSection({
       id: editingWarehouse?.id,
       codigo: data.codigo.trim(),
       nombre: data.nombre.trim(),
+      centroCostoId: data.centroCostoId || undefined,
     };
 
     startSubmitTransition(async () => {
@@ -185,45 +194,11 @@ export function WarehousesSection({
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<WarehouseDTO>[] = [
-    {
-      accessorKey: "codigo",
-      header: "Código",
-      cell: ({ row }) => (
-        <span className="font-mono text-sm">{row.original.codigo}</span>
-      ),
-    },
-    {
-      accessorKey: "nombre",
-      header: "Nombre",
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openDeleteDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4 text-error" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const columns = getWarehouseColumns({
+    onEdit: openEditDialog,
+    onDelete: openDeleteDialog,
+    isBusy,
+  });
 
   const config = {
     title: "Bodegas",
@@ -314,6 +289,35 @@ export function WarehousesSection({
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="centroCostoId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Centro de Costo</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sin centro asignado" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Sin centro asignado</SelectItem>
+                          {costCenters.map((center) => (
+                            <SelectItem key={center.id} value={center.id}>
+                              {center.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

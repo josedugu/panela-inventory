@@ -2,11 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,25 +44,14 @@ import {
   getCustomersAction,
   updateCustomerAction,
 } from "../actions";
+import {
+  type CustomerFormValues,
+  customerFormSchema,
+} from "../schemas/form.schemas";
+import { getCustomerColumns } from "./columns";
 import { ViewCustomerModal } from "./view-customer-modal";
 
 type Customer = CustomerDTO;
-
-const currencyFormatter = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-});
-
-const customerFormSchema = z.object({
-  nombre: z.string().min(1, "Nombre requerido"),
-  email: z.string().email("Email inválido"),
-  telefono: z.string().optional(),
-  whatsapp: z.string().optional(),
-  direccion: z.string().optional(),
-});
-
-type CustomerFormValues = z.infer<typeof customerFormSchema>;
 
 export function Customers() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -170,55 +157,7 @@ export function Customers() {
 
   const total = filteredCustomers.length;
 
-  const columns: ColumnDef<Customer>[] = useMemo(
-    () => [
-      {
-        accessorKey: "nombre",
-        header: "Nombre",
-        cell: ({ row }) => (
-          <div className="font-medium">{row.original.nombre}</div>
-        ),
-        size: 200,
-      },
-      {
-        accessorKey: "email",
-        header: "Email",
-        cell: ({ row }) => (
-          <div className="text-sm text-text-secondary">
-            {row.original.email}
-          </div>
-        ),
-        size: 240,
-      },
-      {
-        accessorKey: "telefono",
-        header: "Teléfono",
-        cell: ({ row }) => (
-          <div className="text-sm">{row.original.telefono ?? "-"}</div>
-        ),
-        size: 150,
-      },
-      {
-        accessorKey: "whatsapp",
-        header: "WhatsApp",
-        cell: ({ row }) => (
-          <div className="text-sm">{row.original.whatsapp ?? "-"}</div>
-        ),
-        size: 150,
-      },
-      {
-        accessorKey: "totalVentas",
-        header: "Total Ventas",
-        cell: ({ row }) => (
-          <div className="text-center font-medium">
-            {currencyFormatter.format(row.original.totalVentas)}
-          </div>
-        ),
-        size: 150,
-      },
-    ],
-    [],
-  );
+  const columns = useMemo(() => getCustomerColumns(), []);
 
   const handlePageChange = useCallback(
     (nextPage: number) => {

@@ -6,7 +6,10 @@ import { prisma } from "@/lib/prisma/client";
 export interface ProductDTO {
   id: string;
   costo?: number | null;
+  pvp?: number | null;
   cantidad: number;
+  descripcion?: string | null;
+  estado: boolean;
   tipoProductoId?: string | null;
   tipoProductoNombre?: string | null;
   imagenUrl?: string | null;
@@ -26,6 +29,7 @@ export interface ProductDTO {
 
 interface ProductInput {
   costo?: number | null;
+  pvp?: number | null;
   descripcion?: string | null;
   tipoProductoId?: string | null;
   imagenUrl?: string | null;
@@ -53,7 +57,10 @@ export async function listProducts(): Promise<ProductDTO[]> {
   return products.map((product) => ({
     id: product.id,
     costo: product.costo ? Number(product.costo) : null,
+    pvp: product.pvp ? Number(product.pvp) : null,
     cantidad: product.cantidad,
+    descripcion: product.descripcion,
+    estado: product.estado,
     tipoProductoId: product.tipoProductoId,
     tipoProductoNombre: product.tipoProducto?.nombre ?? null,
     imagenUrl: product.imagenUrl,
@@ -69,7 +76,6 @@ export async function listProducts(): Promise<ProductDTO[]> {
     ramCapacidad: product.ram?.capacidad ? Number(product.ram.capacidad) : null,
     colorId: product.colorId,
     colorNombre: product.color?.nombre ?? null,
-    estado: product.estado,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   }));
@@ -79,6 +85,7 @@ export async function createProduct(input: ProductInput): Promise<ProductDTO> {
   const product = await prisma.producto.create({
     data: {
       costo: input.costo ? new Prisma.Decimal(input.costo.toString()) : null,
+      pvp: input.pvp ? new Prisma.Decimal(input.pvp.toString()) : null,
       descripcion: input.descripcion,
       tipoProductoId: input.tipoProductoId || undefined,
       imagenUrl: input.imagenUrl,
@@ -102,7 +109,10 @@ export async function createProduct(input: ProductInput): Promise<ProductDTO> {
   return {
     id: product.id,
     costo: product.costo ? Number(product.costo) : null,
+    pvp: product.pvp ? Number(product.pvp) : null,
     cantidad: product.cantidad,
+    descripcion: product.descripcion,
+    estado: product.estado,
     tipoProductoId: product.tipoProductoId,
     tipoProductoNombre: product.tipoProducto?.nombre ?? null,
     imagenUrl: product.imagenUrl,
@@ -131,6 +141,7 @@ export async function updateProduct(
     where: { id },
     data: {
       costo: input.costo ? new Prisma.Decimal(input.costo.toString()) : null,
+      pvp: input.pvp ? new Prisma.Decimal(input.pvp.toString()) : null,
       descripcion: input.descripcion,
       tipoProductoId: input.tipoProductoId || undefined,
       imagenUrl: input.imagenUrl,
@@ -154,7 +165,10 @@ export async function updateProduct(
   return {
     id: product.id,
     costo: product.costo ? Number(product.costo) : null,
+    pvp: product.pvp ? Number(product.pvp) : null,
     cantidad: product.cantidad,
+    descripcion: product.descripcion,
+    estado: product.estado,
     tipoProductoId: product.tipoProductoId,
     tipoProductoNombre: product.tipoProducto?.nombre ?? null,
     imagenUrl: product.imagenUrl,

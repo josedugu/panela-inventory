@@ -1,12 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import {
   AlertDialog,
@@ -45,21 +42,16 @@ import {
   upsertSupplierAction,
 } from "@/features/master-data/actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
+import { getSupplierColumns } from "@/features/master-data/proveedores/columns";
+import {
+  type SupplierFormValues,
+  supplierFormSchema,
+} from "@/features/master-data/proveedores/schemas";
 
 interface SuppliersSectionProps {
   suppliers: SupplierDTO[];
   onRefresh: () => void;
 }
-
-const supplierFormSchema = z.object({
-  nombre: z.string().min(1, "Nombre requerido"),
-  contacto: z.string().min(1, "Persona de contacto requerida"),
-  email: z.string().email("Email inválido"),
-  telefono: z.string().min(1, "Teléfono requerido"),
-  direccion: z.string().optional(),
-});
-
-type SupplierFormValues = z.infer<typeof supplierFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
 
@@ -204,58 +196,11 @@ export function SuppliersSection({
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<SupplierDTO>[] = [
-    {
-      accessorKey: "nombre",
-      header: "Nombre",
-      cell: ({ row }) => (
-        <span className="font-medium text-text">{row.original.nombre}</span>
-      ),
-    },
-    {
-      accessorKey: "contacto",
-      header: "Contacto",
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "telefono",
-      header: "Teléfono",
-    },
-    {
-      id: "direccion",
-      header: "Dirección",
-      cell: ({ row }) => row.original.direccion ?? "—",
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openDeleteDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4 text-error" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const columns = getSupplierColumns({
+    onEdit: openEditDialog,
+    onDelete: openDeleteDialog,
+    isBusy,
+  });
 
   const config = {
     title: "Proveedores",

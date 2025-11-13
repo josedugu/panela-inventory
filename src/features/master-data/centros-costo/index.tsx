@@ -1,12 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import {
   AlertDialog,
@@ -44,20 +41,17 @@ import {
   deleteCostCenterAction,
   upsertCostCenterAction,
 } from "@/features/master-data/actions";
+import { getCostCenterColumns } from "@/features/master-data/centros-costo/columns";
+import {
+  type CostCenterFormValues,
+  costCenterFormSchema,
+} from "@/features/master-data/centros-costo/schemas";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
 
 interface CostCentersSectionProps {
   costCenters: CostCenterDTO[];
   onRefresh: () => void;
 }
-
-const costCenterFormSchema = z.object({
-  nombre: z.string().min(1, "Nombre requerido"),
-  descripcion: z.string().optional(),
-  responsable: z.string().optional(),
-});
-
-type CostCenterFormValues = z.infer<typeof costCenterFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
 
@@ -195,48 +189,11 @@ export function CostCentersSection({
 
   const isBusy = isSubmitting || isDeleting;
 
-  const columns: ColumnDef<CostCenterDTO>[] = [
-    {
-      accessorKey: "nombre",
-      header: "Nombre",
-    },
-    {
-      accessorKey: "descripcion",
-      header: "Descripción",
-      cell: ({ row }) => row.original.descripcion ?? "—",
-    },
-    {
-      accessorKey: "responsable",
-      header: "Responsable",
-      cell: ({ row }) => row.original.responsable ?? "—",
-    },
-    {
-      id: "actions",
-      header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => openDeleteDialog(row.original)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4 text-error" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const columns = getCostCenterColumns({
+    onEdit: openEditDialog,
+    onDelete: openDeleteDialog,
+    isBusy,
+  });
 
   const config = {
     title: "Centros de costo",
