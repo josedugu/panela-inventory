@@ -1,9 +1,12 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useMemo, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +26,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import { useEntityFilters } from "@/features/entity-table/hooks/use-entity-filters";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
@@ -46,21 +56,15 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
   minimumFractionDigits: 2,
 });
 
-interface CustomerFormState {
-  nombre: string;
-  email: string;
-  telefono: string;
-  whatsapp: string;
-  direccion: string;
-}
-
-const createEmptyFormState = (): CustomerFormState => ({
-  nombre: "",
-  email: "",
-  telefono: "",
-  whatsapp: "",
-  direccion: "",
+const customerFormSchema = z.object({
+  nombre: z.string().min(1, "Nombre requerido"),
+  email: z.string().email("Email inválido"),
+  telefono: z.string().optional(),
+  whatsapp: z.string().optional(),
+  direccion: z.string().optional(),
 });
+
+type CustomerFormValues = z.infer<typeof customerFormSchema>;
 
 export function Customers() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -70,14 +74,33 @@ export function Customers() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
-  const [formData, setFormData] = useState<CustomerFormState>(
-    createEmptyFormState(),
-  );
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchValue, setSearchValue] = useState("");
+
+  const createForm = useForm<CustomerFormValues>({
+    resolver: zodResolver(customerFormSchema),
+    defaultValues: {
+      nombre: "",
+      email: "",
+      telefono: "",
+      whatsapp: "",
+      direccion: "",
+    },
+  });
+
+  const editForm = useForm<CustomerFormValues>({
+    resolver: zodResolver(customerFormSchema),
+    defaultValues: {
+      nombre: "",
+      email: "",
+      telefono: "",
+      whatsapp: "",
+      direccion: "",
+    },
+  });
 
   const filterDescriptors = useMemo<EntityFilterDescriptor[]>(() => [], []);
 
@@ -222,12 +245,18 @@ export function Customers() {
   );
 
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    createForm.reset({
+      nombre: "",
+      email: "",
+      telefono: "",
+      whatsapp: "",
+      direccion: "",
+    });
     setIsCreateModalOpen(true);
   };
 
   const openEditDialog = (customer: Customer) => {
-    setFormData({
+    editForm.reset({
       nombre: customer.nombre,
       email: customer.email,
       telefono: customer.telefono ?? "",
@@ -245,13 +274,13 @@ export function Customers() {
 
   const closeCreateDialog = () => {
     setIsCreateModalOpen(false);
-    setFormData(createEmptyFormState());
+    createForm.reset();
   };
 
   const closeEditDialog = () => {
     setIsEditModalOpen(false);
     setEditingCustomer(null);
-    setFormData(createEmptyFormState());
+    editForm.reset();
   };
 
   const closeDeleteDialog = () => {
@@ -259,28 +288,20 @@ export function Customers() {
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof CustomerFormState, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleCreateSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleCreateSubmit = (data: CustomerFormValues) => {
     if (isSubmitting) return;
 
     const formDataObj = new FormData();
-    formDataObj.append("nombre", formData.nombre.trim());
-    formDataObj.append("email", formData.email.trim());
-    if (formData.telefono.trim()) {
-      formDataObj.append("telefono", formData.telefono.trim());
+    formDataObj.append("nombre", data.nombre.trim());
+    formDataObj.append("email", data.email.trim());
+    if (data.telefono?.trim()) {
+      formDataObj.append("telefono", data.telefono.trim());
     }
-    if (formData.whatsapp.trim()) {
-      formDataObj.append("whatsapp", formData.whatsapp.trim());
+    if (data.whatsapp?.trim()) {
+      formDataObj.append("whatsapp", data.whatsapp.trim());
     }
-    if (formData.direccion.trim()) {
-      formDataObj.append("direccion", formData.direccion.trim());
+    if (data.direccion?.trim()) {
+      formDataObj.append("direccion", data.direccion.trim());
     }
 
     startSubmitTransition(async () => {
@@ -295,21 +316,20 @@ export function Customers() {
     });
   };
 
-  const handleEditSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleEditSubmit = (data: CustomerFormValues) => {
     if (isSubmitting || !editingCustomer) return;
 
     const formDataObj = new FormData();
-    formDataObj.append("nombre", formData.nombre.trim());
-    formDataObj.append("email", formData.email.trim());
-    if (formData.telefono.trim()) {
-      formDataObj.append("telefono", formData.telefono.trim());
+    formDataObj.append("nombre", data.nombre.trim());
+    formDataObj.append("email", data.email.trim());
+    if (data.telefono?.trim()) {
+      formDataObj.append("telefono", data.telefono.trim());
     }
-    if (formData.whatsapp.trim()) {
-      formDataObj.append("whatsapp", formData.whatsapp.trim());
+    if (data.whatsapp?.trim()) {
+      formDataObj.append("whatsapp", data.whatsapp.trim());
     }
-    if (formData.direccion.trim()) {
-      formDataObj.append("direccion", formData.direccion.trim());
+    if (data.direccion?.trim()) {
+      formDataObj.append("direccion", data.direccion.trim());
     }
 
     startSubmitTransition(async () => {
@@ -420,74 +440,116 @@ export function Customers() {
               Complete los datos del cliente para agregarlo al sistema
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreateSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre *</Label>
-                <Input
-                  id="nombre"
-                  value={formData.nombre}
-                  onChange={(e) => handleFormChange("nombre", e.target.value)}
-                  required
+          <Form {...createForm}>
+            <form
+              onSubmit={createForm.handleSubmit(handleCreateSubmit)}
+              className="space-y-4"
+            >
+              <div className="grid gap-4 py-4">
+                <FormField
+                  control={createForm.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre del cliente"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleFormChange("email", e.target.value)}
-                  required
+                <FormField
+                  control={createForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="email@ejemplo.com"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="telefono">Teléfono</Label>
-                  <Input
-                    id="telefono"
-                    value={formData.telefono}
-                    onChange={(e) =>
-                      handleFormChange("telefono", e.target.value)
-                    }
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={createForm.control}
+                    name="telefono"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Teléfono"
+                            disabled={isSubmitting}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createForm.control}
+                    name="whatsapp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>WhatsApp</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="WhatsApp"
+                            disabled={isSubmitting}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp">WhatsApp</Label>
-                  <Input
-                    id="whatsapp"
-                    value={formData.whatsapp}
-                    onChange={(e) =>
-                      handleFormChange("whatsapp", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="direccion">Dirección</Label>
-                <Input
-                  id="direccion"
-                  value={formData.direccion}
-                  onChange={(e) =>
-                    handleFormChange("direccion", e.target.value)
-                  }
+                <FormField
+                  control={createForm.control}
+                  name="direccion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Dirección</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Dirección"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeCreateDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Guardando..." : "Agregar Cliente"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeCreateDialog}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Guardando..." : "Agregar Cliente"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
@@ -500,74 +562,116 @@ export function Customers() {
               Modifique los datos del cliente
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEditSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-nombre">Nombre *</Label>
-                <Input
-                  id="edit-nombre"
-                  value={formData.nombre}
-                  onChange={(e) => handleFormChange("nombre", e.target.value)}
-                  required
+          <Form {...editForm}>
+            <form
+              onSubmit={editForm.handleSubmit(handleEditSubmit)}
+              className="space-y-4"
+            >
+              <div className="grid gap-4 py-4">
+                <FormField
+                  control={editForm.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre del cliente"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email *</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleFormChange("email", e.target.value)}
-                  required
+                <FormField
+                  control={editForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="email@ejemplo.com"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-telefono">Teléfono</Label>
-                  <Input
-                    id="edit-telefono"
-                    value={formData.telefono}
-                    onChange={(e) =>
-                      handleFormChange("telefono", e.target.value)
-                    }
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editForm.control}
+                    name="telefono"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Teléfono"
+                            disabled={isSubmitting}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="whatsapp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>WhatsApp</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="WhatsApp"
+                            disabled={isSubmitting}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-whatsapp">WhatsApp</Label>
-                  <Input
-                    id="edit-whatsapp"
-                    value={formData.whatsapp}
-                    onChange={(e) =>
-                      handleFormChange("whatsapp", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-direccion">Dirección</Label>
-                <Input
-                  id="edit-direccion"
-                  value={formData.direccion}
-                  onChange={(e) =>
-                    handleFormChange("direccion", e.target.value)
-                  }
+                <FormField
+                  control={editForm.control}
+                  name="direccion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Dirección</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Dirección"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeEditDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Guardando..." : "Guardar Cambios"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeEditDialog}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Guardando..." : "Guardar Cambios"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

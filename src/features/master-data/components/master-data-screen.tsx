@@ -13,7 +13,7 @@ import type {
   TipoProductoDTO,
 } from "@/data/repositories/shared.repository";
 import type { SupplierDTO } from "@/data/repositories/suppliers.repository";
-import type { UserDTO } from "@/data/repositories/users.repository";
+import type { RoleDTO, UserDTO } from "@/data/repositories/users.repository";
 import type { WarehouseDTO } from "@/data/repositories/warehouses.repository";
 import { StorageSection } from "@/features/master-data/almacenamiento";
 import { WarehousesSection } from "@/features/master-data/bodegas";
@@ -33,6 +33,7 @@ interface MasterDataScreenData {
   brands?: BrandDTO[];
   models?: ModelDTO[];
   users?: UserDTO[];
+  roles?: RoleDTO[];
   costCenters?: CostCenterDTO[];
   warehouses?: WarehouseDTO[];
   colors?: ColorDTO[];
@@ -47,6 +48,7 @@ type SectionRenderer = (props: {
   brands?: BrandDTO[];
   models?: ModelDTO[];
   users?: UserDTO[];
+  roles?: RoleDTO[];
   costCenters?: CostCenterDTO[];
   warehouses?: WarehouseDTO[];
   colors?: ColorDTO[];
@@ -67,10 +69,11 @@ const SECTION_RENDERERS: Record<MasterDataSection, SectionRenderer> = {
   modelos: ({ models = [], brands = [], onRefresh }) => (
     <ModelsSection models={models} brands={brands} onRefresh={onRefresh} />
   ),
-  usuarios: ({ users = [], costCenters = [], onRefresh }) => (
+  usuarios: ({ users = [], costCenters = [], roles = [], onRefresh }) => (
     <UsersSection
       users={users}
       costCenters={costCenters}
+      roles={roles}
       onRefresh={onRefresh}
     />
   ),
@@ -127,6 +130,7 @@ export function MasterDataScreen({ section, data }: MasterDataScreenProps) {
   const brands = data.brands ?? [];
   const models = data.models ?? [];
   const users = data.users ?? [];
+  const roles = data.roles ?? [];
   const costCenters = data.costCenters ?? [];
   const warehouses = data.warehouses ?? [];
   const colors = data.colors ?? [];
@@ -147,6 +151,7 @@ export function MasterDataScreen({ section, data }: MasterDataScreenProps) {
       brands,
       models,
       users,
+      roles,
       costCenters,
       warehouses,
       colors,
@@ -164,6 +169,7 @@ export function MasterDataScreen({ section, data }: MasterDataScreenProps) {
     models,
     products,
     ramOptions,
+    roles,
     section,
     storageOptions,
     suppliers,

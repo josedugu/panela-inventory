@@ -65,7 +65,9 @@ import {
 import {
   createUser,
   deleteUser,
+  listRoles,
   listUsers,
+  type RoleDTO,
   type UserDTO,
   updateUser,
 } from "@/data/repositories/users.repository";
@@ -316,7 +318,7 @@ const userSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
   email: z.string().email("Correo inválido"),
   telefono: z.string().optional(),
-  rol: z.string().min(1, "El rol es obligatorio"),
+  rolId: z.string().uuid("Selecciona un rol válido"),
   centroCostoId: z
     .string()
     .uuid()
@@ -507,6 +509,7 @@ export type MasterDataPayload = {
   models?: ModelDTO[];
   costCenters?: CostCenterDTO[];
   users?: UserDTO[];
+  roles?: RoleDTO[];
   warehouses?: WarehouseDTO[];
   colors?: ColorDTO[];
   storageOptions?: StorageDTO[];
@@ -532,11 +535,12 @@ export async function getSectionData(
       return { models, brands };
     }
     case "usuarios": {
-      const [users, costCenters] = await Promise.all([
+      const [users, costCenters, roles] = await Promise.all([
         listUsers(),
         listCostCenters(),
+        listRoles(),
       ]);
-      return { users, costCenters };
+      return { users, costCenters, roles };
     }
     case "centros-costo":
       return {
