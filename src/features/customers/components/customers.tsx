@@ -123,6 +123,7 @@ export function Customers() {
         return result;
       },
       placeholderData: (previous) => previous,
+      staleTime: 1000 * 60 * 30, // 30 minutos - cacheo para navegación rápida
       refetchInterval: 30000,
     });
 

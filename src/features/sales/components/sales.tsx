@@ -75,7 +75,8 @@ export function Sales() {
 
       return result;
     },
-    placeholderData: (previous) => previous,
+    placeholderData: (previousData) => previousData,
+    staleTime: 1000 * 60 * 30, // 30 minutos - cacheo para navegación rápida
     refetchInterval: 30000,
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import type { ProductDTO } from "@/data/repositories/master.products.repository";
 import type {
@@ -27,21 +27,7 @@ import { SuppliersSection } from "@/features/master-data/proveedores";
 import { RamSection } from "@/features/master-data/ram";
 import { TipoProductosSection } from "@/features/master-data/tipo-productos";
 import { UsersSection } from "@/features/master-data/usuarios";
-
-interface MasterDataScreenData {
-  suppliers?: SupplierDTO[];
-  brands?: BrandDTO[];
-  models?: ModelDTO[];
-  users?: UserDTO[];
-  roles?: RoleDTO[];
-  costCenters?: CostCenterDTO[];
-  warehouses?: WarehouseDTO[];
-  colors?: ColorDTO[];
-  storageOptions?: StorageDTO[];
-  ramOptions?: RamDTO[];
-  tipoProductos?: TipoProductoDTO[];
-  products?: ProductDTO[];
-}
+import { getSectionData } from "../actions";
 
 type SectionRenderer = (props: {
   suppliers?: SupplierDTO[];
@@ -124,28 +110,35 @@ const SECTION_RENDERERS: Record<MasterDataSection, SectionRenderer> = {
 
 interface MasterDataScreenProps {
   section: MasterDataSection;
-  data: MasterDataScreenData;
 }
 
-export function MasterDataScreen({ section, data }: MasterDataScreenProps) {
-  const router = useRouter();
+export function MasterDataScreen({ section }: MasterDataScreenProps) {
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["master-data", section],
+    queryFn: async () => {
+      const result = await getSectionData(section);
+      return result;
+    },
+    placeholderData: (previousData) => previousData,
+    staleTime: 1000 * 60 * 30, // 30 minutos - mismo que el default de React Query
+  });
 
-  const suppliers = data.suppliers ?? [];
-  const brands = data.brands ?? [];
-  const models = data.models ?? [];
-  const users = data.users ?? [];
-  const roles = data.roles ?? [];
-  const costCenters = data.costCenters ?? [];
-  const warehouses = data.warehouses ?? [];
-  const colors = data.colors ?? [];
-  const storageOptions = data.storageOptions ?? [];
-  const ramOptions = data.ramOptions ?? [];
-  const tipoProductos = data.tipoProductos ?? [];
-  const products = data.products ?? [];
+  const suppliers = data?.suppliers ?? [];
+  const brands = data?.brands ?? [];
+  const models = data?.models ?? [];
+  const users = data?.users ?? [];
+  const roles = data?.roles ?? [];
+  const costCenters = data?.costCenters ?? [];
+  const warehouses = data?.warehouses ?? [];
+  const colors = data?.colors ?? [];
+  const storageOptions = data?.storageOptions ?? [];
+  const ramOptions = data?.ramOptions ?? [];
+  const tipoProductos = data?.tipoProductos ?? [];
+  const products = data?.products ?? [];
 
   const handleRefresh = useCallback(() => {
-    router.refresh();
-  }, [router]);
+    refetch();
+  }, [refetch]);
 
   const sectionContent = useMemo(() => {
     const render = SECTION_RENDERERS[section];
@@ -181,6 +174,14 @@ export function MasterDataScreen({ section, data }: MasterDataScreenProps) {
     users,
     warehouses,
   ]);
+
+  if (isLoading && !data) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-sm text-text-secondary">Cargando...</div>
+      </div>
+    );
+  }
 
   return <>{sectionContent}</>;
 }
