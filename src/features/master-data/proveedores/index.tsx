@@ -1,9 +1,12 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   AlertDialog,
@@ -24,8 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { SupplierDTO } from "@/data/repositories/suppliers.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
@@ -41,23 +51,17 @@ interface SuppliersSectionProps {
   onRefresh: () => void;
 }
 
-interface SupplierFormState {
-  nombre: string;
-  contacto: string;
-  email: string;
-  telefono: string;
-  direccion: string;
-}
+const supplierFormSchema = z.object({
+  nombre: z.string().min(1, "Nombre requerido"),
+  contacto: z.string().min(1, "Persona de contacto requerida"),
+  email: z.string().email("Email inválido"),
+  telefono: z.string().min(1, "Teléfono requerido"),
+  direccion: z.string().optional(),
+});
+
+type SupplierFormValues = z.infer<typeof supplierFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): SupplierFormState => ({
-  nombre: "",
-  contacto: "",
-  email: "",
-  telefono: "",
-  direccion: "",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
@@ -97,9 +101,6 @@ export function SuppliersSection({
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<SupplierFormState>(
-    createEmptyFormState(),
-  );
   const [editingSupplier, setEditingSupplier] = useState<SupplierDTO | null>(
     null,
   );
@@ -107,14 +108,31 @@ export function SuppliersSection({
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
+  const form = useForm<SupplierFormValues>({
+    resolver: zodResolver(supplierFormSchema),
+    defaultValues: {
+      nombre: "",
+      contacto: "",
+      email: "",
+      telefono: "",
+      direccion: "",
+    },
+  });
+
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      nombre: "",
+      contacto: "",
+      email: "",
+      telefono: "",
+      direccion: "",
+    });
     setEditingSupplier(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (supplier: SupplierDTO) => {
-    setFormData({
+    form.reset({
       nombre: supplier.nombre,
       contacto: supplier.contacto,
       email: supplier.email,
@@ -128,7 +146,7 @@ export function SuppliersSection({
   const closeDialog = () => {
     setDialogMode(null);
     setEditingSupplier(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (supplier: SupplierDTO) => {
@@ -139,26 +157,16 @@ export function SuppliersSection({
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof SupplierFormState, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: SupplierFormValues) => {
     if (isSubmitting) return;
 
     const payload = {
       id: editingSupplier?.id,
-      nombre: formData.nombre.trim(),
-      contacto: formData.contacto.trim(),
-      email: formData.email.trim(),
-      telefono: formData.telefono.trim(),
-      direccion: formData.direccion.trim()
-        ? formData.direccion.trim()
-        : undefined,
+      nombre: data.nombre.trim(),
+      contacto: data.contacto.trim(),
+      email: data.email.trim(),
+      telefono: data.telefono.trim(),
+      direccion: data.direccion?.trim() ? data.direccion.trim() : undefined,
     };
 
     startSubmitTransition(async () => {
@@ -308,84 +316,112 @@ export function SuppliersSection({
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="supplier-nombre">Nombre *</Label>
-                <Input
-                  id="supplier-nombre"
-                  value={formData.nombre}
-                  onChange={(event) =>
-                    handleFormChange("nombre", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre del proveedor"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="contacto"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Persona de contacto *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre del contacto"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="email@ejemplo.com"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="telefono"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teléfono *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Teléfono de contacto"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-contacto">Persona de contacto *</Label>
-                <Input
-                  id="supplier-contacto"
-                  value={formData.contacto}
-                  onChange={(event) =>
-                    handleFormChange("contacto", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-email">Email *</Label>
-                <Input
-                  id="supplier-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(event) =>
-                    handleFormChange("email", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="supplier-telefono">Teléfono *</Label>
-                <Input
-                  id="supplier-telefono"
-                  value={formData.telefono}
-                  onChange={(event) =>
-                    handleFormChange("telefono", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="supplier-direccion">Dirección</Label>
-              <Textarea
-                id="supplier-direccion"
-                rows={3}
-                value={formData.direccion}
-                onChange={(event) =>
-                  handleFormChange("direccion", event.target.value)
-                }
-                disabled={isSubmitting}
+              <FormField
+                control={form.control}
+                name="direccion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dirección</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        placeholder="Dirección del proveedor"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

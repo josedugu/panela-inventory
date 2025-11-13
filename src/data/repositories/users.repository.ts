@@ -7,6 +7,7 @@ export interface UserDTO {
   nombre: string;
   email: string;
   telefono?: string | null;
+  rolId?: string | null;
   rolNombre?: string | null;
   centroCostoId?: string | null;
   centroCostoNombre?: string | null;
@@ -15,32 +16,29 @@ export interface UserDTO {
   updatedAt: Date;
 }
 
+export interface RoleDTO {
+  id: string;
+  nombre: string;
+}
+
 interface UserInput {
   nombre: string;
   email: string;
   telefono?: string | null;
-  rol: string;
+  rolId: string;
   centroCostoId?: string | null;
   estado?: boolean;
 }
 
-async function findOrCreateRoleId(
-  nombre: string,
-  tx:
-    | Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
-    | typeof prisma = prisma,
-): Promise<string> {
-  const normalized = nombre.trim();
-
-  const role = await tx.rol.upsert({
-    where: { nombre: normalized },
-    update: {},
-    create: {
-      nombre: normalized,
-    },
+export async function listRoles(): Promise<RoleDTO[]> {
+  const roles = await prisma.rol.findMany({
+    orderBy: { nombre: "asc" },
   });
 
-  return role.id;
+  return roles.map((role) => ({
+    id: role.id,
+    nombre: role.nombre,
+  }));
 }
 
 export async function listUsers(): Promise<UserDTO[]> {
@@ -57,6 +55,7 @@ export async function listUsers(): Promise<UserDTO[]> {
     nombre: user.nombre,
     email: user.email,
     telefono: user.telefono,
+    rolId: user.rolId,
     rolNombre: user.rol?.nombre ?? null,
     centroCostoId: user.centroCostoId,
     centroCostoNombre: user.centroCostos?.nombre ?? null,
@@ -67,23 +66,19 @@ export async function listUsers(): Promise<UserDTO[]> {
 }
 
 export async function createUser(input: UserInput): Promise<UserDTO> {
-  const user = await prisma.$transaction(async (tx) => {
-    const roleId = await findOrCreateRoleId(input.rol, tx);
-
-    return tx.usuario.create({
-      data: {
-        nombre: input.nombre,
-        email: input.email,
-        telefono: input.telefono,
-        rolId: roleId,
-        centroCostoId: input.centroCostoId ?? null,
-        estado: input.estado ?? true,
-      },
-      include: {
-        centroCostos: true,
-        rol: true,
-      },
-    });
+  const user = await prisma.usuario.create({
+    data: {
+      nombre: input.nombre,
+      email: input.email,
+      telefono: input.telefono,
+      rolId: input.rolId,
+      centroCostoId: input.centroCostoId ?? null,
+      estado: input.estado ?? true,
+    },
+    include: {
+      centroCostos: true,
+      rol: true,
+    },
   });
 
   return {
@@ -91,6 +86,7 @@ export async function createUser(input: UserInput): Promise<UserDTO> {
     nombre: user.nombre,
     email: user.email,
     telefono: user.telefono,
+    rolId: user.rolId,
     rolNombre: user.rol?.nombre ?? null,
     centroCostoId: user.centroCostoId,
     centroCostoNombre: user.centroCostos?.nombre ?? null,
@@ -104,24 +100,20 @@ export async function updateUser(
   id: string,
   input: UserInput,
 ): Promise<UserDTO> {
-  const user = await prisma.$transaction(async (tx) => {
-    const roleId = await findOrCreateRoleId(input.rol, tx);
-
-    return tx.usuario.update({
-      where: { id },
-      data: {
-        nombre: input.nombre,
-        email: input.email,
-        telefono: input.telefono,
-        rolId: roleId,
-        centroCostoId: input.centroCostoId ?? null,
-        estado: input.estado ?? true,
-      },
-      include: {
-        centroCostos: true,
-        rol: true,
-      },
-    });
+  const user = await prisma.usuario.update({
+    where: { id },
+    data: {
+      nombre: input.nombre,
+      email: input.email,
+      telefono: input.telefono,
+      rolId: input.rolId,
+      centroCostoId: input.centroCostoId ?? null,
+      estado: input.estado ?? true,
+    },
+    include: {
+      centroCostos: true,
+      rol: true,
+    },
   });
 
   return {
@@ -129,6 +121,7 @@ export async function updateUser(
     nombre: user.nombre,
     email: user.email,
     telefono: user.telefono,
+    rolId: user.rolId,
     rolNombre: user.rol?.nombre ?? null,
     centroCostoId: user.centroCostoId,
     centroCostoNombre: user.centroCostos?.nombre ?? null,

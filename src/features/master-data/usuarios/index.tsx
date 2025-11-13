@@ -1,9 +1,12 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   AlertDialog,
@@ -24,8 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -35,7 +45,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/components/ui/utils";
 import type { CostCenterDTO } from "@/data/repositories/shared.repository";
-import type { UserDTO } from "@/data/repositories/users.repository";
+import type { RoleDTO, UserDTO } from "@/data/repositories/users.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {
@@ -47,34 +57,29 @@ import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTa
 interface UsersSectionProps {
   users: UserDTO[];
   costCenters: CostCenterDTO[];
+  roles: RoleDTO[];
   onRefresh: () => void;
 }
 
-interface UserFormState {
-  nombre: string;
-  email: string;
-  telefono: string;
-  rol: string;
-  centroCostoId: string;
-  estado: "activo" | "inactivo";
-}
+const userFormSchema = z.object({
+  nombre: z.string().min(1, "Nombre requerido"),
+  email: z.string().email("Email inválido"),
+  telefono: z.string().optional(),
+  rolId: z.string().uuid("Selecciona un rol válido"),
+  centroCostoId: z.string().optional(),
+  estado: z.enum(["activo", "inactivo"]),
+});
+
+type UserFormValues = z.infer<typeof userFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): UserFormState => ({
-  nombre: "",
-  email: "",
-  telefono: "",
-  rol: "",
-  centroCostoId: "",
-  estado: "activo",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
 export function UsersSection({
   users,
   costCenters,
+  roles,
   onRefresh,
 }: UsersSectionProps) {
   const {
@@ -108,26 +113,42 @@ export function UsersSection({
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<UserFormState>(
-    createEmptyFormState(),
-  );
   const [editingUser, setEditingUser] = useState<UserDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserDTO | null>(null);
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
+    defaultValues: {
+      nombre: "",
+      email: "",
+      telefono: "",
+      rolId: "",
+      centroCostoId: "",
+      estado: "activo",
+    },
+  });
+
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      nombre: "",
+      email: "",
+      telefono: "",
+      rolId: "",
+      centroCostoId: "",
+      estado: "activo",
+    });
     setEditingUser(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (user: UserDTO) => {
-    setFormData({
+    form.reset({
       nombre: user.nombre,
       email: user.email,
       telefono: user.telefono ?? "",
-      rol: user.rolNombre ?? "",
+      rolId: user.rolId ?? "",
       centroCostoId: user.centroCostoId ?? "",
       estado: user.estado ? "activo" : "inactivo",
     });
@@ -138,7 +159,7 @@ export function UsersSection({
   const closeDialog = () => {
     setDialogMode(null);
     setEditingUser(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (user: UserDTO) => {
@@ -149,31 +170,17 @@ export function UsersSection({
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof UserFormState, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: UserFormValues) => {
     if (isSubmitting) return;
-    if (!formData.rol.trim()) {
-      toast.error("Ingresa un rol para el usuario.");
-      return;
-    }
 
     const payload = {
       id: editingUser?.id,
-      nombre: formData.nombre.trim(),
-      email: formData.email.trim(),
-      telefono: formData.telefono.trim() ? formData.telefono.trim() : undefined,
-      rol: formData.rol.trim(),
-      centroCostoId: formData.centroCostoId
-        ? formData.centroCostoId
-        : undefined,
-      estado: formData.estado === "activo",
+      nombre: data.nombre.trim(),
+      email: data.email.trim(),
+      telefono: data.telefono?.trim() ? data.telefono.trim() : undefined,
+      rolId: data.rolId,
+      centroCostoId: data.centroCostoId ? data.centroCostoId : undefined,
+      estado: data.estado === "activo",
     };
 
     startSubmitTransition(async () => {
@@ -344,109 +351,159 @@ export function UsersSection({
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="user-nombre">Nombre completo *</Label>
-                <Input
-                  id="user-nombre"
-                  value={formData.nombre}
-                  onChange={(event) =>
-                    handleFormChange("nombre", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre completo *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre completo del usuario"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="email@ejemplo.com"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="telefono"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teléfono</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Teléfono de contacto"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="rolId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rol *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un rol" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              {role.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="centroCostoId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Centro de costo</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sin centro asignado" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Sin centro asignado</SelectItem>
+                          {costCenters.map((center) => (
+                            <SelectItem key={center.id} value={center.id}>
+                              {center.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="estado"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estado *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un estado" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="activo">Activo</SelectItem>
+                          <SelectItem value="inactivo">Inactivo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="user-email">Email *</Label>
-                <Input
-                  id="user-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(event) =>
-                    handleFormChange("email", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="user-telefono">Teléfono</Label>
-                <Input
-                  id="user-telefono"
-                  value={formData.telefono}
-                  onChange={(event) =>
-                    handleFormChange("telefono", event.target.value)
-                  }
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="user-rol">Rol *</Label>
-                <Input
-                  id="user-rol"
-                  value={formData.rol}
-                  onChange={(event) =>
-                    handleFormChange("rol", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="user-centro">Centro de costo</Label>
-                <Select
-                  value={formData.centroCostoId}
-                  onValueChange={(value) =>
-                    handleFormChange("centroCostoId", value)
-                  }
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger id="user-centro">
-                    <SelectValue placeholder="Sin centro asignado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Sin centro asignado</SelectItem>
-                    {costCenters.map((center) => (
-                      <SelectItem key={center.id} value={center.id}>
-                        {center.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="user-estado">Estado *</Label>
-                <Select
-                  value={formData.estado}
-                  onValueChange={(value) => handleFormChange("estado", value)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger id="user-estado">
-                    <SelectValue placeholder="Selecciona un estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="activo">Activo</SelectItem>
-                    <SelectItem value="inactivo">Inactivo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
