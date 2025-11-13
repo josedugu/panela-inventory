@@ -1,9 +1,12 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   AlertDialog,
@@ -24,8 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { BrandDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
@@ -41,17 +51,14 @@ interface BrandsSectionProps {
   onRefresh: () => void;
 }
 
-interface BrandFormState {
-  nombre: string;
-  descripcion: string;
-}
+const brandFormSchema = z.object({
+  nombre: z.string().min(1, "Nombre requerido"),
+  descripcion: z.string().optional(),
+});
+
+type BrandFormValues = z.infer<typeof brandFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): BrandFormState => ({
-  nombre: "",
-  descripcion: "",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
@@ -85,22 +92,30 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<BrandFormState>(
-    createEmptyFormState(),
-  );
   const [editingBrand, setEditingBrand] = useState<BrandDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BrandDTO | null>(null);
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
+  const form = useForm<BrandFormValues>({
+    resolver: zodResolver(brandFormSchema),
+    defaultValues: {
+      nombre: "",
+      descripcion: "",
+    },
+  });
+
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      nombre: "",
+      descripcion: "",
+    });
     setEditingBrand(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (brand: BrandDTO) => {
-    setFormData({
+    form.reset({
       nombre: brand.nombre,
       descripcion: brand.descripcion ?? "",
     });
@@ -111,7 +126,7 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
   const closeDialog = () => {
     setDialogMode(null);
     setEditingBrand(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (brand: BrandDTO) => {
@@ -122,22 +137,14 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof BrandFormState, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: BrandFormValues) => {
     if (isSubmitting) return;
 
     const payload = {
       id: editingBrand?.id,
-      nombre: formData.nombre.trim(),
-      descripcion: formData.descripcion.trim()
-        ? formData.descripcion.trim()
+      nombre: data.nombre.trim(),
+      descripcion: data.descripcion?.trim()
+        ? data.descripcion.trim()
         : undefined,
     };
 
@@ -275,47 +282,60 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="brand-nombre">Nombre *</Label>
-                <Input
-                  id="brand-nombre"
-                  value={formData.nombre}
-                  onChange={(event) =>
-                    handleFormChange("nombre", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre de la marca"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="brand-descripcion">Descripción</Label>
-              <Textarea
-                id="brand-descripcion"
-                rows={3}
-                value={formData.descripcion}
-                onChange={(event) =>
-                  handleFormChange("descripcion", event.target.value)
-                }
-                disabled={isSubmitting}
+              <FormField
+                control={form.control}
+                name="descripcion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        placeholder="Descripción de la marca"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
