@@ -272,7 +272,28 @@ export function Inventory() {
     >;
 
     if (filterOptions) {
+      // Mapear todas las opciones disponibles desde el servidor
       base.category = filterOptions.categories.map((value) => ({
+        label: value,
+        value,
+      }));
+      base.brand = filterOptions.brands.map((value) => ({
+        label: value,
+        value,
+      }));
+      base.model = filterOptions.models.map((value) => ({
+        label: value,
+        value,
+      }));
+      base.storage = filterOptions.storages.map((value) => ({
+        label: value,
+        value,
+      }));
+      base.color = filterOptions.colors.map((value) => ({
+        label: value,
+        value,
+      }));
+      base.supplier = filterOptions.suppliers.map((value) => ({
         label: value,
         value,
       }));
@@ -281,6 +302,7 @@ export function Inventory() {
         label: STATUS_LABELS[value as InventoryStatus] ?? value,
       }));
     } else {
+      // Si no hay opciones del servidor, usar valores por defecto
       base.status = (base.status ??
         Object.keys(STATUS_LABELS).map((value) => ({
           value,
@@ -288,12 +310,20 @@ export function Inventory() {
         }))) as { label: string; value: string }[];
     }
 
+    // Asegurar que status siempre tenga valores por defecto
     base.status ??= Object.keys(STATUS_LABELS).map((value) => ({
       value,
       label: STATUS_LABELS[value as InventoryStatus] ?? value,
     }));
 
+    // Inicializar arrays vacíos para campos que no tienen opciones del servidor
     base.category ??= [];
+    base.brand ??= [];
+    base.model ??= [];
+    base.storage ??= [];
+    base.color ??= [];
+    base.supplier ??= [];
+    // IMEI no tiene opciones predefinidas, se busca dinámicamente
 
     return base;
   }, [filterOptions, normalizedOptions]);

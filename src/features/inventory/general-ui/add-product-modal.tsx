@@ -40,6 +40,7 @@ import {
   getMovementFormWarehouses,
 } from "@/features/inventory/actions/get-movement-form-options";
 import {
+  createInventoryMovementFormSchema,
   type InventoryMovementFormValues,
   inventoryMovementFormSchema,
 } from "@/features/inventory/schemas/movement-form.schemas";
@@ -94,11 +95,6 @@ export function InventoryMovementModal({
     };
   }, [initialData]);
 
-  const form = useForm<InventoryMovementFormValues>({
-    resolver: zodResolver(inventoryMovementFormSchema),
-    defaultValues,
-  });
-
   const { data: products, isLoading: isLoadingProducts } = useQuery({
     queryKey: ["inventory-movement-products"],
     queryFn: getMovementFormProducts,
@@ -123,12 +119,11 @@ export function InventoryMovementModal({
     enabled: isOpen,
   });
 
-  // Resetear formulario cuando cambia initialData o isOpen
-  useEffect(() => {
-    if (isOpen) {
-      form.reset(defaultValues);
-    }
-  }, [isOpen, defaultValues, form]);
+  // Inicializar form con schema base primero
+  const form = useForm<InventoryMovementFormValues>({
+    resolver: zodResolver(inventoryMovementFormSchema),
+    defaultValues,
+  });
 
   // Observar cambios en movementType e imeis para calcular quantity automáticamente
   const movementType = form.watch("movementType");
@@ -140,6 +135,46 @@ export function InventoryMovementModal({
   );
 
   const isIngresoMovement = Boolean(selectedMovementType?.ingreso);
+  const isHorizontalMovement = Boolean(
+    selectedMovementType &&
+      !selectedMovementType.ingreso &&
+      !selectedMovementType.salida,
+  );
+
+  // Crear schema dinámico basado en el tipo de movimiento
+  const dynamicSchema = useMemo(
+    () => createInventoryMovementFormSchema(selectedMovementType ?? undefined),
+    [selectedMovementType],
+  );
+
+  // Validar cuando cambia el schema dinámico
+  useEffect(() => {
+    // Limpiar errores y re-validar con el nuevo schema si hay valores
+    form.clearErrors();
+    if (form.formState.isDirty || movementType) {
+      // Validar manualmente con el nuevo schema
+      const validateWithSchema = async () => {
+        const result = await dynamicSchema.safeParseAsync(form.getValues());
+        if (!result.success) {
+          // Aplicar errores del nuevo schema
+          result.error.errors.forEach((error) => {
+            form.setError(error.path[0] as keyof InventoryMovementFormValues, {
+              type: "manual",
+              message: error.message,
+            });
+          });
+        }
+      };
+      validateWithSchema();
+    }
+  }, [dynamicSchema, form, movementType]);
+
+  // Resetear formulario cuando cambia initialData o isOpen
+  useEffect(() => {
+    if (isOpen) {
+      form.reset(defaultValues);
+    }
+  }, [isOpen, defaultValues, form]);
 
   // Calcular quantity automáticamente cuando es ingreso y hay IMEIs
   useEffect(() => {
@@ -156,6 +191,21 @@ export function InventoryMovementModal({
     }
   }, [isIngresoMovement, imeis, form]);
 
+  // Calcular quantity automáticamente para movimientos horizontales desde IMEIs
+  useEffect(() => {
+    if (isHorizontalMovement && imeis) {
+      const imeiCount = imeis
+        .split(",")
+        .map((imei) => imei.trim())
+        .filter(Boolean).length;
+      if (imeiCount > 0) {
+        form.setValue("quantity", imeiCount.toString(), {
+          shouldValidate: true,
+        });
+      }
+    }
+  }, [isHorizontalMovement, imeis, form]);
+
   const onSubmit = (data: InventoryMovementFormValues) => {
     if (isReadOnly || isPending) {
       onClose();
@@ -164,10 +214,19 @@ export function InventoryMovementModal({
 
     startTransition(async () => {
       const payload = new FormData();
-      payload.set("product", data.product);
+      // Para movimientos horizontales, product puede estar vacío
+      if (data.product && data.product.trim() !== "") {
+        payload.set("product", data.product);
+      }
       payload.set("movementType", data.movementType);
-      payload.set("cost", data.cost);
-      payload.set("quantity", data.quantity);
+      // Para movimientos horizontales, cost puede estar vacío
+      if (data.cost && data.cost.trim() !== "") {
+        payload.set("cost", data.cost);
+      }
+      // Para movimientos horizontales, quantity se calcula desde IMEIs
+      if (data.quantity && data.quantity.trim() !== "") {
+        payload.set("quantity", data.quantity);
+      }
       payload.set("imeis", data.imeis ?? "");
       payload.set("warehouse", data.warehouse ?? "");
       payload.set("supplier", data.supplier ?? "");
@@ -209,60 +268,64 @@ export function InventoryMovementModal({
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
-                  name="product"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Producto *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isReadOnly || isLoadingProducts}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar producto" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {products?.map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="movementType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Movimiento *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isReadOnly || isLoadingMovementTypes}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar tipo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {movementTypes?.map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const selectedType = movementTypes?.find(
+                      (type) => type.id === field.value,
+                    );
+                    return (
+                      <FormItem>
+                        <FormLabel>Tipo de Movimiento *</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isReadOnly || isLoadingMovementTypes}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              {selectedType ? (
+                                <span className="flex items-center gap-2">
+                                  <span>{selectedType.nombre}</span>
+                                  {selectedType.ingreso && (
+                                    <span className="text-green-600 dark:text-green-400">
+                                      +
+                                    </span>
+                                  )}
+                                  {selectedType.salida && (
+                                    <span className="text-red-600 dark:text-red-400">
+                                      -
+                                    </span>
+                                  )}
+                                </span>
+                              ) : (
+                                <SelectValue placeholder="Seleccionar tipo" />
+                              )}
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {movementTypes?.map((type) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                <span className="flex items-center gap-2">
+                                  <span>{type.nombre}</span>
+                                  {type.ingreso && (
+                                    <span className="text-green-600 dark:text-green-400">
+                                      +
+                                    </span>
+                                  )}
+                                  {type.salida && (
+                                    <span className="text-red-600 dark:text-red-400">
+                                      -
+                                    </span>
+                                  )}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <FormField
@@ -270,7 +333,9 @@ export function InventoryMovementModal({
                   name="warehouse"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Bodega</FormLabel>
+                      <FormLabel>
+                        Bodega{isHorizontalMovement ? " *" : ""}
+                      </FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value ?? ""}
@@ -294,81 +359,121 @@ export function InventoryMovementModal({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="supplier"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Proveedor</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
-                        disabled={isReadOnly || isLoadingSuppliers}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar proveedor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {suppliers?.map((supplier) => (
-                            <SelectItem key={supplier.id} value={supplier.id}>
-                              {supplier.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {!isHorizontalMovement && (
+                  <FormField
+                    control={form.control}
+                    name="product"
+                    render={({ field }) => (
+                      <FormItem className="sm:col-span-2">
+                        <FormLabel>Producto *</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isReadOnly || isLoadingProducts}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar producto" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {products?.map((product) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                {product.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
-                <FormField
-                  control={form.control}
-                  name="cost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Costo Unitario *</FormLabel>
-                      <FormControl>
-                        <CurrencyInput
-                          placeholder="0"
+                {!isHorizontalMovement && (
+                  <FormField
+                    control={form.control}
+                    name="supplier"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Proveedor</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
                           value={field.value ?? ""}
-                          onChange={field.onChange}
-                          readOnly={isReadOnly}
-                          disabled={isReadOnly}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          disabled={isReadOnly || isLoadingSuppliers}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar proveedor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {suppliers?.map((supplier) => (
+                              <SelectItem key={supplier.id} value={supplier.id}>
+                                {supplier.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cantidad *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          disabled={isIngresoMovement || isReadOnly}
-                          readOnly={isReadOnly}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {!isHorizontalMovement && (
+                  <FormField
+                    control={form.control}
+                    name="cost"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Costo Unitario *</FormLabel>
+                        <FormControl>
+                          <CurrencyInput
+                            placeholder="0"
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            readOnly={isReadOnly}
+                            disabled={isReadOnly}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {!isHorizontalMovement && (
+                  <FormField
+                    control={form.control}
+                    name="quantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cantidad *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            disabled={isIngresoMovement || isReadOnly}
+                            readOnly={isReadOnly}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
               <FormField
                 control={form.control}
                 name="imeis"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>IMEIs (separados por coma)</FormLabel>
+                    <FormLabel>
+                      IMEIs (separados por coma)
+                      {isHorizontalMovement ? " *" : ""}
+                    </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="ej. 123..., 456..."

@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ProductDTO } from "@/data/repositories/master.products.repository";
+import { formatPrice } from "@/lib/utils";
 
 interface ProductColumnsOptions {
   onEdit: (product: ProductDTO) => void;
@@ -48,7 +49,10 @@ export function getProductColumns({
       cell: ({ row }) => (
         <div className="flex items-center justify-center">
           {row.original.costo
-            ? `$${row.original.costo.toLocaleString("es-CO")}`
+            ? formatPrice(row.original.costo, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })
             : "—"}
         </div>
       ),

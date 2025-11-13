@@ -1,13 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { CustomerDTO } from "@/features/customers/actions";
+import { formatPrice } from "@/lib/utils";
 
 type Customer = CustomerDTO;
-
-const currencyFormatter = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-});
 
 export function getCustomerColumns(): ColumnDef<Customer>[] {
   return [
@@ -48,7 +43,10 @@ export function getCustomerColumns(): ColumnDef<Customer>[] {
       header: "Total Ventas",
       cell: ({ row }) => (
         <div className="text-center font-medium">
-          {currencyFormatter.format(row.original.totalVentas)}
+          {formatPrice(row.original.totalVentas, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}
         </div>
       ),
       size: 150,

@@ -110,7 +110,7 @@ export function InputSearch({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[280px] p-0" align="start">
-          <Command>
+          <Command shouldFilter={false}>
             <CommandInput
               value={search}
               onValueChange={setSearch}
@@ -123,9 +123,9 @@ export function InputSearch({
                     <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
                   </span>
                 </CommandEmpty>
-              ) : (
+              ) : filteredOptions.length === 0 && !customOption ? (
                 <CommandEmpty>Sin resultados</CommandEmpty>
-              )}
+              ) : null}
               {!loading && value && (
                 <CommandItem
                   value="__clear__"
@@ -138,7 +138,7 @@ export function InputSearch({
                 filteredOptions.map((option) => (
                   <CommandItem
                     key={option.value}
-                    value={option.value}
+                    value={`${option.label} ${option.value}`}
                     onSelect={() => handleSelect(option)}
                   >
                     {option.label}

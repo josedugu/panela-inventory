@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { MapPin } from "lucide-react";
 import type { TableAction } from "@/components/ui/table-actions-cell";
 import { TableActionsCell } from "@/components/ui/table-actions-cell";
+import { formatPrice } from "@/lib/utils";
 import type { InventoryProduct } from "../functions/types";
 
 interface InventoryColumnsOptions {
@@ -30,7 +31,12 @@ export function getInventoryColumns({
       accessorKey: "pvp",
       header: "PVP",
       cell: ({ row }) => (
-        <div className="text-center">${row.original.pvp.toFixed(2)}</div>
+        <div className="text-center">
+          {formatPrice(row.original.pvp, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}
+        </div>
       ),
       size: 120,
     },
@@ -38,7 +44,12 @@ export function getInventoryColumns({
       accessorKey: "cost",
       header: "Costo",
       cell: ({ row }) => (
-        <div className="text-center">${row.original.cost.toFixed(2)}</div>
+        <div className="text-center">
+          {formatPrice(row.original.cost, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}
+        </div>
       ),
       size: 120,
     },

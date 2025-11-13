@@ -108,7 +108,7 @@ interface CreateInventoryMovementInput {
   productId: string;
   movementTypeId: string;
   quantity: number;
-  unitCost: number;
+  unitCost?: number;
   imeis: string[];
   warehouseId?: string;
   supplierId?: string;
@@ -124,18 +124,6 @@ export async function createInventoryMovementWithDetails({
   supplierId,
 }: CreateInventoryMovementInput) {
   return prisma.$transaction(async (tx) => {
-    const product = await tx.producto.findUnique({
-      where: { id: productId },
-      include: {
-        modelo: true,
-        marca: true,
-      },
-    });
-
-    if (!product) {
-      throw new Error("Producto no encontrado");
-    }
-
     const movementType = await tx.tipoMovimientoInventario.findUnique({
       where: { id: movementTypeId },
     });
@@ -145,16 +133,69 @@ export async function createInventoryMovementWithDetails({
     }
 
     const isIngreso = movementType.ingreso;
+    const isSalida = movementType.salida;
+    const isHorizontal = !isIngreso && !isSalida;
+
+    let actualProductId = productId;
+    let product = null;
+
+    // Para movimientos horizontales, obtener el producto desde los IMEIs si no se proporciona
+    if (isHorizontal && (!productId || productId.trim() === "")) {
+      if (imeis.length === 0) {
+        throw new Error(
+          "Los IMEIs son requeridos para movimientos horizontales",
+        );
+      }
+
+      // Buscar el producto desde el primer IMEI
+      const firstDetail = await tx.productoDetalle.findFirst({
+        where: {
+          imei: imeis[0],
+          estado: true,
+        },
+        include: {
+          producto: {
+            include: {
+              modelo: true,
+              marca: true,
+            },
+          },
+        },
+      });
+
+      if (!firstDetail || !firstDetail.producto) {
+        throw new Error(
+          `No se encontró un producto activo con el IMEI: ${imeis[0]}`,
+        );
+      }
+
+      actualProductId = firstDetail.producto.id;
+      product = firstDetail.producto;
+    } else {
+      // Para movimientos normales, obtener el producto normalmente
+      product = await tx.producto.findUnique({
+        where: { id: actualProductId },
+        include: {
+          modelo: true,
+          marca: true,
+        },
+      });
+
+      if (!product) {
+        throw new Error("Producto no encontrado");
+      }
+    }
 
     let productDetailsIds: string[] = [];
 
     if (imeis.length > 0) {
       if (isIngreso) {
+        // Movimientos de ingreso: crear nuevos detalles
         const createdDetails = await Promise.all(
           imeis.map((imei) =>
             tx.productoDetalle.create({
               data: {
-                productoId: productId,
+                productoId: actualProductId,
                 imei,
                 nombre:
                   product.descripcion ??
@@ -166,19 +207,21 @@ export async function createInventoryMovementWithDetails({
           ),
         );
         productDetailsIds = createdDetails.map((detail) => detail.id);
-      } else {
+      } else if (isSalida) {
+        // Movimientos de salida: marcar detalles existentes como inactivos
         const existingDetails = await tx.productoDetalle.findMany({
           where: {
-            productoId: productId,
+            productoId: actualProductId,
             imei: {
               in: imeis,
             },
+            estado: true,
           },
         });
 
         if (existingDetails.length !== imeis.length) {
           throw new Error(
-            "Algunos IMEI no están registrados para este producto",
+            "Algunos IMEI no están registrados o no están activos para este producto",
           );
         }
 
@@ -194,13 +237,42 @@ export async function createInventoryMovementWithDetails({
             estado: false,
           },
         });
+      } else if (isHorizontal) {
+        // Movimientos horizontales: solo obtener los detalles existentes (no crear ni marcar como inactivos)
+        const existingDetails = await tx.productoDetalle.findMany({
+          where: {
+            imei: {
+              in: imeis,
+            },
+            estado: true,
+          },
+        });
+
+        if (existingDetails.length !== imeis.length) {
+          throw new Error(
+            "Algunos IMEI no están registrados o no están activos",
+          );
+        }
+
+        // Verificar que todos los IMEIs pertenezcan al mismo producto
+        const productIds = new Set(
+          existingDetails.map((detail) => detail.productoId),
+        );
+        if (productIds.size > 1) {
+          throw new Error("Todos los IMEIs deben pertenecer al mismo producto");
+        }
+
+        productDetailsIds = existingDetails.map((detail) => detail.id);
       }
     }
 
     const movement = await tx.movimientoInventario.create({
       data: {
         cantidad: quantity,
-        costoUnitario: new Prisma.Decimal(unitCost.toString()),
+        costoUnitario:
+          unitCost !== undefined && unitCost !== null
+            ? new Prisma.Decimal(unitCost.toString())
+            : null,
         tipoMovimientoId: movementTypeId,
         bodegaId: warehouseId || null,
         proveedorId: supplierId || null,
@@ -213,21 +285,24 @@ export async function createInventoryMovementWithDetails({
       },
     });
 
-    const currentQuantity = product.cantidad ?? 0;
-    const updatedQuantity = isIngreso
-      ? currentQuantity + quantity
-      : currentQuantity - quantity;
+    // Solo actualizar la cantidad del producto si NO es un movimiento horizontal
+    if (!isHorizontal) {
+      const currentQuantity = product.cantidad ?? 0;
+      const updatedQuantity = isIngreso
+        ? currentQuantity + quantity
+        : currentQuantity - quantity;
 
-    if (updatedQuantity < 0) {
-      throw new Error("La cantidad resulta negativa para el producto");
+      if (updatedQuantity < 0) {
+        throw new Error("La cantidad resulta negativa para el producto");
+      }
+
+      await tx.producto.update({
+        where: { id: actualProductId },
+        data: {
+          cantidad: updatedQuantity,
+        },
+      });
     }
-
-    await tx.producto.update({
-      where: { id: productId },
-      data: {
-        cantidad: updatedQuantity,
-      },
-    });
 
     return movement;
   });

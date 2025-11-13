@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatPrice } from "@/lib/utils";
 import { getSaleForEditAction } from "../actions/get-sale-for-edit";
 import { getSaleFormData } from "../actions/get-sale-form-data";
 
@@ -36,12 +37,6 @@ interface SaleLine {
   quantity: number;
   unitPrice: number;
 }
-
-const currencyFormatter = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-});
 
 function createEmptyLine(): SaleLine {
   return {
@@ -368,7 +363,10 @@ export function CreateSaleModal({
                           className="cursor-not-allowed bg-surface-2 text-right opacity-75"
                           value={
                             line.discountAmount > 0
-                              ? `${currencyFormatter.format(line.discountAmount)} ${
+                              ? `${formatPrice(line.discountAmount, {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                })} ${
                                   line.discountName
                                     ? `(${line.discountName})`
                                     : ""
@@ -431,18 +429,30 @@ export function CreateSaleModal({
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Subtotal</span>
                 <span className="font-medium">
-                  {currencyFormatter.format(subtotal)}
+                  {formatPrice(subtotal, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-text-secondary">Descuentos</span>
                 <span className="font-medium text-destructive">
-                  -{currencyFormatter.format(totalDiscounts)}
+                  -
+                  {formatPrice(totalDiscounts, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between text-base font-semibold">
                 <span>Total</span>
-                <span>{currencyFormatter.format(total)}</span>
+                <span>
+                  {formatPrice(total, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}
+                </span>
               </div>
             </div>
           </div>
