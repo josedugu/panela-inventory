@@ -1,9 +1,12 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   AlertDialog,
@@ -25,10 +28,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
   InputSearch,
   type InputSearchOption,
 } from "@/components/ui/input-search";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -64,25 +74,18 @@ interface ProductsSectionProps {
   onRefresh: () => void;
 }
 
-interface ProductFormState {
-  tipoProductoId: string;
-  marcaId: string;
-  modeloId: string;
-  almacenamientoId: string;
-  ramId: string;
-  colorId: string;
-}
+const productFormSchema = z.object({
+  tipoProductoId: z.string().uuid("Selecciona un tipo de producto válido"),
+  marcaId: z.string().uuid("Selecciona una marca válida"),
+  modeloId: z.string().uuid("Selecciona un modelo válido"),
+  almacenamientoId: z.string().uuid("Selecciona un almacenamiento válido"),
+  ramId: z.string().uuid("Selecciona una RAM válida"),
+  colorId: z.string().uuid("Selecciona un color válido"),
+});
+
+type ProductFormValues = z.infer<typeof productFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): ProductFormState => ({
-  tipoProductoId: "",
-  marcaId: "",
-  modeloId: "",
-  almacenamientoId: "",
-  ramId: "",
-  colorId: "",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
@@ -134,13 +137,22 @@ export function ProductsSection({
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<ProductFormState>(
-    createEmptyFormState(),
-  );
   const [editingProduct, setEditingProduct] = useState<ProductDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ProductDTO | null>(null);
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
+
+  const form = useForm<ProductFormValues>({
+    resolver: zodResolver(productFormSchema),
+    defaultValues: {
+      tipoProductoId: "",
+      marcaId: "",
+      modeloId: "",
+      almacenamientoId: "",
+      ramId: "",
+      colorId: "",
+    },
+  });
 
   // Preparar opciones para InputSearch
   const brandOptions: InputSearchOption[] = useMemo(
@@ -153,10 +165,11 @@ export function ProductsSection({
   );
 
   // Filtrar modelos según la marca seleccionada
+  const marcaId = form.watch("marcaId");
   const availableModels = useMemo(() => {
-    if (!formData.marcaId) return [];
-    return models.filter((model) => model.marcaId === formData.marcaId);
-  }, [models, formData.marcaId]);
+    if (!marcaId) return [];
+    return models.filter((model) => model.marcaId === marcaId);
+  }, [models, marcaId]);
 
   const modelOptions: InputSearchOption[] = useMemo(
     () =>
@@ -167,30 +180,35 @@ export function ProductsSection({
     [availableModels],
   );
 
-  // Resetear modeloId si cambia la marca
-  const handleMarcaChange = (option: InputSearchOption | undefined) => {
-    setFormData((prev) => ({
-      ...prev,
-      marcaId: option?.value ?? "",
-      modeloId: "", // Resetear modelo cuando cambia la marca
-    }));
-  };
+  // Obtener valores seleccionados para InputSearch
+  const selectedBrand: InputSearchOption | undefined = useMemo(() => {
+    if (!marcaId) return undefined;
+    const brand = brands.find((b) => b.id === marcaId);
+    return brand ? { label: brand.nombre, value: brand.id } : undefined;
+  }, [marcaId, brands]);
 
-  const handleModeloChange = (option: InputSearchOption | undefined) => {
-    setFormData((prev) => ({
-      ...prev,
-      modeloId: option?.value ?? "",
-    }));
-  };
+  const modeloId = form.watch("modeloId");
+  const selectedModel: InputSearchOption | undefined = useMemo(() => {
+    if (!modeloId) return undefined;
+    const model = availableModels.find((m) => m.id === modeloId);
+    return model ? { label: model.nombre, value: model.id } : undefined;
+  }, [modeloId, availableModels]);
 
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      tipoProductoId: "",
+      marcaId: "",
+      modeloId: "",
+      almacenamientoId: "",
+      ramId: "",
+      colorId: "",
+    });
     setEditingProduct(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (product: ProductDTO) => {
-    setFormData({
+    form.reset({
       tipoProductoId: product.tipoProductoId ?? "",
       marcaId: product.marcaId ?? "",
       modeloId: product.modeloId ?? "",
@@ -202,23 +220,10 @@ export function ProductsSection({
     setDialogMode("edit");
   };
 
-  // Obtener valores seleccionados para InputSearch
-  const selectedBrand: InputSearchOption | undefined = useMemo(() => {
-    if (!formData.marcaId) return undefined;
-    const brand = brands.find((b) => b.id === formData.marcaId);
-    return brand ? { label: brand.nombre, value: brand.id } : undefined;
-  }, [formData.marcaId, brands]);
-
-  const selectedModel: InputSearchOption | undefined = useMemo(() => {
-    if (!formData.modeloId) return undefined;
-    const model = availableModels.find((m) => m.id === formData.modeloId);
-    return model ? { label: model.nombre, value: model.id } : undefined;
-  }, [formData.modeloId, availableModels]);
-
   const closeDialog = () => {
     setDialogMode(null);
     setEditingProduct(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (product: ProductDTO) => {
@@ -229,51 +234,23 @@ export function ProductsSection({
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof ProductFormState, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  // Resetear modeloId cuando cambia la marca
+  const handleMarcaChange = (option: InputSearchOption | undefined) => {
+    form.setValue("marcaId", option?.value ?? "");
+    form.setValue("modeloId", ""); // Resetear modelo cuando cambia la marca
   };
 
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: ProductFormValues) => {
     if (isSubmitting) return;
-
-    // Validar campos obligatorios
-    if (!formData.tipoProductoId.trim()) {
-      toast.error("El tipo de producto es obligatorio");
-      return;
-    }
-    if (!formData.marcaId.trim()) {
-      toast.error("La marca es obligatoria");
-      return;
-    }
-    if (!formData.modeloId.trim()) {
-      toast.error("El modelo es obligatorio");
-      return;
-    }
-    if (!formData.almacenamientoId.trim()) {
-      toast.error("El almacenamiento es obligatorio");
-      return;
-    }
-    if (!formData.ramId.trim()) {
-      toast.error("La RAM es obligatoria");
-      return;
-    }
-    if (!formData.colorId.trim()) {
-      toast.error("El color es obligatorio");
-      return;
-    }
 
     const payload = {
       id: editingProduct?.id,
-      tipoProductoId: formData.tipoProductoId.trim(),
-      marcaId: formData.marcaId.trim(),
-      modeloId: formData.modeloId.trim(),
-      almacenamientoId: formData.almacenamientoId.trim(),
-      ramId: formData.ramId.trim(),
-      colorId: formData.colorId.trim(),
+      tipoProductoId: data.tipoProductoId,
+      marcaId: data.marcaId,
+      modeloId: data.modeloId,
+      almacenamientoId: data.almacenamientoId,
+      ramId: data.ramId,
+      colorId: data.colorId,
     };
 
     startSubmitTransition(async () => {
@@ -444,129 +421,182 @@ export function ProductsSection({
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="product-tipo">Tipo de Producto *</Label>
-                <Select
-                  value={formData.tipoProductoId}
-                  onValueChange={(value) =>
-                    handleFormChange("tipoProductoId", value)
-                  }
-                  disabled={isSubmitting}
-                  required
-                >
-                  <SelectTrigger id="product-tipo">
-                    <SelectValue placeholder="Selecciona un tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tipoProductos.map((tipo) => (
-                      <SelectItem key={tipo.id} value={tipo.id}>
-                        {tipo.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <InputSearch
-                  label="Marca *"
-                  placeholder="Buscar marca..."
-                  value={selectedBrand}
-                  onChange={handleMarcaChange}
-                  options={brandOptions}
-                  disabled={isSubmitting}
-                  maxOptions={10}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="tipoProductoId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Producto *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {tipoProductos.map((tipo) => (
+                            <SelectItem key={tipo.id} value={tipo.id}>
+                              {tipo.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="marcaId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marca *</FormLabel>
+                      <FormControl>
+                        <InputSearch
+                          placeholder="Buscar marca..."
+                          value={selectedBrand}
+                          onChange={(option) => {
+                            handleMarcaChange(option);
+                            field.onChange(option?.value ?? "");
+                          }}
+                          options={brandOptions}
+                          disabled={isSubmitting}
+                          maxOptions={10}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="modeloId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Modelo *</FormLabel>
+                      <FormControl>
+                        <InputSearch
+                          placeholder="Buscar modelo..."
+                          value={selectedModel}
+                          onChange={(option) => {
+                            field.onChange(option?.value ?? "");
+                          }}
+                          options={modelOptions}
+                          disabled={isSubmitting || !marcaId}
+                          maxOptions={10}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="almacenamientoId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Almacenamiento *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona almacenamiento" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {storageOptions.map((storage) => (
+                            <SelectItem key={storage.id} value={storage.id}>
+                              {storage.capacidad} GB
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="ramId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>RAM *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona RAM" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {ramOptions.map((ram) => (
+                            <SelectItem key={ram.id} value={ram.id}>
+                              {ram.capacidad} GB
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="colorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un color" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {colors.map((color) => (
+                            <SelectItem key={color.id} value={color.id}>
+                              {color.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="space-y-2">
-                <InputSearch
-                  label="Modelo *"
-                  placeholder="Buscar modelo..."
-                  value={selectedModel}
-                  onChange={handleModeloChange}
-                  options={modelOptions}
-                  disabled={isSubmitting || !formData.marcaId}
-                  maxOptions={10}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-almacenamiento">Almacenamiento *</Label>
-                <Select
-                  value={formData.almacenamientoId}
-                  onValueChange={(value) =>
-                    handleFormChange("almacenamientoId", value)
-                  }
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
                   disabled={isSubmitting}
-                  required
                 >
-                  <SelectTrigger id="product-almacenamiento">
-                    <SelectValue placeholder="Selecciona almacenamiento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {storageOptions.map((storage) => (
-                      <SelectItem key={storage.id} value={storage.id}>
-                        {storage.capacidad} GB
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-ram">RAM *</Label>
-                <Select
-                  value={formData.ramId}
-                  onValueChange={(value) => handleFormChange("ramId", value)}
-                  disabled={isSubmitting}
-                  required
-                >
-                  <SelectTrigger id="product-ram">
-                    <SelectValue placeholder="Selecciona RAM" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ramOptions.map((ram) => (
-                      <SelectItem key={ram.id} value={ram.id}>
-                        {ram.capacidad} GB
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-color">Color *</Label>
-                <Select
-                  value={formData.colorId}
-                  onValueChange={(value) => handleFormChange("colorId", value)}
-                  disabled={isSubmitting}
-                  required
-                >
-                  <SelectTrigger id="product-color">
-                    <SelectValue placeholder="Selecciona un color" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colors.map((color) => (
-                      <SelectItem key={color.id} value={color.id}>
-                        {color.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
