@@ -12,15 +12,32 @@ const schema = z.object({
   quantity: z.coerce.number().int().positive("La cantidad debe ser mayor a 0"),
   cost: z.coerce.number().nonnegative("El costo no puede ser negativo"),
   imeis: z.string().optional(),
+  warehouse: z
+    .string()
+    .uuid("Bodega inválida")
+    .optional()
+    .or(z.literal(""))
+    .transform((val) => (val === "" ? undefined : val)),
+  supplier: z
+    .string()
+    .uuid("Proveedor inválido")
+    .optional()
+    .or(z.literal(""))
+    .transform((val) => (val === "" ? undefined : val)),
 });
 
 export async function createInventoryMovementAction(formData: FormData) {
+  const warehouseValue = formData.get("warehouse");
+  const supplierValue = formData.get("supplier");
+
   const parsed = schema.safeParse({
     product: formData.get("product"),
     movementType: formData.get("movementType"),
     quantity: formData.get("quantity"),
     cost: formData.get("cost"),
     imeis: formData.get("imeis"),
+    warehouse: warehouseValue || "",
+    supplier: supplierValue || "",
   });
 
   if (!parsed.success) {
@@ -31,7 +48,8 @@ export async function createInventoryMovementAction(formData: FormData) {
     };
   }
 
-  const { product, movementType, quantity, cost, imeis } = parsed.data;
+  const { product, movementType, quantity, cost, imeis, warehouse, supplier } =
+    parsed.data;
 
   const imeiList =
     imeis
@@ -65,6 +83,8 @@ export async function createInventoryMovementAction(formData: FormData) {
       quantity,
       unitCost: cost,
       imeis: imeiList,
+      warehouseId: warehouse || undefined,
+      supplierId: supplier || undefined,
     });
 
     return {

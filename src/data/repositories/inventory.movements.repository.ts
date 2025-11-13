@@ -110,6 +110,8 @@ interface CreateInventoryMovementInput {
   quantity: number;
   unitCost: number;
   imeis: string[];
+  warehouseId?: string;
+  supplierId?: string;
 }
 
 export async function createInventoryMovementWithDetails({
@@ -118,6 +120,8 @@ export async function createInventoryMovementWithDetails({
   quantity,
   unitCost,
   imeis,
+  warehouseId,
+  supplierId,
 }: CreateInventoryMovementInput) {
   return prisma.$transaction(async (tx) => {
     const product = await tx.producto.findUnique({
@@ -198,6 +202,8 @@ export async function createInventoryMovementWithDetails({
         cantidad: quantity,
         costoUnitario: new Prisma.Decimal(unitCost.toString()),
         tipoMovimientoId: movementTypeId,
+        bodegaId: warehouseId || null,
+        proveedorId: supplierId || null,
         productos:
           productDetailsIds.length > 0
             ? {
