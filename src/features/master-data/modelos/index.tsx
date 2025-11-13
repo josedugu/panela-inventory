@@ -1,9 +1,12 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   AlertDialog,
@@ -24,8 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -48,17 +58,14 @@ interface ModelsSectionProps {
   onRefresh: () => void;
 }
 
-interface ModelFormState {
-  nombre: string;
-  marcaId: string;
-}
+const modelFormSchema = z.object({
+  nombre: z.string().min(1, "Nombre requerido"),
+  marcaId: z.string().min(1, "Marca requerida"),
+});
+
+type ModelFormValues = z.infer<typeof modelFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): ModelFormState => ({
-  nombre: "",
-  marcaId: "",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
@@ -93,22 +100,30 @@ export function ModelsSection({
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<ModelFormState>(
-    createEmptyFormState(),
-  );
   const [editingModel, setEditingModel] = useState<ModelDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ModelDTO | null>(null);
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
+  const form = useForm<ModelFormValues>({
+    resolver: zodResolver(modelFormSchema),
+    defaultValues: {
+      nombre: "",
+      marcaId: "",
+    },
+  });
+
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      nombre: "",
+      marcaId: "",
+    });
     setEditingModel(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (model: ModelDTO) => {
-    setFormData({
+    form.reset({
       nombre: model.nombre,
       marcaId: model.marcaId,
     });
@@ -119,7 +134,7 @@ export function ModelsSection({
   const closeDialog = () => {
     setDialogMode(null);
     setEditingModel(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (model: ModelDTO) => {
@@ -130,25 +145,13 @@ export function ModelsSection({
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof ModelFormState, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: ModelFormValues) => {
     if (isSubmitting) return;
-    if (!formData.marcaId) {
-      toast.error("Selecciona una marca para el modelo.");
-      return;
-    }
 
     const payload = {
       id: editingModel?.id,
-      nombre: formData.nombre.trim(),
-      marcaId: formData.marcaId,
+      nombre: data.nombre.trim(),
+      marcaId: data.marcaId,
     };
 
     startSubmitTransition(async () => {
@@ -284,54 +287,70 @@ export function ModelsSection({
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="model-nombre">Nombre *</Label>
-                <Input
-                  id="model-nombre"
-                  value={formData.nombre}
-                  onChange={(event) =>
-                    handleFormChange("nombre", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre del modelo"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="marcaId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Marca *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona una marca" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {brands.map((brand) => (
+                            <SelectItem key={brand.id} value={brand.id}>
+                              {brand.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="model-marca">Marca *</Label>
-                <Select
-                  value={formData.marcaId}
-                  onValueChange={(value) => handleFormChange("marcaId", value)}
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger id="model-marca">
-                    <SelectValue placeholder="Selecciona una marca" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands.map((brand) => (
-                      <SelectItem key={brand.id} value={brand.id}>
-                        {brand.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
