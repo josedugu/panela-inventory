@@ -1,9 +1,12 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   AlertDialog,
@@ -24,8 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { CostCenterDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
@@ -41,19 +51,15 @@ interface CostCentersSectionProps {
   onRefresh: () => void;
 }
 
-interface CostCenterFormState {
-  nombre: string;
-  descripcion: string;
-  responsable: string;
-}
+const costCenterFormSchema = z.object({
+  nombre: z.string().min(1, "Nombre requerido"),
+  descripcion: z.string().optional(),
+  responsable: z.string().optional(),
+});
+
+type CostCenterFormValues = z.infer<typeof costCenterFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): CostCenterFormState => ({
-  nombre: "",
-  descripcion: "",
-  responsable: "",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
@@ -90,9 +96,6 @@ export function CostCentersSection({
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<CostCenterFormState>(
-    createEmptyFormState(),
-  );
   const [editingCenter, setEditingCenter] = useState<CostCenterDTO | null>(
     null,
   );
@@ -100,14 +103,27 @@ export function CostCentersSection({
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
+  const form = useForm<CostCenterFormValues>({
+    resolver: zodResolver(costCenterFormSchema),
+    defaultValues: {
+      nombre: "",
+      descripcion: "",
+      responsable: "",
+    },
+  });
+
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      nombre: "",
+      descripcion: "",
+      responsable: "",
+    });
     setEditingCenter(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (center: CostCenterDTO) => {
-    setFormData({
+    form.reset({
       nombre: center.nombre,
       descripcion: center.descripcion ?? "",
       responsable: center.responsable ?? "",
@@ -119,7 +135,7 @@ export function CostCentersSection({
   const closeDialog = () => {
     setDialogMode(null);
     setEditingCenter(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (center: CostCenterDTO) => {
@@ -130,28 +146,17 @@ export function CostCentersSection({
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (
-    field: keyof CostCenterFormState,
-    value: string,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: CostCenterFormValues) => {
     if (isSubmitting) return;
 
     const payload = {
       id: editingCenter?.id,
-      nombre: formData.nombre.trim(),
-      descripcion: formData.descripcion.trim()
-        ? formData.descripcion.trim()
+      nombre: data.nombre.trim(),
+      descripcion: data.descripcion?.trim()
+        ? data.descripcion.trim()
         : undefined,
-      responsable: formData.responsable.trim()
-        ? formData.responsable.trim()
+      responsable: data.responsable?.trim()
+        ? data.responsable.trim()
         : undefined,
     };
 
@@ -290,58 +295,77 @@ export function CostCentersSection({
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cost-center-nombre">Nombre *</Label>
-                <Input
-                  id="cost-center-nombre"
-                  value={formData.nombre}
-                  onChange={(event) =>
-                    handleFormChange("nombre", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre del centro de costo"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cost-center-descripcion">Descripción</Label>
-              <Textarea
-                id="cost-center-descripcion"
-                rows={3}
-                value={formData.descripcion}
-                onChange={(event) =>
-                  handleFormChange("descripcion", event.target.value)
-                }
-                disabled={isSubmitting}
+              <FormField
+                control={form.control}
+                name="descripcion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        placeholder="Descripción del centro de costo"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cost-center-responsable">Responsable</Label>
-              <Input
-                id="cost-center-responsable"
-                value={formData.responsable}
-                onChange={(event) =>
-                  handleFormChange("responsable", event.target.value)
-                }
-                disabled={isSubmitting}
+              <FormField
+                control={form.control}
+                name="responsable"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Responsable</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Nombre del responsable"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

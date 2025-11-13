@@ -1,9 +1,12 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +26,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   type TableAction,
   TableActionsCell,
@@ -44,17 +54,14 @@ interface TipoProductosSectionProps {
   onRefresh: () => void;
 }
 
-interface TipoProductoFormState {
-  nombre: string;
-  descripcion: string;
-}
+const tipoProductoFormSchema = z.object({
+  nombre: z.string().min(1, "Nombre requerido"),
+  descripcion: z.string().optional(),
+});
+
+type TipoProductoFormValues = z.infer<typeof tipoProductoFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): TipoProductoFormState => ({
-  nombre: "",
-  descripcion: "",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
@@ -88,9 +95,6 @@ export function TipoProductosSection({
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<TipoProductoFormState>(
-    createEmptyFormState(),
-  );
   const [editingTipoProducto, setEditingTipoProducto] =
     useState<TipoProductoDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TipoProductoDTO | null>(
@@ -99,14 +103,25 @@ export function TipoProductosSection({
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
+  const form = useForm<TipoProductoFormValues>({
+    resolver: zodResolver(tipoProductoFormSchema),
+    defaultValues: {
+      nombre: "",
+      descripcion: "",
+    },
+  });
+
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      nombre: "",
+      descripcion: "",
+    });
     setEditingTipoProducto(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (tipoProducto: TipoProductoDTO) => {
-    setFormData({
+    form.reset({
       nombre: tipoProducto.nombre,
       descripcion: tipoProducto.descripcion ?? "",
     });
@@ -117,7 +132,7 @@ export function TipoProductosSection({
   const closeDialog = () => {
     setDialogMode(null);
     setEditingTipoProducto(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (tipoProducto: TipoProductoDTO) => {
@@ -128,25 +143,14 @@ export function TipoProductosSection({
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (
-    field: keyof TipoProductoFormState,
-    value: string,
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: TipoProductoFormValues) => {
     if (isSubmitting) return;
 
     const payload = {
       id: editingTipoProducto?.id,
-      nombre: formData.nombre.trim(),
-      descripcion: formData.descripcion.trim()
-        ? formData.descripcion.trim()
+      nombre: data.nombre.trim(),
+      descripcion: data.descripcion?.trim()
+        ? data.descripcion.trim()
         : undefined,
     };
 
@@ -284,47 +288,60 @@ export function TipoProductosSection({
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="tipo-producto-nombre">Nombre *</Label>
-                <Input
-                  id="tipo-producto-nombre"
-                  value={formData.nombre}
-                  onChange={(event) =>
-                    handleFormChange("nombre", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre del tipo de producto"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tipo-producto-descripcion">Descripción</Label>
-              <Textarea
-                id="tipo-producto-descripcion"
-                rows={3}
-                value={formData.descripcion}
-                onChange={(event) =>
-                  handleFormChange("descripcion", event.target.value)
-                }
-                disabled={isSubmitting}
+              <FormField
+                control={form.control}
+                name="descripcion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={3}
+                        placeholder="Descripción del tipo de producto"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

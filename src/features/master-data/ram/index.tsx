@@ -1,9 +1,12 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   AlertDialog,
@@ -24,8 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { RamDTO } from "@/data/repositories/shared.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
@@ -40,15 +50,22 @@ interface RamSectionProps {
   onRefresh: () => void;
 }
 
-interface RamFormState {
-  capacidad: string;
-}
+const ramFormSchema = z.object({
+  capacidad: z
+    .string()
+    .min(1, "Capacidad requerida")
+    .refine(
+      (val) => {
+        const num = Number.parseInt(val, 10);
+        return !Number.isNaN(num) && num > 0;
+      },
+      { message: "La capacidad debe ser un número positivo" },
+    ),
+});
+
+type RamFormValues = z.infer<typeof ramFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): RamFormState => ({
-  capacidad: "",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
@@ -79,22 +96,28 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<RamFormState>(
-    createEmptyFormState(),
-  );
   const [editingOption, setEditingOption] = useState<RamDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RamDTO | null>(null);
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
+  const form = useForm<RamFormValues>({
+    resolver: zodResolver(ramFormSchema),
+    defaultValues: {
+      capacidad: "",
+    },
+  });
+
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      capacidad: "",
+    });
     setEditingOption(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (option: RamDTO) => {
-    setFormData({
+    form.reset({
       capacidad: option.capacidad.toString(),
     });
     setEditingOption(option);
@@ -104,7 +127,7 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
   const closeDialog = () => {
     setDialogMode(null);
     setEditingOption(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (option: RamDTO) => {
@@ -115,22 +138,10 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof RamFormState, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: RamFormValues) => {
     if (isSubmitting) return;
 
-    const capacidadNumber = parseInt(formData.capacidad.trim(), 10);
-    if (Number.isNaN(capacidadNumber) || capacidadNumber <= 0) {
-      toast.error("La capacidad debe ser un número positivo");
-      return;
-    }
+    const capacidadNumber = Number.parseInt(data.capacidad.trim(), 10);
 
     const payload = {
       id: editingOption?.id,
@@ -271,37 +282,43 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="ram-capacidad">Capacidad (GB) *</Label>
-              <Input
-                id="ram-capacidad"
-                type="number"
-                min="1"
-                step="1"
-                value={formData.capacidad}
-                onChange={(event) =>
-                  handleFormChange("capacidad", event.target.value)
-                }
-                placeholder="Ej: 8"
-                required
-                disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="capacidad"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Capacidad (GB) *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="Ej: 8"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

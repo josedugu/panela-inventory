@@ -1,9 +1,12 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil, Trash2 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 import {
   AlertDialog,
@@ -24,8 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { WarehouseDTO } from "@/data/repositories/warehouses.repository";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
@@ -40,17 +50,14 @@ interface WarehousesSectionProps {
   onRefresh: () => void;
 }
 
-interface WarehouseFormState {
-  codigo: string;
-  nombre: string;
-}
+const warehouseFormSchema = z.object({
+  codigo: z.string().min(1, "Código requerido"),
+  nombre: z.string().min(1, "Nombre requerido"),
+});
+
+type WarehouseFormValues = z.infer<typeof warehouseFormSchema>;
 
 type DialogMode = "create" | "edit" | null;
-
-const createEmptyFormState = (): WarehouseFormState => ({
-  codigo: "",
-  nombre: "",
-});
 
 const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
 
@@ -87,9 +94,6 @@ export function WarehousesSection({
   });
 
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [formData, setFormData] = useState<WarehouseFormState>(
-    createEmptyFormState(),
-  );
   const [editingWarehouse, setEditingWarehouse] = useState<WarehouseDTO | null>(
     null,
   );
@@ -97,14 +101,25 @@ export function WarehousesSection({
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
+  const form = useForm<WarehouseFormValues>({
+    resolver: zodResolver(warehouseFormSchema),
+    defaultValues: {
+      codigo: "",
+      nombre: "",
+    },
+  });
+
   const openCreateDialog = () => {
-    setFormData(createEmptyFormState());
+    form.reset({
+      codigo: "",
+      nombre: "",
+    });
     setEditingWarehouse(null);
     setDialogMode("create");
   };
 
   const openEditDialog = (warehouse: WarehouseDTO) => {
-    setFormData({
+    form.reset({
       codigo: warehouse.codigo,
       nombre: warehouse.nombre,
     });
@@ -115,7 +130,7 @@ export function WarehousesSection({
   const closeDialog = () => {
     setDialogMode(null);
     setEditingWarehouse(null);
-    setFormData(createEmptyFormState());
+    form.reset();
   };
 
   const openDeleteDialog = (warehouse: WarehouseDTO) => {
@@ -126,21 +141,13 @@ export function WarehousesSection({
     setDeleteTarget(null);
   };
 
-  const handleFormChange = (field: keyof WarehouseFormState, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = (data: WarehouseFormValues) => {
     if (isSubmitting) return;
 
     const payload = {
       id: editingWarehouse?.id,
-      codigo: formData.codigo.trim(),
-      nombre: formData.nombre.trim(),
+      codigo: data.codigo.trim(),
+      nombre: data.nombre.trim(),
     };
 
     startSubmitTransition(async () => {
@@ -274,47 +281,59 @@ export function WarehousesSection({
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="warehouse-codigo">Código *</Label>
-                <Input
-                  id="warehouse-codigo"
-                  value={formData.codigo}
-                  onChange={(event) =>
-                    handleFormChange("codigo", event.target.value)
-                  }
-                  required
-                  disabled={isSubmitting}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="codigo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Código de la bodega"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="nombre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nombre de la bodega"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="warehouse-nombre">Nombre *</Label>
-                <Input
-                  id="warehouse-nombre"
-                  value={formData.nombre}
-                  onChange={(event) =>
-                    handleFormChange("nombre", event.target.value)
-                  }
-                  required
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
                   disabled={isSubmitting}
-                />
-              </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-              </Button>
-            </DialogFooter>
-          </form>
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
