@@ -4,12 +4,7 @@ import {
   getSaleById,
   type SaleWithFullDetails,
 } from "@/data/repositories/sales.repository";
-
-const currencyFormatter = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-});
+import { formatPrice } from "@/lib/utils";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
   dateStyle: "short",
@@ -92,7 +87,10 @@ function normalizeSaleDetails(sale: SaleWithFullDetails): SaleDetailsDTO {
   const fechaLabel = dateTimeFormatter.format(sale.createdAt);
 
   const montoTotal = Number(sale.total);
-  const montoTotalFormatted = currencyFormatter.format(montoTotal);
+  const montoTotalFormatted = formatPrice(montoTotal, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
 
   // Contar cantidad de equipos (productosDetalles)
   let cantidadEquipos = 0;
@@ -112,11 +110,20 @@ function normalizeSaleDetails(sale: SaleWithFullDetails): SaleDetailsDTO {
         nombre: productoDetalle.nombre ?? productoNombre,
         imei: productoDetalle.imei,
         descuento,
-        descuentoFormatted: currencyFormatter.format(descuento),
+        descuentoFormatted: formatPrice(descuento, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }),
         precio,
-        precioFormatted: currencyFormatter.format(precio),
+        precioFormatted: formatPrice(precio, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }),
         total,
-        totalFormatted: currencyFormatter.format(total),
+        totalFormatted: formatPrice(total, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }),
         productoNombre,
       });
     }

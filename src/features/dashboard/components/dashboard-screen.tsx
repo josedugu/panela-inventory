@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Product, ProductCard, StatCard } from "@/features/inventory";
+import { formatPrice } from "@/lib/utils";
 import {
   type LowStockProductDTO,
   type RecentActivityDTO,
@@ -99,12 +100,10 @@ export function DashboardScreen() {
 
   // Formatear valores para las estadísticas
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: "USD",
+    return formatPrice(value, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
+    });
   };
 
   const formatNumber = (value: number) => {

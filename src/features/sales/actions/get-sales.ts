@@ -5,12 +5,7 @@ import {
   listSales,
   type SaleWithRelations,
 } from "@/data/repositories/sales.repository";
-
-const currencyFormatter = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-});
+import { formatPrice } from "@/lib/utils";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
   dateStyle: "short",
@@ -47,7 +42,10 @@ function normalizeSale(sale: SaleWithRelations): SaleDTO {
     id: sale.id,
     consecutivo: sale.consecutivo,
     total: totalNumber,
-    totalFormatted: currencyFormatter.format(totalNumber),
+    totalFormatted: formatPrice(totalNumber, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }),
     status,
     statusLabel,
     statusBadge,

@@ -257,7 +257,7 @@ model MovimientoInventario {
   consecutivo      Int                       @unique @default(autoincrement()) @map("consecutivo") @db.Integer
   cantidad         Int                       @default(0)
   estado           Boolean                   @default(true)
-  costoUnitario    Decimal                   @default(0) @map("costo_unitario") @db.Decimal(10, 2)
+  costoUnitario    Decimal?                   @default(0) @map("costo_unitario") @db.Decimal(10, 2)
   creadoPor        Usuario?                  @relation("MovimientosCreadosPor", fields: [creadoPorId], references: [id])
   creadoPorId      String?                   @map("creado_por_id") @db.Uuid
   actualizadoPor   Usuario?                  @relation("MovimientosActualizadosPor", fields: [actualizadoPorId], references: [id])

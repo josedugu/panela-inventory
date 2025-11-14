@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/components/ui/utils";
+import { formatPrice } from "@/lib/utils";
 import { StockBadge, type StockStatus } from "./stock-badge";
 
 export interface Product {
@@ -68,7 +69,12 @@ export function ProductCard({
             </div>
 
             <div className="text-right min-w-[100px]">
-              <p className="font-semibold">${product.price.toFixed(2)}</p>
+              <p className="font-semibold">
+                {formatPrice(product.price, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
+              </p>
             </div>
 
             <div className="min-w-[120px]">
@@ -163,7 +169,12 @@ export function ProductCard({
           <span className="text-sm text-text-secondary">
             {product.category}
           </span>
-          <span className="font-semibold">${product.price.toFixed(2)}</span>
+          <span className="font-semibold">
+            {formatPrice(product.price, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
+            })}
+          </span>
         </div>
 
         <StockBadge status={product.stockStatus} quantity={product.stock} />

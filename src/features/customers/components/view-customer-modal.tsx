@@ -14,14 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatPrice } from "@/lib/utils";
 import type { CustomerDTO } from "../actions";
 import { getCustomerSalesAction } from "../actions/get-customer-sales";
-
-const currencyFormatter = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-});
 
 const dateFormatter = new Intl.DateTimeFormat("es-CO", {
   dateStyle: "long",
@@ -174,7 +169,10 @@ export function ViewCustomerModal({
             <div className="flex items-center justify-between">
               <div className="text-sm text-text-secondary">Total General</div>
               <div className="text-2xl font-bold">
-                {currencyFormatter.format(totalSales)}
+                {formatPrice(totalSales, {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                })}
               </div>
             </div>
           </div>
@@ -242,20 +240,29 @@ export function ViewCustomerModal({
                                     {descuento > 0 ? (
                                       <>
                                         <span className="text-text-secondary">
-                                          {currencyFormatter.format(descuento)}
+                                          {formatPrice(descuento, {
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 0,
+                                          })}
                                         </span>
                                         {" -- "}
                                       </>
                                     ) : (
                                       <>
                                         <span className="text-text-secondary">
-                                          $0.00
+                                          {formatPrice(0, {
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 0,
+                                          })}
                                         </span>
                                         {" -- "}
                                       </>
                                     )}
                                     <span className="font-semibold">
-                                      {currencyFormatter.format(precioFinal)}
+                                      {formatPrice(precioFinal, {
+                                        minimumFractionDigits: 0,
+                                        maximumFractionDigits: 0,
+                                      })}
                                     </span>
                                   </div>
                                 </div>
@@ -273,7 +280,10 @@ export function ViewCustomerModal({
                           Subtotal
                         </div>
                         <div className="text-lg font-bold">
-                          {currencyFormatter.format(Number(sale.total))}
+                          {formatPrice(Number(sale.total), {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
                         </div>
                       </div>
                     </div>

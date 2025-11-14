@@ -1,9 +1,14 @@
 "use server";
 
-import type { AggregatedProductData } from "@/data/repositories/products.repository";
+import type {
+  AggregatedProductData,
+  InventoryFilters,
+} from "@/data/repositories/products.repository";
 import {
   getAllProductDetails,
   getAllProductDetailsCount,
+  getFilteredProductDetails,
+  getFilteredProductDetailsCount,
 } from "@/data/repositories/products.repository";
 
 export type InventoryProductDTO = {
@@ -36,59 +41,6 @@ function normalizeProduct(data: AggregatedProductData): InventoryProductDTO {
     category: data.categoria,
     status,
   };
-}
-
-type NumericOperator = ">=" | "<=" | "=";
-
-function parseNumericFilterValue(
-  rawValue: string | undefined,
-): { operator: NumericOperator; value: number } | null {
-  if (!rawValue) {
-    return null;
-  }
-
-  const match = rawValue.match(/^(>=|<=|=)\s*(\d+(?:\.\d*)?)$/);
-  if (!match) {
-    return null;
-  }
-
-  const numericValue = Number(match[2]);
-  if (Number.isNaN(numericValue)) {
-    return null;
-  }
-
-  return {
-    operator: match[1] as NumericOperator,
-    value: numericValue,
-  };
-}
-
-function applyNumericFilter(
-  data: InventoryProductDTO[],
-  filterValue: string | undefined,
-  selector: (product: InventoryProductDTO) => number,
-): InventoryProductDTO[] {
-  const parsed = parseNumericFilterValue(filterValue);
-
-  if (!parsed) {
-    return data;
-  }
-
-  return data.filter((product) => {
-    const candidate = selector(product);
-    if (!Number.isFinite(candidate)) return false;
-
-    switch (parsed.operator) {
-      case ">=":
-        return candidate >= parsed.value;
-      case "<=":
-        return candidate <= parsed.value;
-      case "=":
-        return candidate === parsed.value;
-      default:
-        return true;
-    }
-  });
 }
 
 interface GetProductsParams {
@@ -134,20 +86,56 @@ export async function getProductsAction(
     const pageSize = params?.pageSize || 10;
     const offset = (page - 1) * pageSize;
 
-    // Siempre usar paginación SQL para evitar cargar todos los registros
-    const productData = await getAllProductDetails(pageSize, offset);
+    const filters = params?.filters ?? {};
+    const hasFilters = Object.keys(filters).length > 0 || params?.category;
+
+    // Si hay filtros, usar la función con filtros
+    // Si no hay filtros, usar la función SQL original para mejor rendimiento
+    let productData: AggregatedProductData[];
+    let total: number;
+
+    if (hasFilters) {
+      // Construir objeto de filtros para el repository
+      const inventoryFilters: InventoryFilters = {
+        category: filters.category ?? params?.category,
+        brand: filters.brand,
+        model: filters.model,
+        storage: filters.storage,
+        color: filters.color,
+        imei: filters.imei,
+        supplier: filters.supplier,
+        status: filters.status,
+        cost: filters.cost,
+        quantity: filters.quantity,
+      };
+
+      // Remover filtros undefined
+      Object.keys(inventoryFilters).forEach((key) => {
+        const filterKey = key as keyof InventoryFilters;
+        if (inventoryFilters[filterKey] === undefined) {
+          delete inventoryFilters[filterKey];
+        }
+      });
+
+      // Obtener productos con filtros aplicados
+      productData = await getFilteredProductDetails(
+        inventoryFilters,
+        pageSize,
+        offset,
+      );
+
+      // Obtener total con filtros aplicados
+      total = await getFilteredProductDetailsCount(inventoryFilters);
+    } else {
+      // Sin filtros, usar función SQL original
+      productData = await getAllProductDetails(pageSize, offset);
+      total = await getAllProductDetailsCount();
+    }
 
     const normalized = productData.map(normalizeProduct);
-    const availableCategories = Array.from(
-      new Set(
-        normalized
-          .map((product) => product.category)
-          .filter((category) => Boolean(category)),
-      ),
-    );
 
+    // Aplicar búsqueda local si existe (solo para nombres y categorías)
     let filtered = normalized;
-
     if (params?.search) {
       const searchLower = params.search.toLowerCase();
       filtered = filtered.filter(
@@ -155,33 +143,21 @@ export async function getProductsAction(
           p.name.toLowerCase().includes(searchLower) ||
           p.category.toLowerCase().includes(searchLower),
       );
+      // Si hay búsqueda, ajustar el total
+      if (hasFilters) {
+        // El total ya está ajustado por filtros, pero la búsqueda es local
+        // Por simplicidad, usamos el length del resultado filtrado
+        total = filtered.length;
+      }
     }
 
-    const filters = params?.filters ?? {};
-
-    const filterCategory = filters.category ?? params?.category;
-    if (filterCategory && filterCategory !== "all") {
-      const categoryLower = filterCategory.toLowerCase();
-      filtered = filtered.filter(
-        (p) => p.category.toLowerCase() === categoryLower,
-      );
-    }
-
-    if (filters.status) {
-      const statusLower = filters.status.toLowerCase();
-      filtered = filtered.filter((p) => p.status.toLowerCase() === statusLower);
-    }
-
-    filtered = applyNumericFilter(filtered, filters.cost, (p) => p.cost);
-    filtered = applyNumericFilter(
-      filtered,
-      filters.quantity,
-      (p) => p.quantity,
+    const availableCategories = Array.from(
+      new Set(
+        filtered
+          .map((product) => product.category)
+          .filter((category) => Boolean(category)),
+      ),
     );
-
-    // Los productos ya vienen ordenados alfabéticamente por marca desde SQL
-    // Obtener el total desde la función SQL
-    const total = await getAllProductDetailsCount();
 
     return {
       success: true,

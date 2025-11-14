@@ -1,11 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import { formatPrice } from "@/lib/utils";
 import type { InventoryMovementDTO } from "./actions/get-inventory-movements";
-
-const currencyFormatter = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-});
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
   dateStyle: "short",
@@ -48,7 +43,10 @@ export function getInventoryMovementColumns(): ColumnDef<InventoryMovementDTO>[]
       header: "Costo unitario",
       cell: ({ row }) => (
         <div className="text-center">
-          {currencyFormatter.format(row.original.unitCost)}
+          {formatPrice(row.original.unitCost, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}
         </div>
       ),
       size: 150,
@@ -58,7 +56,10 @@ export function getInventoryMovementColumns(): ColumnDef<InventoryMovementDTO>[]
       header: "Total",
       cell: ({ row }) => (
         <div className="text-center">
-          {currencyFormatter.format(row.original.totalCost)}
+          {formatPrice(row.original.totalCost, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}
         </div>
       ),
       size: 150,
