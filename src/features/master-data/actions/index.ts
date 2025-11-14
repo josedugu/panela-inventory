@@ -17,10 +17,13 @@ import {
   updateCostCenter,
 } from "@/data/repositories/costCenters.repository";
 import {
+  createMultipleProducts,
   createProduct,
   deleteProduct,
+  getProductFilterOptions,
   listProducts,
   type ProductDTO,
+  type ProductFilters,
   updateProduct,
 } from "@/data/repositories/master.products.repository";
 import {
@@ -473,14 +476,17 @@ export async function deleteRamAction(id: string): Promise<ActionResponse> {
 const productSchema = z.object({
   tipoProductoId: z.string().uuid("Selecciona un tipo de producto válido"),
   marcaId: z.string().uuid("Selecciona una marca válida"),
-  modeloId: z.string().uuid("Selecciona un modelo válido"),
-  almacenamientoId: z.string().uuid("Selecciona un almacenamiento válido"),
-  ramId: z.string().uuid("Selecciona una RAM válida"),
-  colorId: z.string().uuid("Selecciona un color válido"),
+  modeloId: z.string().uuid("Selecciona un modelo válido").optional(),
+  almacenamientoIds: z.array(z.string().uuid()).optional(), // Array para multiselect
+  ramIds: z.array(z.string().uuid()).optional(), // Array para multiselect
+  colorIds: z.array(z.string().uuid()).optional(), // Array para multiselect
   pvp: z
-    .string()
-    .optional()
+    .union([
+      z.string().min(1, "El PVP es obligatorio"),
+      z.number().positive("El PVP debe ser un número positivo"),
+    ])
     .transform((val) => {
+      if (typeof val === "number") return val;
       if (!val || val === "") return undefined;
       const num = Number.parseFloat(val);
       return Number.isNaN(num) ? undefined : num;
@@ -488,6 +494,27 @@ const productSchema = z.object({
   descripcion: z.string().optional(),
   estado: z.boolean().optional(),
 });
+
+/**
+ * Genera el producto cartesiano de múltiples arrays
+ * Ejemplo: cartesian([1,2], [3,4]) => [[1,3], [1,4], [2,3], [2,4]]
+ */
+function cartesian<T>(...arrays: T[][]): T[][] {
+  if (arrays.length === 0) return [[]];
+  if (arrays.length === 1) {
+    const firstArray = arrays[0];
+    return firstArray ? firstArray.map((item) => [item]) : [[]];
+  }
+
+  const [first, ...rest] = arrays;
+  const restCartesian = cartesian(...rest);
+
+  if (!first) return restCartesian;
+
+  return first.flatMap((item) =>
+    restCartesian.map((combination) => [item, ...combination]),
+  );
+}
 
 export async function upsertProductAction(
   values: z.infer<typeof productSchema> & { id?: string },
@@ -498,11 +525,87 @@ export async function upsertProductAction(
   }
 
   try {
+    const { almacenamientoIds, ramIds, colorIds, ...restData } = parsed.data;
+
+    // Si es edición, usar lógica simple (un solo producto)
     if (values.id) {
-      await updateProduct(values.id, parsed.data);
-    } else {
-      await createProduct(parsed.data);
+      const productData = {
+        ...restData,
+        almacenamientoId:
+          almacenamientoIds && almacenamientoIds.length > 0
+            ? almacenamientoIds[0]
+            : undefined,
+        ramId: ramIds && ramIds.length > 0 ? ramIds[0] : undefined,
+        colorId: colorIds && colorIds.length > 0 ? colorIds[0] : undefined,
+      };
+      await updateProduct(values.id, productData);
+      return { success: true };
     }
+
+    // Para creación: generar todas las combinaciones si hay arrays con múltiples valores
+    const hasMultipleAlmacenamientos =
+      almacenamientoIds && almacenamientoIds.length > 1;
+    const hasMultipleRams = ramIds && ramIds.length > 1;
+    const hasMultipleColors = colorIds && colorIds.length > 1;
+
+    // Si no hay arrays múltiples, crear un solo producto
+    if (!hasMultipleAlmacenamientos && !hasMultipleRams && !hasMultipleColors) {
+      const productData = {
+        ...restData,
+        almacenamientoId:
+          almacenamientoIds && almacenamientoIds.length > 0
+            ? almacenamientoIds[0]
+            : undefined,
+        ramId: ramIds && ramIds.length > 0 ? ramIds[0] : undefined,
+        colorId: colorIds && colorIds.length > 0 ? colorIds[0] : undefined,
+      };
+      await createProduct(productData);
+      return { success: true };
+    }
+
+    // Generar todas las combinaciones posibles
+    // Normalizar arrays: si no hay array o está vacío, usar [undefined] para el cartesiano
+    // pero solo incluir en el cartesiano los arrays que tienen valores
+    const arraysToCombine: (string | undefined)[][] = [];
+
+    if (almacenamientoIds && almacenamientoIds.length > 0) {
+      arraysToCombine.push(almacenamientoIds);
+    } else {
+      arraysToCombine.push([undefined]);
+    }
+
+    if (ramIds && ramIds.length > 0) {
+      arraysToCombine.push(ramIds);
+    } else {
+      arraysToCombine.push([undefined]);
+    }
+
+    if (colorIds && colorIds.length > 0) {
+      arraysToCombine.push(colorIds);
+    } else {
+      arraysToCombine.push([undefined]);
+    }
+
+    // Generar producto cartesiano
+    const combinations = cartesian(...arraysToCombine);
+
+    // Crear un ProductInput para cada combinación
+    const productInputs = combinations.map((combination) => {
+      const [almacenamientoId, ramId, colorId] = combination;
+      return {
+        ...restData,
+        almacenamientoId:
+          almacenamientoId !== undefined
+            ? (almacenamientoId as string)
+            : undefined,
+        ramId: ramId !== undefined ? (ramId as string) : undefined,
+        colorId: colorId !== undefined ? (colorId as string) : undefined,
+      };
+    });
+
+    // Crear todos los productos en una transacción
+    await createMultipleProducts(productInputs);
+
     return { success: true };
   } catch (error) {
     return prismaError(error);
@@ -586,7 +689,7 @@ export async function getSectionData(
       };
     case "productos": {
       const [
-        products,
+        productsResult,
         tipoProductos,
         brands,
         models,
@@ -603,7 +706,7 @@ export async function getSectionData(
         listColors(),
       ]);
       return {
-        products,
+        products: productsResult.products,
         tipoProductos,
         brands,
         models,
@@ -614,5 +717,41 @@ export async function getSectionData(
     }
     default:
       return {};
+  }
+}
+
+export async function getProductsWithFiltersAction(
+  filters?: ProductFilters,
+  page?: number,
+  pageSize?: number,
+): Promise<
+  | { success: true; data: ProductDTO[]; total: number }
+  | { success: false; error: string }
+> {
+  try {
+    const result = await listProducts({
+      filters,
+      page,
+      pageSize,
+    });
+    return {
+      success: true,
+      data: result.products,
+      total: result.total,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Error al obtener productos",
+    };
+  }
+}
+
+export async function getProductFilterOptionsAction() {
+  try {
+    return await getProductFilterOptions();
+  } catch {
+    throw new Error("No se pudieron cargar las opciones de filtro");
   }
 }

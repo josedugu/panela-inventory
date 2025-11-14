@@ -210,6 +210,7 @@ export function WarehousesSection({
     columns,
     onDelete: (warehouse: WarehouseDTO) => openDeleteDialog(warehouse),
     getRowId: (warehouse: WarehouseDTO) => warehouse.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;

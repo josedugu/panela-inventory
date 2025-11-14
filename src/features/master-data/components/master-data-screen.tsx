@@ -86,7 +86,6 @@ const SECTION_RENDERERS: Record<MasterDataSection, SectionRenderer> = {
     <TipoProductosSection tipoProductos={tipoProductos} onRefresh={onRefresh} />
   ),
   productos: ({
-    products = [],
     tipoProductos = [],
     brands = [],
     models = [],
@@ -96,7 +95,6 @@ const SECTION_RENDERERS: Record<MasterDataSection, SectionRenderer> = {
     onRefresh,
   }) => (
     <ProductsSection
-      products={products}
       tipoProductos={tipoProductos}
       brands={brands}
       models={models}

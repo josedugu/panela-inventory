@@ -205,6 +205,7 @@ export function CostCentersSection({
     columns,
     onDelete: (center: CostCenterDTO) => openDeleteDialog(center),
     getRowId: (center: CostCenterDTO) => center.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;

@@ -212,6 +212,7 @@ export function SuppliersSection({
     columns,
     onDelete: (supplier: SupplierDTO) => openDeleteDialog(supplier),
     getRowId: (supplier: SupplierDTO) => supplier.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;

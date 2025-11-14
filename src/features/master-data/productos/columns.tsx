@@ -17,30 +17,10 @@ export function getProductColumns({
 }: ProductColumnsOptions): ColumnDef<ProductDTO>[] {
   return [
     {
-      accessorKey: "tipoProductoNombre",
-      header: "Tipo",
+      accessorKey: "nombre",
+      header: "Nombre",
       cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.tipoProductoNombre ?? "—"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "marcaNombre",
-      header: "Marca",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.marcaNombre ?? "—"}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "modeloNombre",
-      header: "Modelo",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          {row.original.modeloNombre ?? "—"}
-        </div>
+        <div className="flex items-center">{row.original.nombre ?? "—"}</div>
       ),
     },
     {
@@ -58,11 +38,51 @@ export function getProductColumns({
       ),
     },
     {
+      accessorKey: "pvp",
+      header: "PVP",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          {row.original.pvp
+            ? formatPrice(row.original.pvp, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })
+            : "—"}
+        </div>
+      ),
+    },
+    {
       accessorKey: "cantidad",
       header: "Cantidad",
       cell: ({ row }) => (
         <div className="flex items-center justify-center">
           {row.original.cantidad}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "tipoProductoNombre",
+      header: "Tipo",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          {row.original.tipoProductoNombre ?? "—"}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "estado",
+      header: "Estado",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+              row.original.estado
+                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+            }`}
+          >
+            {row.original.estado ? "Activo" : "Inactivo"}
+          </span>
         </div>
       ),
     },

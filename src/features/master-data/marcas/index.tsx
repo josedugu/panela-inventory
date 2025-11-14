@@ -194,6 +194,7 @@ export function BrandsSection({ brands, onRefresh }: BrandsSectionProps) {
     columns,
     onDelete: (brand: BrandDTO) => openDeleteDialog(brand),
     getRowId: (brand: BrandDTO) => brand.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;

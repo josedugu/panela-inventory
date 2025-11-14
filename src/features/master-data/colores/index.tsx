@@ -184,6 +184,7 @@ export function ColorsSection({ colors, onRefresh }: ColorsSectionProps) {
     columns,
     onDelete: (color: ColorDTO) => openDeleteDialog(color),
     getRowId: (color: ColorDTO) => color.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;

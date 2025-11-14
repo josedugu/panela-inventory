@@ -189,6 +189,7 @@ export function StorageSection({
     columns,
     onDelete: (option: StorageDTO) => openDeleteDialog(option),
     getRowId: (option: StorageDTO) => option.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;

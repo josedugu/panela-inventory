@@ -196,6 +196,7 @@ export function TipoProductosSection({
     columns,
     onDelete: (tipoProducto: TipoProductoDTO) => openDeleteDialog(tipoProducto),
     getRowId: (tipoProducto: TipoProductoDTO) => tipoProducto.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;
