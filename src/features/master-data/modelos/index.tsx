@@ -200,6 +200,7 @@ export function ModelsSection({
     columns,
     onDelete: (model: ModelDTO) => openDeleteDialog(model),
     getRowId: (model: ModelDTO) => model.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;

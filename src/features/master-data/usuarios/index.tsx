@@ -224,6 +224,7 @@ export function UsersSection({
     columns,
     onDelete: (user: UserDTO) => openDeleteDialog(user),
     getRowId: (user: UserDTO) => user.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;

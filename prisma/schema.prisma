@@ -155,6 +155,7 @@ model TipoProducto {
 model Producto {
   id                String              @id @default(uuid()) @db.Uuid
   estado            Boolean             @default(true)
+  nombre            String?             @map("nombre")
   costo             Decimal?            @db.Decimal(10, 2)
   pvp              Decimal?                   @default(0) @map("pvp") @db.Decimal(10, 2)
   cantidad          Int                 @default(0)

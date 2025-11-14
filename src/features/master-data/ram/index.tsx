@@ -188,6 +188,7 @@ export function RamSection({ ramOptions, onRefresh }: RamSectionProps) {
     columns,
     onDelete: (option: RamDTO) => openDeleteDialog(option),
     getRowId: (option: RamDTO) => option.id,
+    showIndexColumn: false,
   };
 
   const isDialogOpen = dialogMode !== null;
