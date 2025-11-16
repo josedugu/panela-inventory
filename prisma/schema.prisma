@@ -20,6 +20,7 @@ model Usuario {
   telefono                   String?
   rolId                      String?                @map("rol_id") @db.Uuid
   centroCostoId              String?                @map("centro_costo_id") @db.Uuid
+  authUserId                 String?                @unique @map("auth_user_id") @db.Uuid
   estado                     Boolean                @default(true)
   createdAt                  DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                  DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
