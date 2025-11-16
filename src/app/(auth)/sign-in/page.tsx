@@ -60,6 +60,7 @@ function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
+  const redirectTo = searchParams.get("redirectTo");
 
   const handleSignIn = async (data: SignInFormData) => {
     const supabase = createClient();
@@ -86,8 +87,9 @@ function SignInContent() {
     // Refrescar la página para actualizar el estado de autenticación
     router.refresh();
 
-    // Redirigir al dashboard
-    router.push("/dashboard");
+    // Redirigir a la ruta original solicitada o al dashboard por defecto
+    const destination = redirectTo?.startsWith("/") ? redirectTo : "/dashboard";
+    router.push(destination);
   };
 
   return (
@@ -110,13 +112,12 @@ export default function SignInPage() {
       fallback={
         <div className="min-h-screen flex items-center justify-center p-4 bg-surface-1">
           <div className="text-center">
-            <div
+            <output
               className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"
-              role="status"
               aria-label="Cargando"
             >
               <span className="sr-only">Cargando...</span>
-            </div>
+            </output>
           </div>
         </div>
       }

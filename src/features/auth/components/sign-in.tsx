@@ -93,7 +93,6 @@ export function SignIn({
           ? error.message
           : "Error al iniciar sesión. Por favor, intenta de nuevo.";
       setServerError(errorMessage);
-      console.error("Error signing in:", error);
     } finally {
       setIsLoading(false);
     }

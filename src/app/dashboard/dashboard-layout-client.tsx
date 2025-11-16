@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { MobileSidebar, SidebarNav } from "@/components/layout/sidebar-nav";
 import { TopNav } from "@/components/layout/top-nav";
+import { useAuth } from "@/hooks/use-auth";
 
 export function DashboardLayoutClient({
   children,
@@ -14,6 +15,7 @@ export function DashboardLayoutClient({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { signOut } = useAuth();
   // Estado local para actualización inmediata del elemento activo
   const [activeItem, setActiveItem] = useState(pathname);
 
@@ -39,11 +41,20 @@ export function DashboardLayoutClient({
     setActiveItem(pathname);
   }, [pathname]);
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch {
+      // Aún así, intentar redirigir a sign-in
+      window.location.href = "/sign-in";
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
       <TopNav
         onMenuClick={() => setMobileMenuOpen(true)}
-        onLogout={() => router.push("/sign-in")}
+        onLogout={handleLogout}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -53,7 +64,7 @@ export function DashboardLayoutClient({
             setActiveItem(href); // Actualizar inmediatamente
             router.push(href);
           }}
-          onLogout={() => router.push("/sign-in")}
+          onLogout={handleLogout}
         />
 
         <MobileSidebar
@@ -64,7 +75,7 @@ export function DashboardLayoutClient({
             setActiveItem(href); // Actualizar inmediatamente
             router.push(href);
           }}
-          onLogout={() => router.push("/sign-in")}
+          onLogout={handleLogout}
         />
 
         <main className="flex-1 flex flex-col overflow-auto min-h-full">
