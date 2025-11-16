@@ -11,6 +11,7 @@ export interface UserDTO {
   rolNombre?: string | null;
   centroCostoId?: string | null;
   centroCostoNombre?: string | null;
+  authUserId?: string | null;
   estado: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +29,7 @@ interface UserInput {
   rolId: string;
   centroCostoId?: string | null;
   estado?: boolean;
+  authUserId?: string | null;
 }
 
 export async function listRoles(): Promise<RoleDTO[]> {
@@ -59,6 +61,7 @@ export async function listUsers(): Promise<UserDTO[]> {
     rolNombre: user.rol?.nombre ?? null,
     centroCostoId: user.centroCostoId,
     centroCostoNombre: user.centroCostos?.nombre ?? null,
+    authUserId: user.authUserId,
     estado: user.estado,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
@@ -71,9 +74,20 @@ export async function createUser(input: UserInput): Promise<UserDTO> {
       nombre: input.nombre,
       email: input.email,
       telefono: input.telefono,
-      rolId: input.rolId,
-      centroCostoId: input.centroCostoId ?? null,
       estado: input.estado ?? true,
+      authUserId: input.authUserId ?? null,
+      rol: {
+        connect: {
+          id: input.rolId,
+        },
+      },
+      centroCostos: input.centroCostoId
+        ? {
+            connect: {
+              id: input.centroCostoId,
+            },
+          }
+        : undefined,
     },
     include: {
       centroCostos: true,
@@ -90,6 +104,7 @@ export async function createUser(input: UserInput): Promise<UserDTO> {
     rolNombre: user.rol?.nombre ?? null,
     centroCostoId: user.centroCostoId,
     centroCostoNombre: user.centroCostos?.nombre ?? null,
+    authUserId: user.authUserId,
     estado: user.estado,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
@@ -106,9 +121,25 @@ export async function updateUser(
       nombre: input.nombre,
       email: input.email,
       telefono: input.telefono,
-      rolId: input.rolId,
-      centroCostoId: input.centroCostoId ?? null,
       estado: input.estado ?? true,
+      authUserId: input.authUserId ?? undefined,
+      rol: {
+        connect: {
+          id: input.rolId,
+        },
+      },
+      centroCostos:
+        input.centroCostoId !== undefined
+          ? input.centroCostoId
+            ? {
+                connect: {
+                  id: input.centroCostoId,
+                },
+              }
+            : {
+                disconnect: true,
+              }
+          : undefined,
     },
     include: {
       centroCostos: true,
@@ -125,9 +156,64 @@ export async function updateUser(
     rolNombre: user.rol?.nombre ?? null,
     centroCostoId: user.centroCostoId,
     centroCostoNombre: user.centroCostos?.nombre ?? null,
+    authUserId: user.authUserId,
     estado: user.estado,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
+  };
+}
+
+export async function getUserById(id: string): Promise<UserDTO | null> {
+  const user = await prisma.usuario.findUnique({
+    where: { id },
+    include: {
+      centroCostos: true,
+      rol: true,
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    nombre: user.nombre,
+    email: user.email,
+    telefono: user.telefono,
+    rolId: user.rolId,
+    rolNombre: user.rol?.nombre ?? null,
+    centroCostoId: user.centroCostoId,
+    centroCostoNombre: user.centroCostos?.nombre ?? null,
+    authUserId: user.authUserId,
+    estado: user.estado,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
+export async function linkUserToAuthAccount(
+  id: string,
+  authUserId: string | null,
+) {
+  await prisma.usuario.update({
+    where: { id },
+    data: { authUserId },
+  });
+}
+
+export async function getRoleById(id: string): Promise<RoleDTO | null> {
+  const role = await prisma.rol.findUnique({
+    where: { id },
+  });
+
+  if (!role) {
+    return null;
+  }
+
+  return {
+    id: role.id,
+    nombre: role.nombre,
   };
 }
 
