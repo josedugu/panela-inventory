@@ -68,6 +68,9 @@ import {
 import {
   createUser,
   deleteUser,
+  getRoleById,
+  getUserById,
+  linkUserToAuthAccount,
   listRoles,
   listUsers,
   type RoleDTO,
@@ -82,6 +85,11 @@ import {
   type WarehouseDTO,
 } from "@/data/repositories/warehouses.repository";
 import type { MasterDataSection } from "@/features/master-data/conts";
+import {
+  createSupabaseMasterUser,
+  deleteSupabaseMasterUser,
+  updateSupabaseMasterUser,
+} from "@/services/supabase/users";
 
 type ActionResponse =
   | { success: true }
@@ -128,6 +136,27 @@ function prismaError(error: unknown): ActionResponse {
   return {
     success: false,
     error: "Ocurrió un error inesperado",
+  };
+}
+
+function supabaseActionError(error: unknown): ActionResponse {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes("already been registered")) {
+      return {
+        success: false,
+        error: "Ya existe un usuario con este correo electrónico",
+      };
+    }
+    return {
+      success: false,
+      error: message,
+    };
+  }
+
+  return {
+    success: false,
+    error: "Ocurrió un error al sincronizar con Supabase",
   };
 }
 
@@ -343,23 +372,143 @@ export async function upsertUserAction(
     return validationError(parsed.error.flatten().fieldErrors);
   }
 
-  try {
-    if (values.id) {
-      await updateUser(values.id, parsed.data);
-    } else {
-      await createUser(parsed.data);
+  const role = await getRoleById(parsed.data.rolId);
+  if (!role) {
+    return {
+      success: false,
+      error: "El rol seleccionado no existe",
+    };
+  }
+
+  const parsedData = parsed.data;
+
+  if (!values.id) {
+    try {
+      const user = await createUser(parsedData);
+      try {
+        const { authUserId } = await createSupabaseMasterUser({
+          localUserId: user.id,
+          email: user.email,
+          fullName: user.nombre,
+          phone: user.telefono ?? null,
+          roleId: role.id,
+          roleName: role.nombre,
+          isActive: user.estado,
+        });
+        await linkUserToAuthAccount(user.id, authUserId);
+        return { success: true };
+      } catch (error) {
+        await deleteUser(user.id).catch(() => {});
+        return supabaseActionError(error);
+      }
+    } catch (error) {
+      return prismaError(error);
     }
-    return { success: true };
+  }
+
+  const existingUser = await getUserById(values.id);
+  if (!existingUser) {
+    return {
+      success: false,
+      error: "El usuario no existe",
+    };
+  }
+
+  const supabasePayload = {
+    localUserId: existingUser.id,
+    email: parsedData.email,
+    fullName: parsedData.nombre,
+    phone: parsedData.telefono ?? null,
+    roleId: role.id,
+    roleName: role.nombre,
+    isActive:
+      typeof parsedData.estado === "boolean"
+        ? parsedData.estado
+        : existingUser.estado,
+  };
+
+  try {
+    let authUserId = existingUser.authUserId ?? null;
+    let createdAuthAccount = false;
+
+    if (authUserId) {
+      await updateSupabaseMasterUser(authUserId, supabasePayload);
+    } else {
+      const result = await createSupabaseMasterUser(supabasePayload);
+      authUserId = result.authUserId;
+      createdAuthAccount = true;
+    }
+
+    try {
+      await updateUser(values.id, parsedData);
+      if (createdAuthAccount && authUserId) {
+        await linkUserToAuthAccount(values.id, authUserId);
+      }
+      return { success: true };
+    } catch (error) {
+      if (createdAuthAccount && authUserId) {
+        await deleteSupabaseMasterUser(authUserId).catch(() => {});
+      } else if (existingUser.authUserId) {
+        await updateSupabaseMasterUser(existingUser.authUserId, {
+          localUserId: existingUser.id,
+          email: existingUser.email,
+          fullName: existingUser.nombre,
+          phone: existingUser.telefono ?? null,
+          roleId: existingUser.rolId ?? role.id,
+          roleName: existingUser.rolNombre ?? role.nombre,
+          isActive: existingUser.estado,
+        }).catch(() => {});
+      }
+      return prismaError(error);
+    }
   } catch (error) {
-    return prismaError(error);
+    return supabaseActionError(error);
   }
 }
 
 export async function deleteUserAction(id: string): Promise<ActionResponse> {
+  const existingUser = await getUserById(id);
+  if (!existingUser) {
+    return {
+      success: false,
+      error: "El usuario no existe",
+    };
+  }
+
+  let supabaseAccountDeleted = false;
+  if (existingUser.authUserId) {
+    try {
+      await deleteSupabaseMasterUser(existingUser.authUserId);
+      supabaseAccountDeleted = true;
+    } catch (error) {
+      return supabaseActionError(error);
+    }
+  }
+
   try {
     await deleteUser(id);
     return { success: true };
   } catch (error) {
+    if (supabaseAccountDeleted && existingUser.rolId) {
+      try {
+        const roleName =
+          existingUser.rolNombre ??
+          (await getRoleById(existingUser.rolId))?.nombre ??
+          undefined;
+        const { authUserId } = await createSupabaseMasterUser({
+          localUserId: existingUser.id,
+          email: existingUser.email,
+          fullName: existingUser.nombre,
+          phone: existingUser.telefono ?? null,
+          roleId: existingUser.rolId,
+          roleName,
+          isActive: existingUser.estado,
+        });
+        await linkUserToAuthAccount(existingUser.id, authUserId);
+      } catch {
+        // Ignorar el rollback si falla: ya estamos devolviendo error al usuario.
+      }
+    }
     return prismaError(error);
   }
 }
