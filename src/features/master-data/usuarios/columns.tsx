@@ -1,19 +1,20 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
+import { Mail, Pencil, Trash2 } from "lucide-react";
 import type { TableAction } from "@/components/ui/table-actions-cell";
 import { TableActionsCell } from "@/components/ui/table-actions-cell";
-import { cn } from "@/components/ui/utils";
 import type { UserDTO } from "@/data/repositories/users.repository";
 
 interface UserColumnsOptions {
   onEdit: (user: UserDTO) => void;
   onDelete: (user: UserDTO) => void;
+  onResendInvite: (user: UserDTO) => void;
   isBusy?: boolean;
 }
 
 export function getUserColumns({
   onEdit,
   onDelete,
+  onResendInvite,
   isBusy = false,
 }: UserColumnsOptions): ColumnDef<UserDTO>[] {
   return [
@@ -49,16 +50,17 @@ export function getUserColumns({
       cell: ({ row }) => {
         const isActive = row.original.estado;
         return (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-              isActive
-                ? "bg-success-light text-success-foreground"
-                : "bg-destructive/10 text-destructive",
-            )}
-          >
-            {isActive ? "Activo" : "Inactivo"}
-          </span>
+          <div className="flex items-center justify-center">
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                isActive
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                  : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+              }`}
+            >
+              {isActive ? "Activo" : "Inactivo"}
+            </span>
+          </div>
         );
       },
     },
@@ -71,6 +73,12 @@ export function getUserColumns({
             label: "Editar",
             icon: <Pencil className="h-4 w-4" />,
             onClick: () => onEdit(row.original),
+            disabled: isBusy,
+          },
+          {
+            label: "Reenviar invitación",
+            icon: <Mail className="h-4 w-4" />,
+            onClick: () => onResendInvite(row.original),
             disabled: isBusy,
           },
           {

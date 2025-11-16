@@ -108,3 +108,60 @@ export async function deleteSupabaseMasterUser(authUserId: string) {
     );
   }
 }
+
+/**
+ * Verifica si un usuario en Supabase ya tiene contraseña establecida
+ * Un usuario tiene contraseña si tiene email confirmado (email_confirmed_at no es null)
+ * Los usuarios invitados que aún no han establecido contraseña tienen email_confirmed_at como null
+ */
+export async function checkUserHasPassword(
+  authUserId: string,
+): Promise<boolean> {
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase.auth.admin.getUserById(authUserId);
+
+  if (error || !data.user) {
+    return false;
+  }
+
+  // Si el usuario tiene email confirmado, significa que ya completó el proceso
+  // de establecer contraseña (ya sea por invitación o registro normal)
+  const hasPassword = data.user.email_confirmed_at !== null;
+
+  return hasPassword;
+}
+
+export async function resendInviteEmail(
+  payload: SupabaseUserPayload,
+  authUserId?: string | null,
+): Promise<void> {
+  const supabase = getSupabaseAdminClient();
+  const userMetadata = buildUserMetadata(payload);
+
+  // Si el usuario tiene authUserId, verificar si ya tiene contraseña establecida
+  if (authUserId) {
+    const hasPassword = await checkUserHasPassword(authUserId);
+    if (hasPassword) {
+      throw new Error(
+        "El usuario ya tiene contraseña establecida. No se puede reenviar la invitación.",
+      );
+    }
+  }
+
+  // inviteUserByEmail puede usarse para reenviar invitaciones a usuarios existentes
+  // que aún no han establecido su contraseña. Si el usuario ya tiene contraseña,
+  // Supabase no enviará el correo (pero no lanzará error, por eso validamos antes)
+  const { error } = await supabase.auth.admin.inviteUserByEmail(
+    payload.email,
+    {
+      data: userMetadata,
+      redirectTo: INVITE_REDIRECT,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      error.message ?? "No se pudo reenviar la invitación desde Supabase",
+    );
+  }
+}

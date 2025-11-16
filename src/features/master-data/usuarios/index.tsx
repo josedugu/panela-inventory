@@ -46,6 +46,7 @@ import { EntityTableLayout } from "@/features/entity-table/components/entity-tab
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {
   deleteUserAction,
+  resendInviteAction,
   upsertUserAction,
 } from "@/features/master-data/actions";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
@@ -105,8 +106,12 @@ export function UsersSection({
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [editingUser, setEditingUser] = useState<UserDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserDTO | null>(null);
+  const [resendInviteTarget, setResendInviteTarget] = useState<UserDTO | null>(
+    null,
+  );
   const [isSubmitting, startSubmitTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
+  const [isResendingInvite, startResendInviteTransition] = useTransition();
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
@@ -160,6 +165,14 @@ export function UsersSection({
     setDeleteTarget(null);
   };
 
+  const openResendInviteDialog = (user: UserDTO) => {
+    setResendInviteTarget(user);
+  };
+
+  const closeResendInviteDialog = () => {
+    setResendInviteTarget(null);
+  };
+
   const onSubmit = (data: UserFormValues) => {
     if (isSubmitting) return;
 
@@ -206,11 +219,31 @@ export function UsersSection({
     });
   };
 
-  const isBusy = isSubmitting || isDeleting;
+  const handleResendInvite = () => {
+    if (!resendInviteTarget || isResendingInvite) return;
+
+    startResendInviteTransition(async () => {
+      const result = await resendInviteAction(resendInviteTarget.id);
+      if (!result.success) {
+        toast.error(
+          result.error ?? "Error al reenviar la invitación",
+        );
+        return;
+      }
+
+      toast.success(
+        `Invitación reenviada exitosamente a ${resendInviteTarget.email}`,
+      );
+      closeResendInviteDialog();
+    });
+  };
+
+  const isBusy = isSubmitting || isDeleting || isResendingInvite;
 
   const columns = getUserColumns({
     onEdit: openEditDialog,
     onDelete: openDeleteDialog,
+    onResendInvite: openResendInviteDialog,
     isBusy,
   });
 
@@ -456,6 +489,40 @@ export function UsersSection({
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(resendInviteTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeResendInviteDialog();
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reenviar invitación</AlertDialogTitle>
+            <AlertDialogDescription>
+              {resendInviteTarget
+                ? `¿Deseas reenviar el enlace de invitación al correo ${resendInviteTarget.email}? Se enviará un nuevo correo con las instrucciones para establecer la contraseña.`
+                : "¿Deseas reenviar el enlace de invitación?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isResendingInvite}
+              onClick={closeResendInviteDialog}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResendInvite}
+              disabled={isResendingInvite}
+            >
+              Reenviar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -88,6 +88,7 @@ import type { MasterDataSection } from "@/features/master-data/conts";
 import {
   createSupabaseMasterUser,
   deleteSupabaseMasterUser,
+  resendInviteEmail,
   updateSupabaseMasterUser,
 } from "@/services/supabase/users";
 
@@ -510,6 +511,69 @@ export async function deleteUserAction(id: string): Promise<ActionResponse> {
       }
     }
     return prismaError(error);
+  }
+}
+
+export async function resendInviteAction(
+  id: string,
+): Promise<ActionResponse> {
+  const existingUser = await getUserById(id);
+  if (!existingUser) {
+    return {
+      success: false,
+      error: "El usuario no existe",
+    };
+  }
+
+  if (!existingUser.rolId) {
+    return {
+      success: false,
+      error: "El usuario no tiene un rol asignado",
+    };
+  }
+
+  const role = await getRoleById(existingUser.rolId);
+  if (!role) {
+    return {
+      success: false,
+      error: "El rol del usuario no existe",
+    };
+  }
+
+  try {
+    await resendInviteEmail(
+      {
+        localUserId: existingUser.id,
+        email: existingUser.email,
+        fullName: existingUser.nombre,
+        phone: existingUser.telefono ?? null,
+        roleId: role.id,
+        roleName: role.nombre,
+        isActive: existingUser.estado,
+      },
+      existingUser.authUserId ?? undefined,
+    );
+
+    // Si el usuario tiene authUserId, actualizamos los metadatos para asegurar consistencia
+    if (existingUser.authUserId) {
+      try {
+        await updateSupabaseMasterUser(existingUser.authUserId, {
+          localUserId: existingUser.id,
+          email: existingUser.email,
+          fullName: existingUser.nombre,
+          phone: existingUser.telefono ?? null,
+          roleId: role.id,
+          roleName: role.nombre,
+          isActive: existingUser.estado,
+        });
+      } catch {
+        // Si falla la actualización de metadatos, no es crítico, el correo ya se envió
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    return supabaseActionError(error);
   }
 }
 
