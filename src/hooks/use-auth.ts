@@ -34,15 +34,64 @@ export function useAuth() {
       router.refresh();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, [router, queryClient, supabase.auth]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Crear una Promise que se resuelva cuando se confirme el cierre de sesión
+    // IMPORTANTE: Crear la suscripción ANTES de llamar a signOut() para capturar el evento
+    let subscription: { unsubscribe: () => void } | undefined;
+
+    const waitForSignOut = new Promise<void>((resolve) => {
+      // Suscribirse al evento de cambio de estado de auth
+      const {
+        data: { subscription: authSubscription },
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        // Cuando se detecta el evento SIGNED_OUT y no hay sesión
+        if (event === "SIGNED_OUT" && !session) {
+          // Limpiar la suscripción
+          authSubscription?.unsubscribe();
+          resolve();
+        }
+      });
+
+      // Guardar referencia para limpieza en caso de error
+      subscription = authSubscription ?? undefined;
+    });
+
+    // Iniciar el cierre de sesión y esperar su resultado
+    // signOut() limpia las cookies automáticamente
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      // Limpiar suscripción si hay error
+      subscription?.unsubscribe();
+      throw error;
+    }
+
+    // Esperar a que el evento SIGNED_OUT se dispare (confirma que la sesión se cerró)
+    await waitForSignOut;
+
+    // Verificación final: confirmar que getSession() retorna null
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session) {
+      // Si aún hay sesión después del evento SIGNED_OUT, algo salió mal
+      throw new Error("No se pudo cerrar la sesión completamente");
+    }
+
     // Invalidar cache de React Query
     queryClient.setQueryData(["auth", "user"], null);
-    router.push("/sign-in");
-    router.refresh();
+    queryClient.invalidateQueries();
+
+    // Forzar refresh completo usando window.location
+    // Esto asegura que el middleware vea el estado actualizado
+    // y que las cookies se hayan limpiado completamente
+    window.location.href = "/sign-in";
   };
 
   return {

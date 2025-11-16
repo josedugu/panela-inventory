@@ -81,10 +81,6 @@ export function useSetPasswordState() {
           });
 
           if (sessionError) {
-            console.error(
-              "[set-password] Error setting session:",
-              sessionError,
-            );
             dispatch({ type: "VALIDATION_FAILURE" });
             return;
           }
@@ -133,8 +129,7 @@ export function useSetPasswordState() {
             dispatch({ type: "VALIDATION_FAILURE" });
           }
         }
-      } catch (error) {
-        console.error("[set-password] Error validating link:", error);
+      } catch {
         dispatch({ type: "VALIDATION_FAILURE" });
       }
     };
