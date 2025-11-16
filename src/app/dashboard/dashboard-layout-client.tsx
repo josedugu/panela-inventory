@@ -17,6 +17,23 @@ export function DashboardLayoutClient({
   // Estado local para actualización inmediata del elemento activo
   const [activeItem, setActiveItem] = useState(pathname);
 
+  // Detectar hash de invitación y redirigir a /set-password
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.substring(1);
+      if (hash) {
+        const hashParams = new URLSearchParams(hash);
+        const type = hashParams.get("type");
+
+        // Si es una invitación, redirigir a /set-password manteniendo el hash
+        if (type === "invite" && pathname !== "/set-password") {
+          router.replace(`/set-password${window.location.hash}`);
+          return;
+        }
+      }
+    }
+  }, [pathname, router]);
+
   // Sincronizar con pathname cuando cambie (después de navegación)
   useEffect(() => {
     setActiveItem(pathname);
