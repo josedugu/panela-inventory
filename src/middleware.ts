@@ -24,8 +24,9 @@ export const config = {
      * - favicon.ico (favicon file)
      * - *.svg, *.png, *.jpg, *.jpeg, *.gif, *.webp (image files)
      * - Rutas públicas de autenticación (sign-in, sign-up, forgot-password, set-password, auth/callback)
+     * - Página de no autorizado (unauthorized)
      * - api routes (si las hay, se pueden proteger individualmente)
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|set-password|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|set-password|auth/callback|unauthorized|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

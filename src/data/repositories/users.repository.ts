@@ -222,3 +222,34 @@ export async function deleteUser(id: string): Promise<void> {
     where: { id },
   });
 }
+
+export async function getUserByAuthId(
+  authUserId: string,
+): Promise<UserDTO | null> {
+  const user = await prisma.usuario.findUnique({
+    where: { authUserId },
+    include: {
+      centroCostos: true,
+      rol: true,
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    nombre: user.nombre,
+    email: user.email,
+    telefono: user.telefono,
+    rolId: user.rolId,
+    rolNombre: user.rol?.nombre ?? null,
+    centroCostoId: user.centroCostoId,
+    centroCostoNombre: user.centroCostos?.nombre ?? null,
+    authUserId: user.authUserId,
+    estado: user.estado,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
