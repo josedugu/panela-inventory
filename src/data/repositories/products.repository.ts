@@ -8,6 +8,9 @@ export type ProductWithRelations = Prisma.ProductoGetPayload<{
     tipoProducto: true;
     marca: true;
     modelo: true;
+    almacenamiento: true;
+    ram: true;
+    color: true;
     productoDescuento: true;
     productosDetalles: {
       include: {
@@ -47,6 +50,9 @@ export async function getAllProducts(): Promise<ProductWithRelations[]> {
       tipoProducto: true,
       marca: true,
       modelo: true,
+      almacenamiento: true,
+      ram: true,
+      color: true,
       productoDescuento: true,
       productosDetalles: {
         where: {
@@ -59,6 +65,76 @@ export async function getAllProducts(): Promise<ProductWithRelations[]> {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+export async function searchProductsForSale(
+  query: string,
+  limit: number = 10,
+): Promise<
+  Array<{
+    id: string;
+    nombre: string | null;
+    pvp: number | null;
+    cantidad: number;
+  }>
+> {
+  if (!query.trim()) {
+    const results = await prisma.producto.findMany({
+      where: {
+        estado: true,
+        cantidad: {
+          gt: 0,
+        },
+      },
+      select: {
+        id: true,
+        nombre: true,
+        pvp: true,
+        cantidad: true,
+      },
+      orderBy: {
+        nombre: "asc",
+      },
+      take: limit,
+    });
+
+    return results.map((product) => ({
+      id: product.id,
+      nombre: product.nombre,
+      pvp: product.pvp ? Number(product.pvp) : null,
+      cantidad: product.cantidad,
+    }));
+  }
+
+  const results = await prisma.producto.findMany({
+    where: {
+      estado: true,
+      cantidad: {
+        gt: 0,
+      },
+      nombre: {
+        contains: query,
+        mode: "insensitive",
+      },
+    },
+    select: {
+      id: true,
+      nombre: true,
+      pvp: true,
+      cantidad: true,
+    },
+    orderBy: {
+      nombre: "asc",
+    },
+    take: limit,
+  });
+
+  return results.map((product) => ({
+    id: product.id,
+    nombre: product.nombre,
+    pvp: product.pvp ? Number(product.pvp) : null,
+    cantidad: product.cantidad,
+  }));
 }
 
 // Código original comentado - ahora usamos función SQL para filtrar productos físicamente activos
@@ -507,6 +583,9 @@ export async function getProductById(
       tipoProducto: true,
       marca: true,
       modelo: true,
+      almacenamiento: true,
+      ram: true,
+      color: true,
       productoDescuento: true,
       productosDetalles: {
         where: {
@@ -557,6 +636,9 @@ export async function searchProducts(
       tipoProducto: true,
       marca: true,
       modelo: true,
+      almacenamiento: true,
+      ram: true,
+      color: true,
       productoDescuento: true,
       productosDetalles: {
         where: {
@@ -585,6 +667,9 @@ export async function getLowStockProducts(
       tipoProducto: true,
       marca: true,
       modelo: true,
+      almacenamiento: true,
+      ram: true,
+      color: true,
       productoDescuento: true,
       productosDetalles: {
         where: {

@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import {
   Dialog,
   DialogContent,
@@ -12,18 +13,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { InputSearch } from "@/components/ui/input-search";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { InputSearchDB } from "@/components/ui/input-search-db";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import { getSaleForEditAction } from "../actions/get-sale-for-edit";
-import { getSaleFormData } from "../actions/get-sale-form-data";
+import { searchCustomersAction } from "../actions/search-customers";
+import { searchProductsAction } from "../actions/search-products";
 
 interface CreateSaleModalProps {
   isOpen: boolean;
@@ -57,11 +52,13 @@ export function CreateSaleModal({
   const [isPending, startTransition] = useTransition();
   const isEditMode = !!saleId;
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["sale-form-data"],
-    queryFn: getSaleFormData,
-    enabled: isOpen,
-  });
+  // Estado para almacenar los productos y clientes seleccionados
+  const [selectedProductData, setSelectedProductData] = useState<
+    Map<string, { label: string; pvp: number; availableQuantity: number }>
+  >(new Map());
+  const [selectedCustomerData, setSelectedCustomerData] = useState<
+    Map<string, { label: string }>
+  >(new Map());
 
   const { data: saleForEdit, isLoading: isLoadingSaleForEdit } = useQuery({
     queryKey: ["sale-for-edit", saleId],
@@ -71,9 +68,6 @@ export function CreateSaleModal({
     },
     enabled: isOpen && isEditMode && !!saleId,
   });
-
-  const productOptions = data?.products ?? [];
-  const customerOptions = data?.customers ?? [];
 
   // Cargar datos de la venta cuando está en modo edición
   useEffect(() => {
@@ -100,92 +94,124 @@ export function CreateSaleModal({
 
   const lineDetails = useMemo(() => {
     return lines.map((line) => {
-      const product = productOptions.find(
-        (option) => option.id === line.productId,
-      );
+      const product = selectedProductData.get(line.productId);
       if (!product) {
         return {
           ...line,
           label: "Selecciona un producto",
           availableQuantity: 0,
-          discountName: undefined,
-          discountAmount: 0,
-          cost: 0,
+          pvp: 0,
           lineSubtotal: 0,
-          lineDiscount: 0,
         };
       }
 
-      const unitPrice = line.unitPrice || product.cost;
+      const unitPrice = line.unitPrice || product.pvp;
       const lineSubtotal = unitPrice * line.quantity;
-      const lineDiscount = product.discount?.amount
-        ? product.discount.amount * line.quantity
-        : 0;
 
       return {
         ...line,
         label: product.label,
         availableQuantity: product.availableQuantity,
-        discountName: product.discount?.name,
-        discountAmount: product.discount?.amount ?? 0,
-        cost: product.cost,
+        pvp: product.pvp,
         lineSubtotal,
-        lineDiscount,
       };
     });
-  }, [lines, productOptions]);
+  }, [lines, selectedProductData]);
 
   const subtotal = lineDetails.reduce(
     (sum, line) => sum + line.lineSubtotal,
     0,
   );
-  const totalDiscounts = lineDetails.reduce(
-    (sum, line) => sum + line.lineDiscount,
-    0,
-  );
-  const total = subtotal - totalDiscounts;
+  const total = subtotal;
 
-  const handleProductChange = (lineId: string, productId: string) => {
+  const clampQuantity = (quantity: number, productId: string) => {
+    if (quantity <= 0) {
+      return 1;
+    }
+    const product = selectedProductData.get(productId);
+    if (!product) {
+      return quantity;
+    }
+    const maxAvailable = Math.max(1, product.availableQuantity);
+    return Math.min(quantity, maxAvailable);
+  };
+
+  const handleProductChange = (
+    lineId: string,
+    product:
+      | { value: string; label: string; pvp: number; availableQuantity: number }
+      | undefined,
+  ) => {
+    if (!product) {
+      setLines((previous) =>
+        previous.map((line) =>
+          line.id === lineId ? { ...line, productId: "", unitPrice: 0 } : line,
+        ),
+      );
+      return;
+    }
+
+    // Guardar los datos del producto seleccionado
+    setSelectedProductData((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(product.value, {
+        label: product.label,
+        pvp: product.pvp,
+        availableQuantity: product.availableQuantity,
+      });
+      return newMap;
+    });
+
     setLines((previous) =>
       previous.map((line) => {
         if (line.id !== lineId) {
           return line;
         }
-        const product = productOptions.find(
-          (option) => option.id === productId,
-        );
         return {
           ...line,
-          productId,
-          unitPrice: product ? product.cost : 0,
-          quantity: product
-            ? Math.min(line.quantity, Math.max(1, product.availableQuantity))
-            : line.quantity,
+          productId: product.value,
+          unitPrice: product.pvp,
+          quantity: Math.min(
+            line.quantity,
+            Math.max(1, product.availableQuantity),
+          ),
         };
       }),
     );
   };
 
   const handleQuantityChange = (lineId: string, value: string) => {
-    const quantity = Number.parseInt(value, 10);
-    if (Number.isNaN(quantity) || quantity <= 0) {
-      return;
-    }
+    const sanitized = value.replace(/\D/g, "");
+    setLines((previous) =>
+      previous.map((line) => {
+        if (line.id !== lineId) {
+          return line;
+        }
+
+        if (!sanitized) {
+          return { ...line, quantity: 0 };
+        }
+
+        const parsed = Number.parseInt(sanitized, 10);
+        if (Number.isNaN(parsed)) {
+          return line;
+        }
+
+        return {
+          ...line,
+          quantity: clampQuantity(parsed, line.productId),
+        };
+      }),
+    );
+  };
+
+  const handleQuantityBlur = (lineId: string) => {
     setLines((previous) =>
       previous.map((line) =>
         line.id === lineId
           ? {
               ...line,
-              quantity: (() => {
-                const product = productOptions.find(
-                  (option) => option.id === line.productId,
-                );
-                if (!product) return quantity;
-                return Math.min(
-                  quantity,
-                  Math.max(1, product.availableQuantity),
-                );
-              })(),
+              quantity: clampQuantity(line.quantity || 0, line.productId),
             }
           : line,
       ),
@@ -253,7 +279,7 @@ export function CreateSaleModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-8xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[min(90vw,1100px)] max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? "Editar venta" : "Registrar venta"}
@@ -263,24 +289,36 @@ export function CreateSaleModal({
         <div className="space-y-6">
           <div className="space-y-2">
             <span className="text-sm font-medium text-text">Cliente *</span>
-            {isLoading || isLoadingSaleForEdit ? (
+            {isLoadingSaleForEdit ? (
               <Skeleton className="h-10 w-full" />
             ) : (
-              <Select
-                value={selectedCustomer}
-                onValueChange={setSelectedCustomer}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customerOptions.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <InputSearchDB
+                placeholder="Buscar por nombre o cédula"
+                value={
+                  selectedCustomer
+                    ? {
+                        value: selectedCustomer,
+                        label:
+                          selectedCustomerData.get(selectedCustomer)?.label ??
+                          "",
+                      }
+                    : undefined
+                }
+                onChange={(option) => {
+                  if (option) {
+                    setSelectedCustomer(option.value);
+                    setSelectedCustomerData((prev) => {
+                      const newMap = new Map(prev);
+                      newMap.set(option.value, { label: option.label });
+                      return newMap;
+                    });
+                  } else {
+                    setSelectedCustomer("");
+                  }
+                }}
+                searchFn={searchCustomersAction}
+                queryKeyBase="customers"
+              />
             )}
           </div>
 
@@ -297,11 +335,8 @@ export function CreateSaleModal({
 
             {lineDetails.length > 0 && (
               <div className="hidden grid-cols-12 gap-4 pb-2 text-xs font-medium uppercase tracking-wide text-text-secondary sm:grid md:grid-cols-12 md:gap-8">
-                <div className="text-left md:col-span-5">Producto</div>
-                <div className="text-left sm:col-span-6 md:col-span-2">
-                  Descuento
-                </div>
-                <div className="text-left sm:col-span-6 md:col-span-2">
+                <div className="text-left md:col-span-6">Producto</div>
+                <div className="text-left sm:col-span-6 md:col-span-3">
                   Precio unitario
                 </div>
                 <div className="text-left sm:col-span-6 md:col-span-2">
@@ -313,7 +348,6 @@ export function CreateSaleModal({
 
             <div className="space-y-4">
               {lineDetails.map((line) => {
-                const discountInputId = `discount-${line.id}`;
                 const unitPriceInputId = `unit-price-${line.id}`;
                 const quantityInputId = `quantity-${line.id}`;
 
@@ -323,69 +357,79 @@ export function CreateSaleModal({
                     className="space-y-4 rounded-lg border border-border/60 bg-surface-1 p-4"
                   >
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end">
-                      {isLoading || isLoadingSaleForEdit ? (
+                      {isLoadingSaleForEdit ? (
                         <div className="sm:col-span-12">
                           <Skeleton className="h-10 w-full" />
                         </div>
                       ) : (
-                        <div className="sm:col-span-12 md:col-span-5">
-                          <InputSearch
+                        <div className="sm:col-span-12 md:col-span-6">
+                          <InputSearchDB
                             placeholder="Buscar producto"
                             value={
                               line.productId
                                 ? {
                                     value: line.productId,
                                     label:
-                                      productOptions.find(
-                                        (option) =>
-                                          option.id === line.productId,
-                                      )?.label ?? "",
+                                      selectedProductData.get(line.productId)
+                                        ?.label ?? "",
                                   }
                                 : undefined
                             }
-                            onChange={(option) =>
-                              handleProductChange(line.id, option?.value ?? "")
-                            }
-                            options={productOptions.map((product) => ({
-                              value: product.id,
-                              label: product.label,
-                            }))}
-                            loading={isLoading}
+                            onChange={async (option) => {
+                              if (option) {
+                                // Obtener los datos completos del producto por ID
+                                const products = await searchProductsAction(
+                                  option.value,
+                                );
+                                const product = products[0];
+
+                                if (product) {
+                                  handleProductChange(line.id, {
+                                    value: product.id,
+                                    label: product.label,
+                                    pvp: product.pvp,
+                                    availableQuantity:
+                                      product.availableQuantity,
+                                  });
+                                }
+                              } else {
+                                handleProductChange(line.id, undefined);
+                              }
+                            }}
+                            searchFn={async (query) => {
+                              const products =
+                                await searchProductsAction(query);
+                              // Guardar los datos completos en el estado
+                              products.forEach((p) => {
+                                setSelectedProductData((prev) => {
+                                  const newMap = new Map(prev);
+                                  newMap.set(p.id, {
+                                    label: p.label,
+                                    pvp: p.pvp,
+                                    availableQuantity: p.availableQuantity,
+                                  });
+                                  return newMap;
+                                });
+                              });
+                              return products.map((p) => ({
+                                value: p.id,
+                                label: p.label,
+                              }));
+                            }}
+                            queryKeyBase="products"
+                            valueClassName="whitespace-normal break-words text-left"
                           />
                         </div>
                       )}
 
-                      <div className="sm:col-span-6 md:col-span-2">
-                        <Input
-                          id={discountInputId}
-                          readOnly
-                          disabled
-                          className="cursor-not-allowed bg-surface-2 text-right opacity-75"
-                          value={
-                            line.discountAmount > 0
-                              ? `${formatPrice(line.discountAmount, {
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0,
-                                })} ${
-                                  line.discountName
-                                    ? `(${line.discountName})`
-                                    : ""
-                                }`
-                              : "-"
-                          }
-                        />
-                      </div>
-
-                      <div className="sm:col-span-6 md:col-span-2">
-                        <Input
+                      <div className="sm:col-span-6 md:col-span-3">
+                        <CurrencyInput
                           id={unitPriceInputId}
-                          className="text-right"
-                          type="number"
-                          min={0.01}
-                          step="0.01"
-                          value={line.unitPrice}
-                          onChange={(event) =>
-                            handleUnitPriceChange(line.id, event.target.value)
+                          value={
+                            line.unitPrice > 0 ? line.unitPrice.toString() : ""
+                          }
+                          onChange={(value) =>
+                            handleUnitPriceChange(line.id, value)
                           }
                         />
                       </div>
@@ -394,12 +438,15 @@ export function CreateSaleModal({
                         <Input
                           id={quantityInputId}
                           className="text-right"
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           min={1}
-                          value={line.quantity}
+                          value={line.quantity === 0 ? "" : line.quantity}
                           onChange={(event) =>
                             handleQuantityChange(line.id, event.target.value)
                           }
+                          onBlur={() => handleQuantityBlur(line.id)}
                         />
                       </div>
 
@@ -426,25 +473,6 @@ export function CreateSaleModal({
           <div className="space-y-2">
             <span className="text-sm font-medium text-text">Resumen</span>
             <div className="space-y-1 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-text-secondary">Subtotal</span>
-                <span className="font-medium">
-                  {formatPrice(subtotal, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-text-secondary">Descuentos</span>
-                <span className="font-medium text-destructive">
-                  -
-                  {formatPrice(totalDiscounts, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  })}
-                </span>
-              </div>
               <div className="flex items-center justify-between text-base font-semibold">
                 <span>Total</span>
                 <span>
