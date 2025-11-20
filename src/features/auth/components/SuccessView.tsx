@@ -16,7 +16,7 @@ interface SuccessViewProps {
 
 export function SuccessView({ onNavigateToSignIn }: SuccessViewProps) {
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md pb-6">
       <CardHeader className="space-y-3 text-center">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-success">
           <CheckCircle2 className="h-6 w-6 text-success-foreground" />
