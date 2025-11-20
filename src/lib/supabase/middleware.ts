@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { canAccessRoute } from "@/config/canAccessRoute";
+import { normalizeRole } from "@/lib/auth/normalize-role";
 
 /**
  * Rutas públicas que no requieren autenticación
@@ -31,6 +33,10 @@ function normalizePathname(pathname: string): string {
  * Verifica si una ruta es pública
  */
 function isPublicRoute(pathname: string): boolean {
+  // La página de no autorizado es pública (no requiere autenticación)
+  if (pathname === "/unauthorized") {
+    return true;
+  }
   return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 }
 
@@ -113,7 +119,15 @@ export async function updateSession(request: NextRequest) {
 
   // Caso 1: Usuario autenticado intentando acceder a ruta pública de auth
   // Redirigir al dashboard para evitar loops
+  // EXCEPCIÓN: Permitir acceso a /set-password siempre (el componente cliente valida tokens)
   if (isAuthenticated && isPublic && pathname !== "/auth/callback") {
+    // Si es /set-password, siempre permitir acceso
+    // El componente SetPassword validará los tokens (hash o query params) en el cliente
+    // Esto permite que usuarios autenticados puedan cambiar contraseña con link de invitación
+    if (pathname === "/set-password") {
+      return response;
+    }
+
     const redirectUrl = getAuthRedirectUrl(pathname);
     // Evitar loop: solo redirigir si no está ya en la ruta de destino
     if (pathname !== redirectUrl) {
@@ -139,6 +153,44 @@ export async function updateSession(request: NextRequest) {
   // Redirigir al dashboard
   if (isAuthenticated && pathname === "/") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Caso 5: Verificar permisos de ruta para usuarios autenticados en rutas protegidas
+  if (isAuthenticated && isProtected) {
+    // Obtener el rol desde los claims del JWT (ya validado en línea 110)
+    // Esto evita consultar la BD con Prisma, que no funciona en Edge Runtime
+    const claims = data?.claims;
+
+    if (claims) {
+      // El rol está guardado en app_metadata.roleName cuando se crea/actualiza el usuario
+      const roleName =
+        (claims.app_metadata as { roleName?: string })?.roleName ??
+        (claims.user_metadata as { roleName?: string })?.roleName ??
+        null;
+
+      if (roleName) {
+        // Normalizar el rol para manejar diferencias de case-sensitivity
+        const normalizedRole = normalizeRole(roleName);
+
+        if (normalizedRole) {
+          const hasAccess = canAccessRoute(normalizedRole, pathname);
+
+          if (!hasAccess) {
+            // Redirigir a página de no autorizado en lugar de 404
+            const unauthorizedUrl = new URL("/unauthorized", request.url);
+            unauthorizedUrl.searchParams.set("from", pathname);
+            return NextResponse.redirect(unauthorizedUrl);
+          }
+        } else {
+          // Si el rol no es válido después de normalizar, denegar acceso
+          return new NextResponse(null, { status: 404 });
+        }
+      } else {
+        // Si el usuario no tiene rol asignado en los metadatos, denegar acceso
+        // (esto puede pasar si el usuario fue creado antes de implementar esta funcionalidad)
+        return new NextResponse(null, { status: 404 });
+      }
+    }
   }
 
   // Permitir el acceso en todos los demás casos

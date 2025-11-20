@@ -225,9 +225,7 @@ export function UsersSection({
     startResendInviteTransition(async () => {
       const result = await resendInviteAction(resendInviteTarget.id);
       if (!result.success) {
-        toast.error(
-          result.error ?? "Error al reenviar la invitación",
-        );
+        toast.error(result.error ?? "Error al reenviar la invitación");
         return;
       }
 

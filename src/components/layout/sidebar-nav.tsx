@@ -12,7 +12,9 @@ import {
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { canAccessRoute } from "@/config/permissions";
 import { MASTER_DATA_SECTIONS } from "@/features/master-data/conts";
+import { useUserRole } from "@/hooks/use-user-role";
 import {
   Accordion,
   AccordionContent,
@@ -107,13 +109,45 @@ export function SidebarNav({
   onLogout: _onLogout,
   className,
 }: SidebarNavProps) {
+  const { role } = useUserRole();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Filtrar items del sidebar según permisos
+  const filteredNavItems = useMemo(() => {
+    return navItems
+      .filter((item) => {
+        // Si tiene href directo, verificar acceso
+        if (item.href) {
+          return canAccessRoute(role, item.href);
+        }
+        // Si tiene children, verificar si al menos uno tiene acceso
+        if (item.children) {
+          return item.children.some((child) =>
+            canAccessRoute(role, child.href),
+          );
+        }
+        return false;
+      })
+      .map((item) => {
+        // Filtrar children también
+        if (item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) =>
+              canAccessRoute(role, child.href),
+            ),
+          };
+        }
+        return item;
+      });
+  }, [role]);
+
   const activeGroup = useMemo(
     () =>
-      navItems.find((item) =>
+      filteredNavItems.find((item) =>
         item.children?.some((child) => child.href === activeItem),
       )?.title,
-    [activeItem],
+    [activeItem, filteredNavItems],
   );
   const [openGroups, setOpenGroups] = useState<string[]>(
     activeGroup ? [activeGroup] : [],
@@ -144,7 +178,7 @@ export function SidebarNav({
 
   const renderCollapsedNav = () => (
     <nav className="space-y-1">
-      {navItems.map((item) => {
+      {filteredNavItems.map((item) => {
         const Icon = item.icon;
         const hasChildren = Boolean(item.children?.length);
         const targetHref = hasChildren ? item.children?.[0]?.href : item.href;
@@ -173,7 +207,7 @@ export function SidebarNav({
 
   const renderExpandedNav = () => (
     <div className="space-y-1">
-      {navItems.map((item) => {
+      {filteredNavItems.map((item) => {
         const Icon = item.icon;
         const hasChildren = Boolean(item.children?.length);
 
@@ -314,12 +348,41 @@ export function MobileSidebar({
   onItemClick,
   onLogout: _onLogout,
 }: MobileSidebarProps) {
+  const { role } = useUserRole();
+
+  // Filtrar items del sidebar según permisos
+  const filteredNavItems = useMemo(() => {
+    return navItems
+      .filter((item) => {
+        if (item.href) {
+          return canAccessRoute(role, item.href);
+        }
+        if (item.children) {
+          return item.children.some((child) =>
+            canAccessRoute(role, child.href),
+          );
+        }
+        return false;
+      })
+      .map((item) => {
+        if (item.children) {
+          return {
+            ...item,
+            children: item.children.filter((child) =>
+              canAccessRoute(role, child.href),
+            ),
+          };
+        }
+        return item;
+      });
+  }, [role]);
+
   const activeGroup = useMemo(
     () =>
-      navItems.find((item) =>
+      filteredNavItems.find((item) =>
         item.children?.some((child) => child.href === activeItem),
       )?.title,
-    [activeItem],
+    [activeItem, filteredNavItems],
   );
   const [openGroups, setOpenGroups] = useState<string[]>(
     activeGroup ? [activeGroup] : [],
@@ -379,7 +442,7 @@ export function MobileSidebar({
           {/* Navigation */}
           <ScrollArea className="flex-1 min-h-0 px-3 py-4">
             <div className="space-y-1">
-              {navItems.map((item) => {
+              {filteredNavItems.map((item) => {
                 const Icon = item.icon;
                 const hasChildren = Boolean(item.children?.length);
 

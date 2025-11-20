@@ -514,9 +514,7 @@ export async function deleteUserAction(id: string): Promise<ActionResponse> {
   }
 }
 
-export async function resendInviteAction(
-  id: string,
-): Promise<ActionResponse> {
+export async function resendInviteAction(id: string): Promise<ActionResponse> {
   const existingUser = await getUserById(id);
   if (!existingUser) {
     return {

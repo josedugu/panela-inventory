@@ -151,13 +151,10 @@ export async function resendInviteEmail(
   // inviteUserByEmail puede usarse para reenviar invitaciones a usuarios existentes
   // que aún no han establecido su contraseña. Si el usuario ya tiene contraseña,
   // Supabase no enviará el correo (pero no lanzará error, por eso validamos antes)
-  const { error } = await supabase.auth.admin.inviteUserByEmail(
-    payload.email,
-    {
-      data: userMetadata,
-      redirectTo: INVITE_REDIRECT,
-    },
-  );
+  const { error } = await supabase.auth.admin.inviteUserByEmail(payload.email, {
+    data: userMetadata,
+    redirectTo: INVITE_REDIRECT,
+  });
 
   if (error) {
     throw new Error(
