@@ -293,6 +293,7 @@ model TipoMovimientoInventario {
 
 model Cliente {
   id        String   @id @default(uuid()) @db.Uuid
+  cedula    String?  @unique
   nombre    String
   email     String   @unique
   telefono  String?

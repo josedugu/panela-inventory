@@ -62,7 +62,19 @@ export function InputSearch({
     }
 
     return options
-      .filter((option) => option.label.toLowerCase().includes(query))
+      .filter((option) => {
+        const labelLower = option.label.toLowerCase();
+        // Buscar en el label completo
+        if (labelLower.includes(query)) {
+          return true;
+        }
+        // Si el label tiene un separador " - ", buscar en ambas partes
+        if (labelLower.includes(" - ")) {
+          const [part1, part2] = labelLower.split(" - ");
+          return part1.includes(query) || part2.includes(query);
+        }
+        return false;
+      })
       .slice(0, maxOptions);
   }, [open, search, options, maxOptions, value]);
 
@@ -130,6 +142,7 @@ export function InputSearch({
                 <CommandItem
                   value="__clear__"
                   onSelect={() => handleSelect(undefined)}
+                  className="cursor-pointer"
                 >
                   Limpiar selección
                 </CommandItem>
@@ -140,6 +153,7 @@ export function InputSearch({
                     key={option.value}
                     value={`${option.label} ${option.value}`}
                     onSelect={() => handleSelect(option)}
+                    className="cursor-pointer"
                   >
                     {option.label}
                   </CommandItem>
@@ -149,6 +163,7 @@ export function InputSearch({
                   <CommandItem
                     value={customOption.value}
                     onSelect={() => handleSelect(customOption)}
+                    className="cursor-pointer"
                   >
                     Usar "{customOption.label}"
                   </CommandItem>

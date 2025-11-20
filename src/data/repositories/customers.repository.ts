@@ -6,6 +6,7 @@ export type CustomerWithTotalSales = {
   id: string;
   nombre: string;
   email: string;
+  cedula: string | null;
   telefono: string | null;
   whatsapp: string | null;
   totalVentas: number;
@@ -20,6 +21,7 @@ export async function listCustomers(): Promise<CustomerWithTotalSales[]> {
       id: true,
       nombre: true,
       email: true,
+      cedula: true,
       telefono: true,
       whatsapp: true,
       venta: {
@@ -40,6 +42,7 @@ export async function listCustomers(): Promise<CustomerWithTotalSales[]> {
       id: customer.id,
       nombre: customer.nombre,
       email: customer.email,
+      cedula: customer.cedula,
       telefono: customer.telefono,
       whatsapp: customer.whatsapp,
       totalVentas,
@@ -90,6 +93,53 @@ export async function updateCustomer(
 export async function deleteCustomer(id: string) {
   return prisma.cliente.delete({
     where: { id },
+  });
+}
+
+export async function searchCustomers(
+  query: string,
+  limit: number = 10,
+): Promise<Array<{ id: string; nombre: string; cedula: string | null }>> {
+  if (!query.trim()) {
+    return prisma.cliente.findMany({
+      select: {
+        id: true,
+        nombre: true,
+        cedula: true,
+      },
+      orderBy: {
+        nombre: "asc",
+      },
+      take: limit,
+    });
+  }
+
+  return prisma.cliente.findMany({
+    where: {
+      OR: [
+        {
+          nombre: {
+            contains: query,
+            mode: "insensitive",
+          },
+        },
+        {
+          cedula: {
+            contains: query,
+            mode: "insensitive",
+          },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      nombre: true,
+      cedula: true,
+    },
+    orderBy: {
+      nombre: "asc",
+    },
+    take: limit,
   });
 }
 
