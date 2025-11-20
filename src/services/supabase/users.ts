@@ -15,7 +15,7 @@ interface SupabaseUserPayload {
 const INVITE_REDIRECT =
   process.env.SUPABASE_INVITE_REDIRECT_URL ??
   (process.env.NEXT_PUBLIC_SITE_URL
-    ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/set-password`
+    ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/auth/callback`
     : undefined);
 
 function buildUserMetadata(payload: SupabaseUserPayload) {
