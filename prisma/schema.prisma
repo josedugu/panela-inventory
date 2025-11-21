@@ -158,7 +158,7 @@ model Producto {
   estado            Boolean             @default(true)
   nombre            String?             @map("nombre")
   costo             Decimal?            @db.Decimal(10, 2)
-  pvp              Decimal?                   @default(0) @map("pvp") @db.Decimal(10, 2)
+  pvp               Decimal?            @default(0) @map("pvp") @db.Decimal(10, 2)
   cantidad          Int                 @default(0)
   descripcion       String?
   tipoProductoId    String?             @map("tipo_producto_id") @db.Uuid
@@ -259,7 +259,7 @@ model MovimientoInventario {
   consecutivo      Int                       @unique @default(autoincrement()) @map("consecutivo") @db.Integer
   cantidad         Int                       @default(0)
   estado           Boolean                   @default(true)
-  costoUnitario    Decimal?                   @default(0) @map("costo_unitario") @db.Decimal(10, 2)
+  costoUnitario    Decimal?                  @default(0) @map("costo_unitario") @db.Decimal(10, 2)
   creadoPor        Usuario?                  @relation("MovimientosCreadosPor", fields: [creadoPorId], references: [id])
   creadoPorId      String?                   @map("creado_por_id") @db.Uuid
   actualizadoPor   Usuario?                  @relation("MovimientosActualizadosPor", fields: [actualizadoPorId], references: [id])
@@ -315,10 +315,9 @@ model Venta {
   total         Decimal         @default(0) @db.Decimal(10, 2)
   estado        Boolean         @default(true)
   ventaProducto VentaProducto[]
+  pagos         Pago[]
   createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  metodoPagoId  String?         @map("metodo_pago_id") @db.Uuid
-  metodoPago    MetodoPago?     @relation(fields: [metodoPagoId], references: [id])
   medioVentaId  String?         @map("medio_venta_id") @db.Uuid
   medioVenta    MedioVenta?     @relation(fields: [medioVentaId], references: [id])
   vendidoPor    Usuario?        @relation(fields: [vendidoPorId], references: [id])
@@ -348,13 +347,28 @@ model VentaProducto {
   @@schema("dev")
 }
 
+model Pago {
+  id           String     @id @default(uuid()) @db.Uuid
+  cantidad     Decimal    @db.Decimal(10, 2)
+  metodoPagoId String     @map("metodo_pago_id") @db.Uuid
+  metodoPago   MetodoPago @relation(fields: [metodoPagoId], references: [id])
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  ventaId String @map("venta_id") @db.Uuid
+  venta   Venta  @relation(fields: [ventaId], references: [id])
+
+  @@map("pago")
+  @@schema("dev")
+}
+
 model MetodoPago {
   id        String   @id @default(uuid()) @db.Uuid
   nombre    String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  venta Venta[]
+  pagos Pago[]
 
   @@map("metodo_pago")
   @@schema("dev")

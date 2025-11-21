@@ -60,6 +60,7 @@ export const ROUTE_PERMISSIONS: Record<string, RoleName[]> = {
 
   // Ventas
   "/dashboard/sales": [ROLES.ADMIN, ROLES.ASESOR],
+  "/dashboard/sales/new": [ROLES.ADMIN, ROLES.ASESOR, ROLES.COLABORADOR],
 
   // Configuración
   "/dashboard/settings": [ROLES.ADMIN],
@@ -222,6 +223,13 @@ export const ACTION_PERMISSIONS: Record<string, Record<RoleName, string[]>> = {
     ],
     [ROLES.ASESOR]: ["view", "create", "update", "edit_client", "edit_price"],
     [ROLES.COLABORADOR]: [],
+  },
+
+  // Ventas - Crear nueva venta - todos los roles
+  "/dashboard/sales/new": {
+    [ROLES.ADMIN]: ["view", "create"],
+    [ROLES.ASESOR]: ["view", "create"],
+    [ROLES.COLABORADOR]: ["view", "create"],
   },
 
   // Configuración - solo admin

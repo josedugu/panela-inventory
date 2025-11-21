@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const customerFormSchema = z.object({
   nombre: z.string().min(1, "Nombre requerido"),
+  cedula: z.string().optional(),
   email: z.string().email("Email inválido"),
   telefono: z.string().optional(),
   whatsapp: z.string().optional(),
