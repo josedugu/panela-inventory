@@ -20,7 +20,7 @@ interface SaleUpdateData {
  * Ejemplo de acción de actualización con validación de permisos
  */
 export async function updateSaleActionExample(
-  saleId: string,
+  _saleId: string,
   data: SaleUpdateData,
 ) {
   // 1. Validar acceso general a la ruta
@@ -81,7 +81,7 @@ export async function updateSaleActionExample(
 /**
  * Ejemplo de acción de creación con validación de permisos
  */
-export async function createSaleActionExample(data: SaleUpdateData) {
+export async function createSaleActionExample(_data: SaleUpdateData) {
   // Validar permiso de creación
   const validation = await validateActionPermission(
     "/dashboard/sales",

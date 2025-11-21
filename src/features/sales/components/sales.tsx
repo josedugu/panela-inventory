@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
@@ -15,10 +16,10 @@ import { ViewSaleModal } from "./view-sale-modal";
 type Sale = SaleDTO;
 
 export function Sales() {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
@@ -162,7 +163,7 @@ export function Sales() {
             "Selecciona filtros y aplica para actualizar la tabla.",
           addAction: {
             label: "Crear venta",
-            onClick: () => setIsCreateModalOpen(true),
+            onClick: () => router.push("/dashboard/sales/new"),
           },
           exportAction: {
             label: "Exportar",
@@ -227,11 +228,6 @@ export function Sales() {
         setFilterDialogOpen={setDialogOpen}
         filterOptions={filterOptionsMap}
         isLoadingFilterOptions={isLoading && !filterOptions}
-      />
-
-      <CreateSaleModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
       />
 
       <CreateSaleModal

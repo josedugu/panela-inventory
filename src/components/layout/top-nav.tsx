@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, Menu, Moon, Sun } from "lucide-react";
+import { LogOut, Menu, Moon, Plus, Sun } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   AlertDialog,
@@ -22,6 +23,8 @@ interface TopNavProps {
 }
 
 export function TopNav({ onMenuClick, onLogout }: TopNavProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -33,6 +36,13 @@ export function TopNav({ onMenuClick, onLogout }: TopNavProps) {
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
   };
+
+  const handleCreateSale = () => {
+    router.push("/dashboard/sales/new");
+  };
+
+  // Ocultar botón en la página de crear venta
+  const showCreateSaleButton = pathname !== "/dashboard/sales/new";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-surface-1 backdrop-blur supports-backdrop-filter:bg-surface-1/95">
@@ -63,6 +73,20 @@ export function TopNav({ onMenuClick, onLogout }: TopNavProps) {
 
         {/* Right side actions */}
         <div className="flex items-center gap-2">
+          {/* Create Sale Button */}
+          {showCreateSaleButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCreateSale}
+              type="button"
+              aria-label="Crear nueva venta"
+              title="Crear nueva venta"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          )}
+
           {/* Theme toggle */}
           {mounted ? (
             <Button

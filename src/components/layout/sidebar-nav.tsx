@@ -70,7 +70,16 @@ const navItems: NavItem[] = [
   {
     title: "Ventas",
     icon: ArrowRightLeft,
-    href: "/dashboard/sales",
+    children: [
+      {
+        title: "Historial",
+        href: "/dashboard/sales",
+      },
+      {
+        title: "Nueva venta",
+        href: "/dashboard/sales/new",
+      },
+    ],
   },
   {
     title: "Clientes",
@@ -149,9 +158,7 @@ export function SidebarNav({
       )?.title,
     [activeItem, filteredNavItems],
   );
-  const [openGroups, setOpenGroups] = useState<string[]>(
-    activeGroup ? [activeGroup] : [],
-  );
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
 
   useEffect(() => {
     if (activeGroup) {
@@ -384,9 +391,7 @@ export function MobileSidebar({
       )?.title,
     [activeItem, filteredNavItems],
   );
-  const [openGroups, setOpenGroups] = useState<string[]>(
-    activeGroup ? [activeGroup] : [],
-  );
+  const [openGroups, setOpenGroups] = useState<string[]>([]);
 
   useEffect(() => {
     if (activeGroup) {
