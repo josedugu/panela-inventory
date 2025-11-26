@@ -1,31 +1,7 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-
+import type { UseFormReturn } from "react-hook-form";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Form,
   FormControl,
   FormField,
   FormItem,
@@ -34,8 +10,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import type { StorageDTO } from "@/data/repositories/shared.repository";
-import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
-import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {
   deleteStorageAction,
   upsertStorageAction,
@@ -45,270 +19,88 @@ import {
   type StorageFormValues,
   storageFormSchema,
 } from "@/features/master-data/almacenamiento/schemas";
-import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
+import {
+  CrudSection,
+  type CrudSectionConfig,
+} from "@/features/master-data/components/crud-section";
 
 interface StorageSectionProps {
   storageOptions: StorageDTO[];
   onRefresh: () => void;
 }
 
-type DialogMode = "create" | "edit" | null;
-
-const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [];
+function StorageForm({ form }: { form: UseFormReturn<StorageFormValues> }) {
+  return (
+    <FormField
+      control={form.control}
+      name="capacidad"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Capacidad (GB) *</FormLabel>
+          <FormControl>
+            <Input
+              type="number"
+              placeholder="Capacidad en GB"
+              min={1}
+              {...field}
+              onChange={(e) => field.onChange(Number(e.target.value) || "")}
+            />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
 
 export function StorageSection({
   storageOptions,
   onRefresh,
 }: StorageSectionProps) {
-  const {
-    data,
-    total,
-    page,
-    pageSize,
-    search,
-    setSearch,
-    filterState,
-    setFilterState,
-    pendingFilterState,
-    setPendingFilterState,
-    handleApplyFilters,
-    handleResetPendingFilters,
-    handleClearFilters,
-    isFilterDialogOpen,
-    setFilterDialogOpen,
-    filterOptions,
-    onPageChange,
-    onPageSizeChange,
-  } = useMasterDataTable<StorageDTO>({
-    items: storageOptions,
-    filters: FILTER_DESCRIPTORS,
-    searchableFields: [(option) => option.capacidad.toString()],
-  });
-
-  const [dialogMode, setDialogMode] = useState<DialogMode>(null);
-  const [editingOption, setEditingOption] = useState<StorageDTO | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<StorageDTO | null>(null);
-  const [isSubmitting, startSubmitTransition] = useTransition();
-  const [isDeleting, startDeleteTransition] = useTransition();
-
-  const form = useForm<StorageFormValues>({
-    resolver: zodResolver(storageFormSchema),
-    defaultValues: {
-      capacidad: "",
-    },
-  });
-
-  const openCreateDialog = () => {
-    form.reset({
-      capacidad: "",
-    });
-    setEditingOption(null);
-    setDialogMode("create");
-  };
-
-  const openEditDialog = (option: StorageDTO) => {
-    form.reset({
-      capacidad: option.capacidad.toString(),
-    });
-    setEditingOption(option);
-    setDialogMode("edit");
-  };
-
-  const closeDialog = () => {
-    setDialogMode(null);
-    setEditingOption(null);
-    form.reset();
-  };
-
-  const openDeleteDialog = (option: StorageDTO) => {
-    setDeleteTarget(option);
-  };
-
-  const closeDeleteDialog = () => {
-    setDeleteTarget(null);
-  };
-
-  const onSubmit = (data: StorageFormValues) => {
-    if (isSubmitting) return;
-
-    const capacidadNumber = Number.parseInt(data.capacidad.trim(), 10);
-
-    const payload = {
-      id: editingOption?.id,
-      capacidad: capacidadNumber,
-    };
-
-    startSubmitTransition(async () => {
-      const result = await upsertStorageAction(payload);
-      if (!result.success) {
-        toast.error(result.error ?? "Error al guardar la configuración");
-        return;
-      }
-
-      toast.success(
-        editingOption
-          ? "Configuración de almacenamiento actualizada"
-          : "Configuración de almacenamiento agregada",
-      );
-      closeDialog();
-      onRefresh();
-    });
-  };
-
-  const handleDelete = () => {
-    if (!deleteTarget || isDeleting) return;
-
-    startDeleteTransition(async () => {
-      const result = await deleteStorageAction(deleteTarget.id);
-      if (!result.success) {
-        toast.error(result.error ?? "Error al eliminar la configuración");
-        return;
-      }
-
-      toast.success("Configuración de almacenamiento eliminada");
-      closeDeleteDialog();
-      onRefresh();
-    });
-  };
-
-  const isBusy = isSubmitting || isDeleting;
-
-  const columns = getStorageColumns({
-    onEdit: openEditDialog,
-    onDelete: openDeleteDialog,
-    isBusy,
-  });
-
-  const config = {
+  const config: CrudSectionConfig<StorageDTO, StorageFormValues> = {
     title: "Almacenamiento",
-    description: `${storageOptions.length} configuraciones registradas`,
-    addAction: {
-      label: "Agregar almacenamiento",
-      onClick: openCreateDialog,
-    },
-    columns,
-    onDelete: (option: StorageDTO) => openDeleteDialog(option),
-    getRowId: (option: StorageDTO) => option.id,
-    showIndexColumn: false,
-  };
+    entityName: "configuración de almacenamiento",
+    getItemId: (option) => option.id,
+    getItemName: (option) => `${option.capacidad} GB`,
 
-  const isDialogOpen = dialogMode !== null;
-  const dialogTitle =
-    dialogMode === "edit"
-      ? "Editar configuración de almacenamiento"
-      : "Nueva configuración de almacenamiento";
-  const dialogDescription =
-    dialogMode === "edit"
-      ? "Actualiza la configuración seleccionada."
-      : "Ingresa los datos de la nueva configuración.";
+    columns: getStorageColumns,
+    searchableFields: [(option) => option.capacidad.toString()],
+
+    formSchema: storageFormSchema,
+    defaultFormValues: {
+      capacidad: "",
+    },
+    getFormValuesForEdit: (option) => ({
+      capacidad: option.capacidad.toString(),
+    }),
+
+    upsertAction: async (data) => {
+      const capacidadNumber = Number.parseInt(data.capacidad.trim(), 10);
+      return upsertStorageAction({
+        id: data.id,
+        capacidad: capacidadNumber,
+      });
+    },
+    deleteAction: deleteStorageAction,
+
+    successMessages: {
+      create: "Configuración de almacenamiento agregada",
+      update: "Configuración de almacenamiento actualizada",
+      delete: "Configuración de almacenamiento eliminada",
+    },
+    errorMessages: {
+      create: "Error al guardar la configuración",
+      update: "Error al actualizar la configuración",
+      delete: "Error al eliminar la configuración",
+    },
+  };
 
   return (
-    <>
-      <EntityTableLayout
-        config={config}
-        data={data}
-        total={total}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        searchValue={search}
-        onSearchChange={setSearch}
-        filters={FILTER_DESCRIPTORS}
-        filterState={filterState}
-        onFilterStateChange={setFilterState}
-        pendingFilterState={pendingFilterState}
-        onPendingFilterStateChange={setPendingFilterState}
-        onApplyFilters={handleApplyFilters}
-        onResetPendingFilters={handleResetPendingFilters}
-        onClearFilters={handleClearFilters}
-        isFilterDialogOpen={isFilterDialogOpen}
-        setFilterDialogOpen={setFilterDialogOpen}
-        filterOptions={filterOptions}
-        isLoading={isBusy}
-      />
-
-      <Dialog
-        open={isDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) closeDialog();
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{dialogTitle}</DialogTitle>
-            <DialogDescription>{dialogDescription}</DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="capacidad"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Capacidad (GB) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="1"
-                        step="1"
-                        placeholder="Ej: 128"
-                        disabled={isSubmitting}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter className="gap-2 sm:gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={closeDialog}
-                  disabled={isSubmitting}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {dialogMode === "edit" ? "Guardar cambios" : "Agregar"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog
-        open={Boolean(deleteTarget)}
-        onOpenChange={(open) => {
-          if (!open) closeDeleteDialog();
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Eliminar configuración de almacenamiento
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteTarget
-                ? `¿Seguro que deseas eliminar la capacidad ${deleteTarget.capacidad}? Esta acción no se puede deshacer.`
-                : "¿Seguro que deseas eliminar esta configuración?"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isDeleting}
-              onClick={closeDeleteDialog}
-            >
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    <CrudSection
+      items={storageOptions}
+      config={config}
+      onRefresh={onRefresh}
+      renderForm={(form) => <StorageForm form={form} />}
+    />
   );
 }
