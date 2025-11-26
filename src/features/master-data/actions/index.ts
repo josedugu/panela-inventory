@@ -171,36 +171,14 @@ const supplierSchema = z.object({
   direccion: z.string().optional(),
 });
 
-export async function upsertSupplierAction(
-  values: z.infer<typeof supplierSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = supplierSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
+export const upsertSupplierAction = CrudActionBuilder.for(supplierSchema)
+  .createWith(createSupplier)
+  .updateWith(updateSupplier)
+  .buildUpsertAction();
 
-  try {
-    if (values.id) {
-      await updateSupplier(values.id, parsed.data);
-    } else {
-      await createSupplier(parsed.data);
-    }
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteSupplierAction(
-  id: string,
-): Promise<ActionResponse> {
-  try {
-    await deleteSupplier(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
+export const deleteSupplierAction = CrudActionBuilder.for(supplierSchema)
+  .deleteWith(deleteSupplier)
+  .buildDeleteAction();
 
 // Brands
 const brandSchema = z.object({
@@ -223,34 +201,14 @@ const modelSchema = z.object({
   marcaId: z.string().uuid("Selecciona una marca válida"),
 });
 
-export async function upsertModelAction(
-  values: z.infer<typeof modelSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = modelSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
+export const upsertModelAction = CrudActionBuilder.for(modelSchema)
+  .createWith(createModel)
+  .updateWith(updateModel)
+  .buildUpsertAction();
 
-  try {
-    if (values.id) {
-      await updateModel(values.id, parsed.data);
-    } else {
-      await createModel(parsed.data);
-    }
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteModelAction(id: string): Promise<ActionResponse> {
-  try {
-    await deleteModel(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
+export const deleteModelAction = CrudActionBuilder.for(modelSchema)
+  .deleteWith(deleteModel)
+  .buildDeleteAction();
 
 // Cost centers
 const costCenterSchema = z.object({
@@ -259,36 +217,14 @@ const costCenterSchema = z.object({
   responsable: z.string().optional(),
 });
 
-export async function upsertCostCenterAction(
-  values: z.infer<typeof costCenterSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = costCenterSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
+export const upsertCostCenterAction = CrudActionBuilder.for(costCenterSchema)
+  .createWith(createCostCenter)
+  .updateWith(updateCostCenter)
+  .buildUpsertAction();
 
-  try {
-    if (values.id) {
-      await updateCostCenter(values.id, parsed.data);
-    } else {
-      await createCostCenter(parsed.data);
-    }
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteCostCenterAction(
-  id: string,
-): Promise<ActionResponse> {
-  try {
-    await deleteCostCenter(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
+export const deleteCostCenterAction = CrudActionBuilder.for(costCenterSchema)
+  .deleteWith(deleteCostCenter)
+  .buildDeleteAction();
 
 // Warehouses
 const warehouseSchema = z.object({
@@ -301,36 +237,14 @@ const warehouseSchema = z.object({
     .or(z.literal("").transform(() => undefined)),
 });
 
-export async function upsertWarehouseAction(
-  values: z.infer<typeof warehouseSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = warehouseSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
+export const upsertWarehouseAction = CrudActionBuilder.for(warehouseSchema)
+  .createWith(createWarehouse)
+  .updateWith(updateWarehouse)
+  .buildUpsertAction();
 
-  try {
-    if (values.id) {
-      await updateWarehouse(values.id, parsed.data);
-    } else {
-      await createWarehouse(parsed.data);
-    }
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteWarehouseAction(
-  id: string,
-): Promise<ActionResponse> {
-  try {
-    await deleteWarehouse(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
+export const deleteWarehouseAction = CrudActionBuilder.for(warehouseSchema)
+  .deleteWith(deleteWarehouse)
+  .buildDeleteAction();
 
 // Users
 const userSchema = z.object({

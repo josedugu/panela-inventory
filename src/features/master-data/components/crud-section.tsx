@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import {
   type DefaultValues,
   type FieldValues,
+  type Path,
   type UseFormReturn,
   useForm,
 } from "react-hook-form";
@@ -30,10 +31,74 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Form } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
 import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import { useMasterDataTable } from "@/features/master-data/hooks/useMasterDataTable";
+
+// Helper para campos select
+export function SelectFormField<T extends Record<string, unknown>>({
+  form,
+  name,
+  label,
+  options,
+  placeholder = "Selecciona una opción",
+  required = false,
+}: {
+  form: UseFormReturn<T>;
+  name: Path<T>;
+  label: string;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  return (
+    <FormField
+      control={form.control}
+      name={name as Path<T>}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>
+            {label}
+            {required ? " *" : ""}
+          </FormLabel>
+          <Select
+            onValueChange={field.onChange}
+            value={String(field.value ?? "")}
+          >
+            <FormControl>
+              <SelectTrigger>
+                <SelectValue placeholder={placeholder} />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
 
 export interface CrudSectionConfig<TData, TFormValues extends FieldValues> {
   // Configuración básica
@@ -50,6 +115,14 @@ export interface CrudSectionConfig<TData, TFormValues extends FieldValues> {
   }) => ColumnDef<TData>[];
   filters?: EntityFilterDescriptor[];
   searchableFields?: Array<(item: TData) => string>;
+
+  // Relaciones/Selects (opcional)
+  selectFields?: {
+    [fieldName: string]: {
+      options: Array<{ value: string; label: string }>;
+      placeholder?: string;
+    };
+  };
 
   // Formulario
   // Usamos z.ZodTypeAny debido a limitaciones de compatibilidad de tipos
@@ -81,7 +154,15 @@ export interface CrudSectionProps<TData, TFormValues extends FieldValues> {
   items: TData[];
   config: CrudSectionConfig<TData, TFormValues>;
   onRefresh: () => void;
-  renderForm: (form: UseFormReturn<TFormValues>) => React.ReactNode;
+  renderForm: (
+    form: UseFormReturn<TFormValues>,
+    selectOptions?: {
+      [fieldName: string]: {
+        options: Array<{ value: string; label: string }>;
+        placeholder?: string;
+      };
+    },
+  ) => React.ReactNode;
 }
 
 export interface ActionResponse {
@@ -277,7 +358,7 @@ export function CrudSection<TData, TFormValues extends FieldValues>({
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {renderForm(form)}
+              {renderForm(form, config.selectFields)}
               <DialogFooter className="gap-2 sm:gap-3">
                 <Button
                   type="button"
