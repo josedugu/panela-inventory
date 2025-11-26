@@ -85,6 +85,7 @@ import {
   type WarehouseDTO,
 } from "@/data/repositories/warehouses.repository";
 import type { MasterDataSection } from "@/features/master-data/conts";
+import { CrudActionBuilder } from "@/lib/action-helpers";
 import {
   createSupabaseMasterUser,
   deleteSupabaseMasterUser,
@@ -207,34 +208,14 @@ const brandSchema = z.object({
   descripcion: z.string().optional(),
 });
 
-export async function upsertBrandAction(
-  values: z.infer<typeof brandSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = brandSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
+export const upsertBrandAction = CrudActionBuilder.for(brandSchema)
+  .createWith(createBrand)
+  .updateWith(updateBrand)
+  .buildUpsertAction();
 
-  try {
-    if (values.id) {
-      await updateBrand(values.id, parsed.data);
-    } else {
-      await createBrand(parsed.data);
-    }
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteBrandAction(id: string): Promise<ActionResponse> {
-  try {
-    await deleteBrand(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
+export const deleteBrandAction = CrudActionBuilder.for(brandSchema)
+  .deleteWith(deleteBrand)
+  .buildDeleteAction();
 
 // Models
 const modelSchema = z.object({
@@ -580,34 +561,14 @@ const colorSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
 });
 
-export async function upsertColorAction(
-  values: z.infer<typeof colorSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = colorSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
+export const upsertColorAction = CrudActionBuilder.for(colorSchema)
+  .createWith(createColor)
+  .updateWith(updateColor)
+  .buildUpsertAction();
 
-  try {
-    if (values.id) {
-      await updateColor(values.id, parsed.data);
-    } else {
-      await createColor(parsed.data);
-    }
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteColorAction(id: string): Promise<ActionResponse> {
-  try {
-    await deleteColor(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
+export const deleteColorAction = CrudActionBuilder.for(colorSchema)
+  .deleteWith(deleteColor)
+  .buildDeleteAction();
 
 // Storage
 const storageSchema = z.object({
@@ -617,34 +578,14 @@ const storageSchema = z.object({
     .positive("La capacidad debe ser un número positivo"),
 });
 
-export async function upsertStorageAction(
-  values: z.infer<typeof storageSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = storageSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
+export const upsertStorageAction = CrudActionBuilder.for(storageSchema)
+  .createWith(createStorageOption)
+  .updateWith(updateStorageOption)
+  .buildUpsertAction();
 
-  try {
-    if (values.id) {
-      await updateStorageOption(values.id, parsed.data);
-    } else {
-      await createStorageOption(parsed.data);
-    }
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteStorageAction(id: string): Promise<ActionResponse> {
-  try {
-    await deleteStorageOption(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
+export const deleteStorageAction = CrudActionBuilder.for(storageSchema)
+  .deleteWith(deleteStorageOption)
+  .buildDeleteAction();
 
 // RAM
 const ramSchema = z.object({
@@ -654,34 +595,14 @@ const ramSchema = z.object({
     .positive("La capacidad debe ser un número positivo"),
 });
 
-export async function upsertRamAction(
-  values: z.infer<typeof ramSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = ramSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
+export const upsertRamAction = CrudActionBuilder.for(ramSchema)
+  .createWith(createRamOption)
+  .updateWith(updateRamOption)
+  .buildUpsertAction();
 
-  try {
-    if (values.id) {
-      await updateRamOption(values.id, parsed.data);
-    } else {
-      await createRamOption(parsed.data);
-    }
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteRamAction(id: string): Promise<ActionResponse> {
-  try {
-    await deleteRamOption(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
+export const deleteRamAction = CrudActionBuilder.for(ramSchema)
+  .deleteWith(deleteRamOption)
+  .buildDeleteAction();
 
 // Products
 const productSchema = z.object({
