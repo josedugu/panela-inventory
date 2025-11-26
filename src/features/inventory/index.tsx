@@ -3,7 +3,6 @@
 // Actions compartidas
 export * from "./actions/index";
 export { InventoryMovementModal } from "./general-ui/add-product-modal";
-export { EmptyState } from "./general-ui/empty-state";
 export { type Product, ProductCard } from "./general-ui/product-card";
 export { StatCard } from "./general-ui/stat-card";
 export { StockBadge, type StockStatus } from "./general-ui/stock-badge";
