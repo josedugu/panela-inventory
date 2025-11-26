@@ -351,14 +351,16 @@ export function CrudSection<TData, TFormValues extends FieldValues>({
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {renderForm(form, config.selectFields)}
+              <div className="space-y-4">
+                {renderForm(form, config.selectFields)}
+              </div>
               <DialogFooter className="gap-2 sm:gap-3">
                 <Button
                   type="button"

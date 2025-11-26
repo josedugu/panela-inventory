@@ -17,14 +17,8 @@ import {
   updateCostCenter,
 } from "@/data/repositories/costCenters.repository";
 import {
-  createMultipleProducts,
-  createProduct,
-  deleteProduct,
-  getProductFilterOptions,
   listProducts,
   type ProductDTO,
-  type ProductFilters,
-  updateProduct,
 } from "@/data/repositories/master.products.repository";
 import {
   createModel,
@@ -92,6 +86,13 @@ import {
   resendInviteEmail,
   updateSupabaseMasterUser,
 } from "@/services/supabase/users";
+import {
+  createProductsBatchAction as createProductsBatchActionInternal,
+  deleteProductAction as deleteProductActionInternal,
+  getProductFilterOptionsAction as getProductFilterOptionsActionInternal,
+  getProductsWithFiltersAction as getProductsWithFiltersActionInternal,
+  upsertProductAction as upsertProductActionInternal,
+} from "../productos/actions";
 
 type ActionResponse =
   | { success: true }
@@ -161,6 +162,15 @@ function supabaseActionError(error: unknown): ActionResponse {
     error: "Ocurrió un error al sincronizar con Supabase",
   };
 }
+
+// Reexportar acciones de productos manteniendo compatibilidad con server actions
+export const upsertProductAction = upsertProductActionInternal;
+export const deleteProductAction = deleteProductActionInternal;
+export const getProductsWithFiltersAction =
+  getProductsWithFiltersActionInternal;
+export const getProductFilterOptionsAction =
+  getProductFilterOptionsActionInternal;
+export const createProductsBatchAction = createProductsBatchActionInternal;
 
 // Suppliers
 const supplierSchema = z.object({
@@ -518,155 +528,6 @@ export const deleteRamAction = CrudActionBuilder.for(ramSchema)
   .deleteWith(deleteRamOption)
   .buildDeleteAction();
 
-// Products
-const productSchema = z.object({
-  tipoProductoId: z.string().uuid("Selecciona un tipo de producto válido"),
-  marcaId: z.string().uuid("Selecciona una marca válida"),
-  modeloId: z.string().uuid("Selecciona un modelo válido").optional(),
-  almacenamientoIds: z.array(z.string().uuid()).optional(), // Array para multiselect
-  ramIds: z.array(z.string().uuid()).optional(), // Array para multiselect
-  colorIds: z.array(z.string().uuid()).optional(), // Array para multiselect
-  pvp: z
-    .union([
-      z.string().min(1, "El PVP es obligatorio"),
-      z.number().positive("El PVP debe ser un número positivo"),
-    ])
-    .transform((val) => {
-      if (typeof val === "number") return val;
-      if (!val || val === "") return undefined;
-      const num = Number.parseFloat(val);
-      return Number.isNaN(num) ? undefined : num;
-    }),
-  descripcion: z.string().optional(),
-  estado: z.boolean().optional(),
-});
-
-/**
- * Genera el producto cartesiano de múltiples arrays
- * Ejemplo: cartesian([1,2], [3,4]) => [[1,3], [1,4], [2,3], [2,4]]
- */
-function cartesian<T>(...arrays: T[][]): T[][] {
-  if (arrays.length === 0) return [[]];
-  if (arrays.length === 1) {
-    const firstArray = arrays[0];
-    return firstArray ? firstArray.map((item) => [item]) : [[]];
-  }
-
-  const [first, ...rest] = arrays;
-  const restCartesian = cartesian(...rest);
-
-  if (!first) return restCartesian;
-
-  return first.flatMap((item) =>
-    restCartesian.map((combination) => [item, ...combination]),
-  );
-}
-
-export async function upsertProductAction(
-  values: z.infer<typeof productSchema> & { id?: string },
-): Promise<ActionResponse> {
-  const parsed = productSchema.safeParse(values);
-  if (!parsed.success) {
-    return validationError(parsed.error.flatten().fieldErrors);
-  }
-
-  try {
-    const { almacenamientoIds, ramIds, colorIds, ...restData } = parsed.data;
-
-    // Si es edición, usar lógica simple (un solo producto)
-    if (values.id) {
-      const productData = {
-        ...restData,
-        almacenamientoId:
-          almacenamientoIds && almacenamientoIds.length > 0
-            ? almacenamientoIds[0]
-            : undefined,
-        ramId: ramIds && ramIds.length > 0 ? ramIds[0] : undefined,
-        colorId: colorIds && colorIds.length > 0 ? colorIds[0] : undefined,
-      };
-      await updateProduct(values.id, productData);
-      return { success: true };
-    }
-
-    // Para creación: generar todas las combinaciones si hay arrays con múltiples valores
-    const hasMultipleAlmacenamientos =
-      almacenamientoIds && almacenamientoIds.length > 1;
-    const hasMultipleRams = ramIds && ramIds.length > 1;
-    const hasMultipleColors = colorIds && colorIds.length > 1;
-
-    // Si no hay arrays múltiples, crear un solo producto
-    if (!hasMultipleAlmacenamientos && !hasMultipleRams && !hasMultipleColors) {
-      const productData = {
-        ...restData,
-        almacenamientoId:
-          almacenamientoIds && almacenamientoIds.length > 0
-            ? almacenamientoIds[0]
-            : undefined,
-        ramId: ramIds && ramIds.length > 0 ? ramIds[0] : undefined,
-        colorId: colorIds && colorIds.length > 0 ? colorIds[0] : undefined,
-      };
-      await createProduct(productData);
-      return { success: true };
-    }
-
-    // Generar todas las combinaciones posibles
-    // Normalizar arrays: si no hay array o está vacío, usar [undefined] para el cartesiano
-    // pero solo incluir en el cartesiano los arrays que tienen valores
-    const arraysToCombine: (string | undefined)[][] = [];
-
-    if (almacenamientoIds && almacenamientoIds.length > 0) {
-      arraysToCombine.push(almacenamientoIds);
-    } else {
-      arraysToCombine.push([undefined]);
-    }
-
-    if (ramIds && ramIds.length > 0) {
-      arraysToCombine.push(ramIds);
-    } else {
-      arraysToCombine.push([undefined]);
-    }
-
-    if (colorIds && colorIds.length > 0) {
-      arraysToCombine.push(colorIds);
-    } else {
-      arraysToCombine.push([undefined]);
-    }
-
-    // Generar producto cartesiano
-    const combinations = cartesian(...arraysToCombine);
-
-    // Crear un ProductInput para cada combinación
-    const productInputs = combinations.map((combination) => {
-      const [almacenamientoId, ramId, colorId] = combination;
-      return {
-        ...restData,
-        almacenamientoId:
-          almacenamientoId !== undefined
-            ? (almacenamientoId as string)
-            : undefined,
-        ramId: ramId !== undefined ? (ramId as string) : undefined,
-        colorId: colorId !== undefined ? (colorId as string) : undefined,
-      };
-    });
-
-    // Crear todos los productos en una transacción
-    await createMultipleProducts(productInputs);
-
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
-export async function deleteProductAction(id: string): Promise<ActionResponse> {
-  try {
-    await deleteProduct(id);
-    return { success: true };
-  } catch (error) {
-    return prismaError(error);
-  }
-}
-
 export type MasterDataPayload = {
   suppliers?: SupplierDTO[];
   brands?: BrandDTO[];
@@ -763,41 +624,5 @@ export async function getSectionData(
     }
     default:
       return {};
-  }
-}
-
-export async function getProductsWithFiltersAction(
-  filters?: ProductFilters,
-  page?: number,
-  pageSize?: number,
-): Promise<
-  | { success: true; data: ProductDTO[]; total: number }
-  | { success: false; error: string }
-> {
-  try {
-    const result = await listProducts({
-      filters,
-      page,
-      pageSize,
-    });
-    return {
-      success: true,
-      data: result.products,
-      total: result.total,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "Error al obtener productos",
-    };
-  }
-}
-
-export async function getProductFilterOptionsAction() {
-  try {
-    return await getProductFilterOptions();
-  } catch {
-    throw new Error("No se pudieron cargar las opciones de filtro");
   }
 }
