@@ -9,7 +9,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { formatPrice } from "@/lib/utils";
 import { getPaymentMethods } from "../actions/get-payment-methods";
@@ -29,12 +28,14 @@ interface SalePaymentSectionProps {
   totalToPay: number;
   payments: Payment[];
   setPayments: (payments: Payment[]) => void;
+  hayProductoBajoCosto?: boolean;
 }
 
 export function SalePaymentSection({
   totalToPay,
   payments,
   setPayments,
+  hayProductoBajoCosto = false,
 }: SalePaymentSectionProps) {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const baseId = useId();
@@ -111,7 +112,12 @@ export function SalePaymentSection({
                 onValueChange={(val) => handleMethodChange(payment.id, val)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar método" />
+                  <span className="truncate">
+                    {payment.methodId
+                      ? (paymentMethods.find((m) => m.id === payment.methodId)
+                          ?.nombre ?? "Cargando...")
+                      : "Seleccionar método"}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   {paymentMethods.map((method) => (
@@ -152,6 +158,11 @@ export function SalePaymentSection({
       </div>
 
       <div className="space-y-2 pt-4 border-t">
+        {hayProductoBajoCosto && (
+          <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+            ⚠️ Venta no aprobada: hay productos con precio inferior al costo
+          </div>
+        )}
         <div className="flex justify-between text-sm">
           <span>Total a Pagar:</span>
           <span className="font-medium">
