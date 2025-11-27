@@ -8,6 +8,7 @@ export interface ProductDTO {
   nombre?: string | null;
   costo?: number | null;
   pvp?: number | null;
+  precioOferta?: number | null;
   cantidad: number;
   descripcion?: string | null;
   estado: boolean;
@@ -31,6 +32,7 @@ export interface ProductDTO {
 interface ProductInput {
   costo?: number | null;
   pvp?: number | null;
+  precioOferta?: number | null;
   descripcion?: string | null;
   tipoProductoId?: string | null;
   imagenUrl?: string | null;
@@ -186,6 +188,7 @@ export async function listProducts(
     nombre: product.nombre,
     costo: product.costo ? Number(product.costo) : null,
     pvp: product.pvp ? Number(product.pvp) : null,
+    precioOferta: product.precioOferta ? Number(product.precioOferta) : null,
     cantidad: product.cantidad,
     descripcion: product.descripcion,
     estado: product.estado,
@@ -221,6 +224,10 @@ export async function createProduct(input: ProductInput): Promise<ProductDTO> {
       data: {
         costo: input.costo ? new Prisma.Decimal(input.costo.toString()) : null,
         pvp: input.pvp ? new Prisma.Decimal(input.pvp.toString()) : null,
+        precioOferta:
+          input.precioOferta != null
+            ? new Prisma.Decimal(input.precioOferta.toString())
+            : null,
         descripcion: input.descripcion,
         tipoProductoId: input.tipoProductoId || undefined,
         imagenUrl: input.imagenUrl,
@@ -271,6 +278,9 @@ export async function createProduct(input: ProductInput): Promise<ProductDTO> {
       nombre: updatedProduct.nombre,
       costo: updatedProduct.costo ? Number(updatedProduct.costo) : null,
       pvp: updatedProduct.pvp ? Number(updatedProduct.pvp) : null,
+      precioOferta: updatedProduct.precioOferta
+        ? Number(updatedProduct.precioOferta)
+        : null,
       cantidad: updatedProduct.cantidad,
       descripcion: updatedProduct.descripcion,
       estado: updatedProduct.estado,
@@ -308,6 +318,10 @@ export async function updateProduct(
       data: {
         costo: input.costo ? new Prisma.Decimal(input.costo.toString()) : null,
         pvp: input.pvp ? new Prisma.Decimal(input.pvp.toString()) : null,
+        precioOferta:
+          input.precioOferta != null
+            ? new Prisma.Decimal(input.precioOferta.toString())
+            : null,
         descripcion: input.descripcion,
         tipoProductoId: input.tipoProductoId || undefined,
         imagenUrl: input.imagenUrl,
@@ -358,6 +372,9 @@ export async function updateProduct(
       nombre: updatedProduct.nombre,
       costo: updatedProduct.costo ? Number(updatedProduct.costo) : null,
       pvp: updatedProduct.pvp ? Number(updatedProduct.pvp) : null,
+      precioOferta: updatedProduct.precioOferta
+        ? Number(updatedProduct.precioOferta)
+        : null,
       cantidad: updatedProduct.cantidad,
       descripcion: updatedProduct.descripcion,
       estado: updatedProduct.estado,
@@ -526,6 +543,10 @@ export async function createMultipleProducts(
               ? new Prisma.Decimal(input.costo.toString())
               : null,
             pvp: input.pvp ? new Prisma.Decimal(input.pvp.toString()) : null,
+            precioOferta:
+              input.precioOferta != null
+                ? new Prisma.Decimal(input.precioOferta.toString())
+                : null,
             descripcion: input.descripcion,
             tipoProductoId: input.tipoProductoId || undefined,
             imagenUrl: input.imagenUrl,
@@ -593,6 +614,9 @@ export async function createMultipleProducts(
         nombre: product.nombre,
         costo: product.costo ? Number(product.costo) : null,
         pvp: product.pvp ? Number(product.pvp) : null,
+        precioOferta: product.precioOferta
+          ? Number(product.precioOferta)
+          : null,
         cantidad: product.cantidad,
         descripcion: product.descripcion,
         estado: product.estado,

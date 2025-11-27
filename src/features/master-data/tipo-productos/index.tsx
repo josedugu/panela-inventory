@@ -3,12 +3,14 @@
 import type { UseFormReturn } from "react-hook-form";
 import {
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { TipoProductoDTO } from "@/data/repositories/shared.repository";
 import {
@@ -44,6 +46,7 @@ export function TipoProductosSection({
     defaultFormValues: {
       nombre: "",
       descripcion: "",
+      productoBaseParaOferta: false,
     },
     upsertAction: upsertTipoProductoAction,
     deleteAction: deleteTipoProductoAction,
@@ -96,6 +99,27 @@ export function TipoProductosSection({
                   />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="productoBaseParaOferta"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Activa ofertas</FormLabel>
+                  <FormDescription>
+                    Al vender este tipo de producto, otros productos con precio
+                    de oferta se venderán a ese precio especial
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
               </FormItem>
             )}
           />

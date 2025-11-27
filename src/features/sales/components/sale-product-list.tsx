@@ -19,6 +19,8 @@ export interface SaleLine {
 export interface ProductData {
   label: string;
   pvp: number;
+  precioOferta: number | null;
+  esProductoBase: boolean;
   availableQuantity: number;
 }
 
@@ -39,6 +41,14 @@ export function SaleProductList({
   setSelectedProductData,
   onAddLine,
 }: SaleProductListProps) {
+  // Detectar si hay al menos un producto base en la lista
+  const hayProductoBase = useMemo(() => {
+    return lines.some((line) => {
+      const product = selectedProductData.get(line.productId);
+      return product?.esProductoBase === true;
+    });
+  }, [lines, selectedProductData]);
+
   const lineDetails = useMemo(() => {
     return lines.map((line) => {
       const product = selectedProductData.get(line.productId);
@@ -48,11 +58,30 @@ export function SaleProductList({
           label: "Selecciona un producto",
           availableQuantity: 0,
           pvp: 0,
+          precioOferta: null,
+          esProductoBase: false,
+          aplicaOferta: false,
           lineSubtotal: 0,
         };
       }
 
-      const unitPrice = line.unitPrice || product.pvp;
+      // Determinar si aplica el precio de oferta
+      const aplicaOferta =
+        hayProductoBase &&
+        product.precioOferta !== null &&
+        !product.esProductoBase;
+
+      // Calcular el precio efectivo
+      const precioEfectivo = aplicaOferta
+        ? (product.precioOferta ?? 0)
+        : product.pvp;
+
+      // Si el precio actual del line no coincide con el efectivo, usar el efectivo
+      const unitPrice =
+        line.unitPrice === product.pvp || line.unitPrice === 0
+          ? precioEfectivo
+          : line.unitPrice;
+
       const lineSubtotal = unitPrice * line.quantity;
 
       return {
@@ -60,10 +89,14 @@ export function SaleProductList({
         label: product.label,
         availableQuantity: product.availableQuantity,
         pvp: product.pvp,
+        precioOferta: product.precioOferta,
+        esProductoBase: product.esProductoBase,
+        aplicaOferta,
+        unitPrice,
         lineSubtotal,
       };
     });
-  }, [lines, selectedProductData]);
+  }, [lines, selectedProductData, hayProductoBase]);
 
   const subtotal = lineDetails.reduce(
     (sum, line) => sum + line.lineSubtotal,
@@ -86,7 +119,14 @@ export function SaleProductList({
   const handleProductChange = (
     lineId: string,
     product:
-      | { value: string; label: string; pvp: number; availableQuantity: number }
+      | {
+          value: string;
+          label: string;
+          pvp: number;
+          precioOferta: number | null;
+          esProductoBase: boolean;
+          availableQuantity: number;
+        }
       | undefined,
   ) => {
     if (!product) {
@@ -103,6 +143,8 @@ export function SaleProductList({
       newMap.set(product.value, {
         label: product.label,
         pvp: product.pvp,
+        precioOferta: product.precioOferta,
+        esProductoBase: product.esProductoBase,
         availableQuantity: product.availableQuantity,
       });
       return newMap;
@@ -247,6 +289,8 @@ export function SaleProductList({
                             value: product.id,
                             label: product.label,
                             pvp: product.pvp,
+                            precioOferta: product.precioOferta,
+                            esProductoBase: product.esProductoBase,
                             availableQuantity: product.availableQuantity,
                           });
                         }
@@ -262,6 +306,8 @@ export function SaleProductList({
                           newMap.set(p.id, {
                             label: p.label,
                             pvp: p.pvp,
+                            precioOferta: p.precioOferta,
+                            esProductoBase: p.esProductoBase,
                             availableQuantity: p.availableQuantity,
                           });
                           return newMap;
@@ -280,8 +326,15 @@ export function SaleProductList({
                 <div className="sm:col-span-6 md:col-span-3">
                   <CurrencyInput
                     id={unitPriceInputId}
-                    value={line.unitPrice > 0 ? line.unitPrice.toString() : ""}
+                    value={
+                      line.unitPrice > 0
+                        ? line.unitPrice.toString()
+                        : line.aplicaOferta
+                          ? "0"
+                          : ""
+                    }
                     onChange={(value) => handleUnitPriceChange(line.id, value)}
+                    disabled={line.aplicaOferta}
                   />
                 </div>
 

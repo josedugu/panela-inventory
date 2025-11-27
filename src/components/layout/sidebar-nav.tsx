@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import { canAccessRoute } from "@/config/permissions";
 import { MASTER_DATA_SECTIONS } from "@/features/master-data/conts";
 import { useUserRole } from "@/hooks/use-user-role";
+import { cn } from "@/lib/utils";
 import {
   Accordion,
   AccordionContent,
@@ -23,7 +24,6 @@ import {
 } from "../ui/accordion";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
-import { cn } from "@/lib/utils";
 
 interface NavChildItem {
   title: string;

@@ -22,7 +22,13 @@ export async function searchProductsAction(query: string) {
         id: true,
         nombre: true,
         pvp: true,
+        precioOferta: true,
         cantidad: true,
+        tipoProducto: {
+          select: {
+            productoBaseParaOferta: true,
+          },
+        },
       },
     });
 
@@ -32,6 +38,10 @@ export async function searchProductsAction(query: string) {
           id: product.id,
           label: product.nombre ?? "Producto sin nombre",
           pvp: product.pvp ? Number(product.pvp) : 0,
+          precioOferta: product.precioOferta
+            ? Number(product.precioOferta)
+            : null,
+          esProductoBase: product.tipoProducto?.productoBaseParaOferta ?? false,
           availableQuantity: product.cantidad ?? 0,
         },
       ];
@@ -55,7 +65,13 @@ export async function searchProductsAction(query: string) {
       id: true,
       nombre: true,
       pvp: true,
+      precioOferta: true,
       cantidad: true,
+      tipoProducto: {
+        select: {
+          productoBaseParaOferta: true,
+        },
+      },
     },
     orderBy: {
       nombre: "asc",
@@ -67,6 +83,8 @@ export async function searchProductsAction(query: string) {
     id: product.id,
     label: product.nombre ?? "Producto sin nombre",
     pvp: product.pvp ? Number(product.pvp) : 0,
+    precioOferta: product.precioOferta ? Number(product.precioOferta) : null,
+    esProductoBase: product.tipoProducto?.productoBaseParaOferta ?? false,
     availableQuantity: product.cantidad ?? 0,
   }));
 }

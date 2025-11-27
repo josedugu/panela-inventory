@@ -59,6 +59,7 @@ function prismaError(error: unknown): ActionResponse {
 const tipoProductoSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
   descripcion: z.string().optional(),
+  productoBaseParaOferta: z.boolean().default(false),
 });
 
 export async function upsertTipoProductoAction(

@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
+import { Gift, Pencil, Trash2 } from "lucide-react";
 import type { TableAction } from "@/components/ui/table-actions-cell";
 import { TableActionsCell } from "@/components/ui/table-actions-cell";
 import type { TipoProductoDTO } from "@/data/repositories/shared.repository";
@@ -27,6 +27,19 @@ export function getTipoProductoColumns({
       accessorKey: "descripcion",
       header: "Descripción",
       cell: ({ row }) => row.original.descripcion ?? "—",
+    },
+    {
+      accessorKey: "productoBaseParaOferta",
+      header: "Activa Oferta",
+      cell: ({ row }) =>
+        row.original.productoBaseParaOferta ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+            <Gift className="h-3 w-3" />
+            Sí
+          </span>
+        ) : (
+          <span className="text-text-secondary">—</span>
+        ),
     },
     {
       id: "actions",

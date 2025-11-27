@@ -117,6 +117,13 @@ export async function createSaleAction(
           id: { in: productIds },
           estado: true,
         },
+        include: {
+          tipoProducto: {
+            select: {
+              productoBaseParaOferta: true,
+            },
+          },
+        },
       });
 
       if (products.length !== productIds.length) {
@@ -133,6 +140,39 @@ export async function createSaleAction(
           throw new Error(
             `Cantidad insuficiente para el producto ${product.nombre ?? product.id}. Disponible: ${product.cantidad}, Solicitado: ${line.quantity}`,
           );
+        }
+      }
+
+      // Validar regla de negocio: precio de oferta solo si hay producto base
+      const hayProductoBase = products.some(
+        (p) => p.tipoProducto?.productoBaseParaOferta === true,
+      );
+
+      for (const line of lines) {
+        const product = products.find((p) => p.id === line.productId);
+        if (!product) continue;
+
+        const precioOferta = product.precioOferta
+          ? Number(product.precioOferta)
+          : null;
+        const pvp = product.pvp ? Number(product.pvp) : 0;
+        const esProductoBase =
+          product.tipoProducto?.productoBaseParaOferta === true;
+
+        // Si el producto tiene precio de oferta configurado y no es producto base
+        if (precioOferta !== null && !esProductoBase) {
+          // Si el precio enviado es el de oferta pero no hay producto base, error
+          if (line.unitPrice === precioOferta && !hayProductoBase) {
+            throw new Error(
+              `El producto "${product.nombre}" tiene precio de oferta pero no hay un producto base en la venta. Precio esperado: $${pvp}`,
+            );
+          }
+          // Si hay producto base y el precio no es el de oferta, advertencia/error
+          if (hayProductoBase && line.unitPrice !== precioOferta) {
+            throw new Error(
+              `El producto "${product.nombre}" debe venderse a precio de oferta ($${precioOferta}) cuando hay un producto base en la venta`,
+            );
+          }
         }
       }
 
