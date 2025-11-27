@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 export type StockStatus = "in-stock" | "low-stock" | "out-of-stock";
 

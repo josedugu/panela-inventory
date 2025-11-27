@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 interface StatCardProps {
   title: string;
