@@ -143,7 +143,7 @@ export async function createSaleAction(
         }
       }
 
-      // Validar regla de negocio: precio de oferta solo si hay producto base
+      // Validar reglas de negocio
       const hayProductoBase = products.some(
         (p) => p.tipoProducto?.productoBaseParaOferta === true,
       );
@@ -152,6 +152,7 @@ export async function createSaleAction(
         const product = products.find((p) => p.id === line.productId);
         if (!product) continue;
 
+        const costo = product.costo ? Number(product.costo) : 0;
         const precioOferta = product.precioOferta
           ? Number(product.precioOferta)
           : null;
@@ -159,18 +160,35 @@ export async function createSaleAction(
         const esProductoBase =
           product.tipoProducto?.productoBaseParaOferta === true;
 
-        // Si el producto tiene precio de oferta configurado y no es producto base
+        // Determinar si aplica oferta válida para este producto
+        const aplicaOfertaValida =
+          hayProductoBase && precioOferta !== null && !esProductoBase;
+
+        // Regla 1: Ningún producto puede venderse por debajo del costo
+        // EXCEPTO si aplica una oferta válida (tiene precioOferta y hay producto base)
+        if (line.unitPrice < costo && costo > 0) {
+          // Si aplica oferta válida y el precio es exactamente el de oferta, está permitido
+          if (aplicaOfertaValida && line.unitPrice === precioOferta) {
+            // OK - oferta válida aplicada
+          } else {
+            throw new Error(
+              `El producto "${product.nombre}" no puede venderse por debajo de su costo ($${costo.toLocaleString()}). Precio enviado: $${line.unitPrice.toLocaleString()}`,
+            );
+          }
+        }
+
+        // Regla 2: Productos con precio de oferta
         if (precioOferta !== null && !esProductoBase) {
           // Si el precio enviado es el de oferta pero no hay producto base, error
           if (line.unitPrice === precioOferta && !hayProductoBase) {
             throw new Error(
-              `El producto "${product.nombre}" tiene precio de oferta pero no hay un producto base en la venta. Precio esperado: $${pvp}`,
+              `El producto "${product.nombre}" tiene precio de oferta pero no hay un producto base en la venta. Precio esperado: $${pvp.toLocaleString()}`,
             );
           }
-          // Si hay producto base y el precio no es el de oferta, advertencia/error
+          // Si hay producto base y el precio no es el de oferta, error
           if (hayProductoBase && line.unitPrice !== precioOferta) {
             throw new Error(
-              `El producto "${product.nombre}" debe venderse a precio de oferta ($${precioOferta}) cuando hay un producto base en la venta`,
+              `El producto "${product.nombre}" debe venderse a precio de oferta ($${precioOferta.toLocaleString()}) cuando hay un producto base en la venta`,
             );
           }
         }

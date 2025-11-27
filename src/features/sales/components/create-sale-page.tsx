@@ -77,7 +77,13 @@ export function CreateSalePage() {
     return lines.map((line) => {
       const product = selectedProductData.get(line.productId);
       if (!product) {
-        return { ...line, lineSubtotal: 0, precioEfectivo: 0 };
+        return {
+          ...line,
+          lineSubtotal: 0,
+          precioEfectivo: 0,
+          costo: 0,
+          aplicaOferta: false,
+        };
       }
 
       // Determinar si aplica el precio de oferta
@@ -86,13 +92,26 @@ export function CreateSalePage() {
         product.precioOferta !== null &&
         !product.esProductoBase;
 
-      // Calcular el precio efectivo
-      const precioEfectivo = aplicaOferta
+      // Calcular el precio base (oferta o PVP)
+      const precioBase = aplicaOferta
         ? (product.precioOferta ?? 0)
         : product.pvp;
 
+      // Si el usuario modificó el precio manualmente, usar ese valor
+      // (se considera modificado si es diferente del PVP y diferente de 0)
+      const precioEfectivo =
+        line.unitPrice === product.pvp || line.unitPrice === 0
+          ? precioBase
+          : line.unitPrice;
+
       const lineSubtotal = precioEfectivo * line.quantity;
-      return { ...line, lineSubtotal, precioEfectivo };
+      return {
+        ...line,
+        lineSubtotal,
+        precioEfectivo,
+        costo: product.costo,
+        aplicaOferta,
+      };
     });
   }, [lines, selectedProductData, hayProductoBase]);
 
@@ -100,6 +119,16 @@ export function CreateSalePage() {
     (sum, line) => sum + line.lineSubtotal,
     0,
   );
+
+  // Verificar si hay productos vendidos bajo costo (excluyendo ofertas válidas)
+  const hayProductoBajoCosto = useMemo(() => {
+    return lineDetails.some((line) => {
+      // Si aplica oferta, no es un problema (es una oferta válida)
+      if (line.aplicaOferta) return false;
+      // Si el precio efectivo es menor al costo, hay problema
+      return line.precioEfectivo < line.costo && line.costo > 0;
+    });
+  }, [lineDetails]);
 
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
   const _remaining = totalSale - totalPaid;
@@ -179,7 +208,8 @@ export function CreateSalePage() {
     });
   };
 
-  const isSubmitDisabled = isPending || !isCustomerValid || !isProductsValid;
+  const isSubmitDisabled =
+    isPending || !isCustomerValid || !isProductsValid || hayProductoBajoCosto;
 
   return (
     <div className="container mx-auto max-w-5xl py-6 space-y-6">
@@ -292,6 +322,7 @@ export function CreateSalePage() {
                 totalToPay={totalSale}
                 payments={payments}
                 setPayments={setPayments}
+                hayProductoBajoCosto={hayProductoBajoCosto}
               />
               <div className="flex justify-between mt-6 pt-4 border-t">
                 <Button variant="outline" onClick={handleBack}>

@@ -21,6 +21,7 @@ export async function searchProductsAction(query: string) {
       select: {
         id: true,
         nombre: true,
+        costo: true,
         pvp: true,
         precioOferta: true,
         cantidad: true,
@@ -37,6 +38,7 @@ export async function searchProductsAction(query: string) {
         {
           id: product.id,
           label: product.nombre ?? "Producto sin nombre",
+          costo: product.costo ? Number(product.costo) : 0,
           pvp: product.pvp ? Number(product.pvp) : 0,
           precioOferta: product.precioOferta
             ? Number(product.precioOferta)
@@ -64,6 +66,7 @@ export async function searchProductsAction(query: string) {
     select: {
       id: true,
       nombre: true,
+      costo: true,
       pvp: true,
       precioOferta: true,
       cantidad: true,
@@ -82,6 +85,7 @@ export async function searchProductsAction(query: string) {
   return products.map((product) => ({
     id: product.id,
     label: product.nombre ?? "Producto sin nombre",
+    costo: product.costo ? Number(product.costo) : 0,
     pvp: product.pvp ? Number(product.pvp) : 0,
     precioOferta: product.precioOferta ? Number(product.precioOferta) : null,
     esProductoBase: product.tipoProducto?.productoBaseParaOferta ?? false,

@@ -18,6 +18,7 @@ export interface SaleLine {
 
 export interface ProductData {
   label: string;
+  costo: number;
   pvp: number;
   precioOferta: number | null;
   esProductoBase: boolean;
@@ -122,6 +123,7 @@ export function SaleProductList({
       | {
           value: string;
           label: string;
+          costo: number;
           pvp: number;
           precioOferta: number | null;
           esProductoBase: boolean;
@@ -142,6 +144,7 @@ export function SaleProductList({
       const newMap = new Map(prev);
       newMap.set(product.value, {
         label: product.label,
+        costo: product.costo,
         pvp: product.pvp,
         precioOferta: product.precioOferta,
         esProductoBase: product.esProductoBase,
@@ -277,21 +280,21 @@ export function SaleProductList({
                           }
                         : undefined
                     }
-                    onChange={async (option) => {
+                    onChange={(option) => {
                       if (option) {
-                        const products = await searchProductsAction(
+                        // Usar la data que ya tenemos en selectedProductData
+                        const cachedProduct = selectedProductData.get(
                           option.value,
                         );
-                        const product = products[0];
-
-                        if (product) {
+                        if (cachedProduct) {
                           handleProductChange(line.id, {
-                            value: product.id,
-                            label: product.label,
-                            pvp: product.pvp,
-                            precioOferta: product.precioOferta,
-                            esProductoBase: product.esProductoBase,
-                            availableQuantity: product.availableQuantity,
+                            value: option.value,
+                            label: cachedProduct.label,
+                            costo: cachedProduct.costo,
+                            pvp: cachedProduct.pvp,
+                            precioOferta: cachedProduct.precioOferta,
+                            esProductoBase: cachedProduct.esProductoBase,
+                            availableQuantity: cachedProduct.availableQuantity,
                           });
                         }
                       } else {
@@ -305,6 +308,7 @@ export function SaleProductList({
                           const newMap = new Map(prev);
                           newMap.set(p.id, {
                             label: p.label,
+                            costo: p.costo,
                             pvp: p.pvp,
                             precioOferta: p.precioOferta,
                             esProductoBase: p.esProductoBase,
@@ -326,13 +330,7 @@ export function SaleProductList({
                 <div className="sm:col-span-6 md:col-span-3">
                   <CurrencyInput
                     id={unitPriceInputId}
-                    value={
-                      line.unitPrice > 0
-                        ? line.unitPrice.toString()
-                        : line.aplicaOferta
-                          ? "0"
-                          : ""
-                    }
+                    value={line.unitPrice.toString()}
                     onChange={(value) => handleUnitPriceChange(line.id, value)}
                     disabled={line.aplicaOferta}
                   />
