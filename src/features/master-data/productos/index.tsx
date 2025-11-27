@@ -231,6 +231,7 @@ export function ProductsSection({
       ramIds: [],
       colorIds: [],
       pvp: "",
+      precioOferta: "",
       descripcion: "",
       estado: true,
     },
@@ -353,6 +354,7 @@ export function ProductsSection({
       ramIds: [],
       colorIds: [],
       pvp: "",
+      precioOferta: "",
       descripcion: "",
       estado: true,
     });
@@ -371,6 +373,7 @@ export function ProductsSection({
       ramIds: product.ramId ? [product.ramId] : [],
       colorIds: product.colorId ? [product.colorId] : [],
       pvp: product.pvp?.toString() ?? "",
+      precioOferta: product.precioOferta?.toString() ?? "",
       descripcion: product.descripcion ?? "",
       estado: product.estado ?? true,
     });
@@ -450,6 +453,10 @@ export function ProductsSection({
 
     const pvpNumber =
       data.pvp && data.pvp !== "" ? Number.parseFloat(data.pvp) : undefined;
+    const precioOfertaNumber =
+      data.precioOferta && data.precioOferta !== ""
+        ? Number.parseFloat(data.precioOferta)
+        : null;
 
     const payload = {
       id: editingProduct?.id,
@@ -460,6 +467,10 @@ export function ProductsSection({
       ramIds: data.ramIds || [],
       colorIds: data.colorIds || [],
       pvp: !Number.isNaN(pvpNumber) ? pvpNumber : undefined,
+      precioOferta:
+        precioOfertaNumber !== null && !Number.isNaN(precioOfertaNumber)
+          ? precioOfertaNumber
+          : null,
       descripcion: data.descripcion,
       estado: data.estado,
     };
@@ -767,6 +778,28 @@ export function ProductsSection({
                         disabled={isSubmitting}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="precioOferta"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Precio de Oferta</FormLabel>
+                    <FormControl>
+                      <CurrencyInput
+                        placeholder="Precio cuando se vende con producto base (ej: $0)"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Si se deja vacío, no aplica oferta. Si se pone $0, será
+                      gratis al vender con un producto base.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

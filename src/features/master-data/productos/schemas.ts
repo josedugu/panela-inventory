@@ -17,6 +17,17 @@ export const productFormSchema = z.object({
       },
       { message: "El PVP debe ser un número válido mayor a 0" },
     ),
+  precioOferta: z
+    .string()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val || val === "") return true;
+        const num = Number.parseFloat(val);
+        return !Number.isNaN(num) && num >= 0;
+      },
+      { message: "El precio de oferta debe ser un número válido >= 0" },
+    ),
   descripcion: z.string().optional(),
   estado: z.boolean(),
 });

@@ -80,6 +80,15 @@ const productSchema = z.object({
       const num = Number.parseFloat(val);
       return Number.isNaN(num) ? undefined : num;
     }),
+  precioOferta: z
+    .union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((val) => {
+      if (val === null || val === undefined || val === "") return null;
+      if (typeof val === "number") return val;
+      const num = Number.parseFloat(val);
+      return Number.isNaN(num) ? null : num;
+    }),
   descripcion: z.string().optional(),
   estado: z.boolean().optional(),
 });

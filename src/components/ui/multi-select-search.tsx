@@ -2,6 +2,7 @@
 
 import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import {
@@ -13,7 +14,6 @@ import {
 } from "./command";
 import type { InputSearchOption } from "./input-search";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { cn } from "@/lib/utils";
 
 interface MultiSelectSearchProps {
   label?: string;

@@ -9,7 +9,7 @@ import {
   User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState, useTransition } from "react";
+import { useId, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -65,12 +65,36 @@ export function CreateSalePage() {
 
   // --- Derived State ---
 
-  const lineDetails = lines.map((line) => {
-    const product = selectedProductData.get(line.productId);
-    const unitPrice = line.unitPrice || (product ? product.pvp : 0);
-    const lineSubtotal = unitPrice * line.quantity;
-    return { ...line, lineSubtotal };
-  });
+  // Detectar si hay al menos un producto base en la lista
+  const hayProductoBase = useMemo(() => {
+    return lines.some((line) => {
+      const product = selectedProductData.get(line.productId);
+      return product?.esProductoBase === true;
+    });
+  }, [lines, selectedProductData]);
+
+  const lineDetails = useMemo(() => {
+    return lines.map((line) => {
+      const product = selectedProductData.get(line.productId);
+      if (!product) {
+        return { ...line, lineSubtotal: 0, precioEfectivo: 0 };
+      }
+
+      // Determinar si aplica el precio de oferta
+      const aplicaOferta =
+        hayProductoBase &&
+        product.precioOferta !== null &&
+        !product.esProductoBase;
+
+      // Calcular el precio efectivo
+      const precioEfectivo = aplicaOferta
+        ? (product.precioOferta ?? 0)
+        : product.pvp;
+
+      const lineSubtotal = precioEfectivo * line.quantity;
+      return { ...line, lineSubtotal, precioEfectivo };
+    });
+  }, [lines, selectedProductData, hayProductoBase]);
 
   const totalSale = lineDetails.reduce(
     (sum, line) => sum + line.lineSubtotal,
@@ -129,14 +153,17 @@ export function CreateSalePage() {
     // TODO: Payment validation logic if needed in future
 
     startTransition(async () => {
+      // Usar precios efectivos (con oferta aplicada si corresponde)
+      const linesToSubmit = lineDetails.map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+        unitPrice: line.precioEfectivo,
+      }));
+
       const result = await createSaleAction({
         customerId: selectedCustomer ?? undefined,
         customerData: customerData ?? undefined,
-        lines: lines.map((line) => ({
-          productId: line.productId,
-          quantity: line.quantity,
-          unitPrice: line.unitPrice,
-        })),
+        lines: linesToSubmit,
         payments: payments.map((payment) => ({
           methodId: payment.methodId,
           amount: payment.amount,

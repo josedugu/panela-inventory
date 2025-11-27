@@ -141,12 +141,13 @@ model Bodega {
 
 // Categorías de Productos
 model TipoProducto {
-  id          String     @id @default(uuid()) @db.Uuid
-  nombre      String
-  descripcion String?
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                     String     @id @default(uuid()) @db.Uuid
+  nombre                 String
+  descripcion            String?
+  productoBaseParaOferta Boolean    @default(false)
+  createdAt              DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   // Relación con Productos
-  productos   Producto[]
+  productos              Producto[]
 
   @@map("tipo_producto")
   @@schema("dev")
@@ -159,6 +160,7 @@ model Producto {
   nombre            String?             @map("nombre")
   costo             Decimal?            @db.Decimal(10, 2)
   pvp               Decimal?            @default(0) @map("pvp") @db.Decimal(10, 2)
+  precioOferta      Decimal?            @default(0) @map("precio_oferta") @db.Decimal(10, 2)
   cantidad          Int                 @default(0)
   descripcion       String?
   tipoProductoId    String?             @map("tipo_producto_id") @db.Uuid

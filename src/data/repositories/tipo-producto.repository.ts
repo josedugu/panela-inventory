@@ -6,12 +6,14 @@ export interface TipoProductoDTO {
   id: string;
   nombre: string;
   descripcion?: string | null;
+  productoBaseParaOferta: boolean;
   createdAt: Date;
 }
 
 interface TipoProductoInput {
   nombre: string;
   descripcion?: string | null;
+  productoBaseParaOferta?: boolean;
 }
 
 export async function listTipoProductos(): Promise<TipoProductoDTO[]> {
@@ -23,6 +25,7 @@ export async function listTipoProductos(): Promise<TipoProductoDTO[]> {
     id: tipo.id,
     nombre: tipo.nombre,
     descripcion: tipo.descripcion,
+    productoBaseParaOferta: tipo.productoBaseParaOferta,
     createdAt: tipo.createdAt,
   }));
 }
@@ -32,6 +35,7 @@ export async function createTipoProducto(input: TipoProductoInput) {
     data: {
       nombre: input.nombre,
       descripcion: input.descripcion,
+      productoBaseParaOferta: input.productoBaseParaOferta ?? false,
     },
   });
 
@@ -39,6 +43,7 @@ export async function createTipoProducto(input: TipoProductoInput) {
     id: tipo.id,
     nombre: tipo.nombre,
     descripcion: tipo.descripcion,
+    productoBaseParaOferta: tipo.productoBaseParaOferta,
     createdAt: tipo.createdAt,
   };
 }
@@ -49,6 +54,7 @@ export async function updateTipoProducto(id: string, input: TipoProductoInput) {
     data: {
       nombre: input.nombre,
       descripcion: input.descripcion,
+      productoBaseParaOferta: input.productoBaseParaOferta,
     },
   });
 
@@ -56,6 +62,7 @@ export async function updateTipoProducto(id: string, input: TipoProductoInput) {
     id: tipo.id,
     nombre: tipo.nombre,
     descripcion: tipo.descripcion,
+    productoBaseParaOferta: tipo.productoBaseParaOferta,
     createdAt: tipo.createdAt,
   };
 }
