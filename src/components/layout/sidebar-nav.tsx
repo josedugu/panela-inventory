@@ -23,7 +23,7 @@ import {
 } from "../ui/accordion";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
-import { cn } from "../ui/utils";
+import { cn } from "@/lib/utils";
 
 interface NavChildItem {
   title: string;

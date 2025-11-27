@@ -12,7 +12,7 @@ import {
   CommandList,
 } from "./command";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { cn } from "./utils";
+import { cn } from "@/lib/utils";
 
 export interface InputSearchOption {
   label: string;

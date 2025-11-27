@@ -92,7 +92,7 @@ import {
   getProductFilterOptionsAction as getProductFilterOptionsActionInternal,
   getProductsWithFiltersAction as getProductsWithFiltersActionInternal,
   upsertProductAction as upsertProductActionInternal,
-} from "../productos/actions";
+} from "../productos/actions/index";
 
 type ActionResponse =
   | { success: true }

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { InputSearch } from "@/components/ui/input-search";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 import type { EntityTableLayoutProps } from "../types";
 
 export function EntityTableLayout<TData>({

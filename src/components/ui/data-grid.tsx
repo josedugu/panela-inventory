@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 interface ContextMenu {
   x: number;

@@ -8,7 +8,7 @@ import {
   Users,
 } from "lucide-react";
 import type { ComponentType } from "react";
-import { cn } from "../ui/utils";
+import { cn } from "@/lib/utils";
 
 interface MobileBottomNavProps {
   activeItem?: string;

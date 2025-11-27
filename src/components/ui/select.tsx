@@ -15,7 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { cn } from "./utils";
+import { cn } from "@/lib/utils";
 
 type SelectContextValue = {
   value?: string;

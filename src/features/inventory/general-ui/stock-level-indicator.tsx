@@ -1,7 +1,7 @@
 "use client";
 
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/components/ui/utils";
+import { cn } from "@/lib/utils";
 
 interface StockLevelIndicatorProps {
   current: number;

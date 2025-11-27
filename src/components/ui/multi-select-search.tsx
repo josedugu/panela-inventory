@@ -13,7 +13,7 @@ import {
 } from "./command";
 import type { InputSearchOption } from "./input-search";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { cn } from "./utils";
+import { cn } from "@/lib/utils";
 
 interface MultiSelectSearchProps {
   label?: string;
