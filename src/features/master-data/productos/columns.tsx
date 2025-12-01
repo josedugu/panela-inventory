@@ -1,6 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  type TableAction,
+  TableActionsCell,
+} from "@/components/ui/table-actions-cell";
 import type { ProductDTO } from "@/data/repositories/master.products.repository";
 import { formatPrice } from "@/lib/utils";
 
@@ -89,28 +92,25 @@ export function getProductColumns({
     {
       id: "actions",
       header: "Acciones",
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(row.original)}
-            disabled={isBusy}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(row.original)}
-            disabled={isBusy}
-          >
-            <Trash2 className="h-4 w-4 text-error" />
-          </Button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const actions: TableAction<ProductDTO>[] = [
+          {
+            label: "Editar",
+            icon: <Pencil className="h-4 w-4" />,
+            onClick: () => onEdit(row.original),
+            disabled: isBusy,
+          },
+          {
+            label: "Eliminar",
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => onDelete(row.original),
+            disabled: isBusy,
+            variant: "destructive",
+          },
+        ];
+
+        return <TableActionsCell row={row.original} actions={actions} />;
+      },
     },
   ];
 }

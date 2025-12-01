@@ -299,7 +299,7 @@ export function EntityTableLayout<TData>({
         onDelete={config.onDelete}
         onDuplicate={config.onDuplicate}
         getRowId={config.getRowId}
-        showIndexColumn={config.showIndexColumn ?? true}
+        showIndexColumn={config.showIndexColumn ?? false}
         getIndexValue={config.getIndexValue}
       />
     </div>
