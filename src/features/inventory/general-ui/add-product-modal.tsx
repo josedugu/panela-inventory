@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { InputSearchDB } from "@/components/ui/input-search-db";
 import {
   Select,
   SelectContent,
@@ -31,14 +32,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  InputSearchDBSkeleton,
+  SelectSkeleton,
+} from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { createInventoryMovementAction } from "@/features/inventory/actions/create-inventory-movement";
 import {
-  getMovementFormProducts,
   getMovementFormSuppliers,
   getMovementFormTypes,
   getMovementFormWarehouses,
 } from "@/features/inventory/actions/get-movement-form-options";
+import { searchProductsForInventoryAction } from "@/features/inventory/actions/search-products-for-inventory";
 import {
   createInventoryMovementFormSchema,
   type InventoryMovementFormValues,
@@ -95,12 +100,6 @@ export function InventoryMovementModal({
     };
   }, [initialData]);
 
-  const { data: products, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ["inventory-movement-products"],
-    queryFn: getMovementFormProducts,
-    enabled: isOpen,
-  });
-
   const { data: movementTypes, isLoading: isLoadingMovementTypes } = useQuery({
     queryKey: ["inventory-movement-types"],
     queryFn: getMovementFormTypes,
@@ -128,6 +127,17 @@ export function InventoryMovementModal({
   // Observar cambios en movementType e imeis para calcular quantity automáticamente
   const movementType = form.watch("movementType");
   const imeis = form.watch("imeis");
+  const productId = form.watch("product");
+
+  const { data: selectedProduct, isLoading: isLoadingProduct } = useQuery({
+    queryKey: ["inventory-product", productId],
+    queryFn: async () => {
+      if (!productId) return null;
+      const products = await searchProductsForInventoryAction(productId);
+      return products[0] ?? null;
+    },
+    enabled: Boolean(productId),
+  });
 
   const selectedMovementType = useMemo(
     () => movementTypes?.find((type) => type.id === movementType),
@@ -276,52 +286,56 @@ export function InventoryMovementModal({
                     return (
                       <FormItem>
                         <FormLabel>Tipo de Movimiento *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={isReadOnly || isLoadingMovementTypes}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              {selectedType ? (
-                                <span className="flex items-center gap-2">
-                                  <span>{selectedType.nombre}</span>
-                                  {selectedType.ingreso && (
-                                    <span className="text-green-600 dark:text-green-400">
-                                      +
+                        <FormControl>
+                          {isLoadingMovementTypes ? (
+                            <SelectSkeleton />
+                          ) : (
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              disabled={isReadOnly}
+                            >
+                              <SelectTrigger>
+                                {selectedType ? (
+                                  <span className="flex items-center gap-2">
+                                    <span>{selectedType.nombre}</span>
+                                    {selectedType.ingreso && (
+                                      <span className="text-green-600 dark:text-green-400">
+                                        +
+                                      </span>
+                                    )}
+                                    {selectedType.salida && (
+                                      <span className="text-red-600 dark:text-red-400">
+                                        -
+                                      </span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <SelectValue placeholder="Seleccionar tipo" />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent>
+                                {movementTypes?.map((type) => (
+                                  <SelectItem key={type.id} value={type.id}>
+                                    <span className="flex items-center gap-2">
+                                      <span>{type.nombre}</span>
+                                      {type.ingreso && (
+                                        <span className="text-green-600 dark:text-green-400">
+                                          +
+                                        </span>
+                                      )}
+                                      {type.salida && (
+                                        <span className="text-red-600 dark:text-red-400">
+                                          -
+                                        </span>
+                                      )}
                                     </span>
-                                  )}
-                                  {selectedType.salida && (
-                                    <span className="text-red-600 dark:text-red-400">
-                                      -
-                                    </span>
-                                  )}
-                                </span>
-                              ) : (
-                                <SelectValue placeholder="Seleccionar tipo" />
-                              )}
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {movementTypes?.map((type) => (
-                              <SelectItem key={type.id} value={type.id}>
-                                <span className="flex items-center gap-2">
-                                  <span>{type.nombre}</span>
-                                  {type.ingreso && (
-                                    <span className="text-green-600 dark:text-green-400">
-                                      +
-                                    </span>
-                                  )}
-                                  {type.salida && (
-                                    <span className="text-red-600 dark:text-red-400">
-                                      -
-                                    </span>
-                                  )}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     );
@@ -336,24 +350,31 @@ export function InventoryMovementModal({
                       <FormLabel>
                         Bodega{isHorizontalMovement ? " *" : ""}
                       </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
-                        disabled={isReadOnly || isLoadingWarehouses}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar bodega" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {warehouses?.map((warehouse) => (
-                            <SelectItem key={warehouse.id} value={warehouse.id}>
-                              {warehouse.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        {isLoadingWarehouses ? (
+                          <SelectSkeleton />
+                        ) : (
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value ?? ""}
+                            disabled={isReadOnly}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar bodega" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {warehouses?.map((warehouse) => (
+                                <SelectItem
+                                  key={warehouse.id}
+                                  value={warehouse.id}
+                                >
+                                  {warehouse.nombre}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -366,24 +387,36 @@ export function InventoryMovementModal({
                     render={({ field }) => (
                       <FormItem className="sm:col-span-2">
                         <FormLabel>Producto *</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={isReadOnly || isLoadingProducts}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar producto" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {products?.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          {isLoadingProduct ? (
+                            <InputSearchDBSkeleton />
+                          ) : (
+                            <InputSearchDB
+                              placeholder="Buscar producto"
+                              value={
+                                field.value && selectedProduct
+                                  ? {
+                                      value: field.value,
+                                      label: selectedProduct.label,
+                                    }
+                                  : undefined
+                              }
+                              onChange={(option) => {
+                                field.onChange(option?.value ?? "");
+                              }}
+                              searchFn={async (query) => {
+                                const products =
+                                  await searchProductsForInventoryAction(query);
+                                return products.map((p) => ({
+                                  value: p.id,
+                                  label: p.label,
+                                }));
+                              }}
+                              queryKeyBase="inventory-products"
+                              disabled={isReadOnly}
+                            />
+                          )}
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -397,24 +430,31 @@ export function InventoryMovementModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Proveedor</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? ""}
-                          disabled={isReadOnly || isLoadingSuppliers}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar proveedor" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {suppliers?.map((supplier) => (
-                              <SelectItem key={supplier.id} value={supplier.id}>
-                                {supplier.nombre}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          {isLoadingSuppliers ? (
+                            <SelectSkeleton />
+                          ) : (
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value ?? ""}
+                              disabled={isReadOnly}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar proveedor" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {suppliers?.map((supplier) => (
+                                  <SelectItem
+                                    key={supplier.id}
+                                    value={supplier.id}
+                                  >
+                                    {supplier.nombre}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

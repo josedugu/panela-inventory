@@ -88,10 +88,6 @@ export async function getSalesAction(
   params?: GetSalesParams,
 ): Promise<GetSalesResult> {
   try {
-    const page = params?.page ?? 1;
-    const pageSize = params?.pageSize ?? 10;
-    const offset = (page - 1) * pageSize;
-
     const [sales, filterOptions] = await Promise.all([
       listSales(),
       getSalesFilterOptions(),
@@ -99,21 +95,7 @@ export async function getSalesAction(
 
     let normalized = sales.map(normalizeSale);
 
-    if (params?.search) {
-      const searchLower = params.search.toLowerCase();
-      normalized = normalized.filter((sale) => {
-        const candidates = [
-          sale.consecutivo.toString(),
-          sale.seller,
-          sale.client,
-        ]
-          .filter(Boolean)
-          .map((value) => value?.toLowerCase() ?? "");
-
-        return candidates.some((value) => value.includes(searchLower));
-      });
-    }
-
+    // Aplicar filtros del servidor (seller, client)
     const filters = params?.filters ?? {};
 
     if (filters.seller) {
@@ -130,8 +112,34 @@ export async function getSalesAction(
       );
     }
 
-    const total = normalized.length;
-    const paginated = normalized.slice(offset, offset + pageSize);
+    // Si no hay búsqueda, devolver todos los datos para filtrar en el frontend
+    if (!params?.search) {
+      return {
+        success: true,
+        data: normalized,
+        total: normalized.length,
+        page: 1,
+        pageSize: normalized.length,
+        filterOptions,
+      };
+    }
+
+    // Si hay búsqueda del servidor (aunque no la usaremos desde el frontend)
+    const page = params?.page ?? 1;
+    const pageSize = params?.pageSize ?? 10;
+    const offset = (page - 1) * pageSize;
+
+    const searchLower = params.search.toLowerCase();
+    const filtered = normalized.filter((sale) => {
+      const candidates = [sale.consecutivo.toString(), sale.seller, sale.client]
+        .filter(Boolean)
+        .map((value) => value?.toLowerCase() ?? "");
+
+      return candidates.some((value) => value.includes(searchLower));
+    });
+
+    const total = filtered.length;
+    const paginated = filtered.slice(offset, offset + pageSize);
 
     return {
       success: true,

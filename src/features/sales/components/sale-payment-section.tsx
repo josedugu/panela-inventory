@@ -1,7 +1,8 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import {
@@ -10,18 +11,16 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { SelectSkeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import { getPaymentMethods } from "../actions/get-payment-methods";
+
+type PaymentMethod = Awaited<ReturnType<typeof getPaymentMethods>>[number];
 
 export interface Payment {
   id: string;
   methodId: string;
   amount: number;
-}
-
-interface PaymentMethod {
-  id: string;
-  nombre: string;
 }
 
 interface SalePaymentSectionProps {
@@ -37,17 +36,14 @@ export function SalePaymentSection({
   setPayments,
   hayProductoBajoCosto = false,
 }: SalePaymentSectionProps) {
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const baseId = useId();
   const idCounterRef = useRef(0);
 
-  useEffect(() => {
-    async function loadMethods() {
-      const methods = await getPaymentMethods();
-      setPaymentMethods(methods);
-    }
-    loadMethods();
-  }, []);
+  const { data: paymentMethods = [], isLoading: isLoadingPaymentMethods } =
+    useQuery<PaymentMethod[]>({
+      queryKey: ["payment-methods"],
+      queryFn: getPaymentMethods,
+    });
 
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
   const remaining = totalToPay - totalPaid;
@@ -107,26 +103,30 @@ export function SalePaymentSection({
               <div className="text-sm font-medium mb-1.5 block">
                 Método de Pago
               </div>
-              <Select
-                value={payment.methodId}
-                onValueChange={(val) => handleMethodChange(payment.id, val)}
-              >
-                <SelectTrigger>
-                  <span className="truncate">
-                    {payment.methodId
-                      ? (paymentMethods.find((m) => m.id === payment.methodId)
-                          ?.nombre ?? "Cargando...")
-                      : "Seleccionar método"}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethods.map((method) => (
-                    <SelectItem key={method.id} value={method.id}>
-                      {method.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isLoadingPaymentMethods ? (
+                <SelectSkeleton />
+              ) : (
+                <Select
+                  value={payment.methodId}
+                  onValueChange={(val) => handleMethodChange(payment.id, val)}
+                >
+                  <SelectTrigger>
+                    <span className="truncate">
+                      {payment.methodId
+                        ? (paymentMethods.find((m) => m.id === payment.methodId)
+                            ?.nombre ?? "Seleccionar método")
+                        : "Seleccionar método"}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((method) => (
+                      <SelectItem key={method.id} value={method.id}>
+                        {method.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="sm:col-span-12 md:col-span-5">

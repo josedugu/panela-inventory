@@ -58,12 +58,9 @@ export function Sales() {
   });
 
   const { data, isLoading, isFetching, refetch } = useQuery<GetSalesSuccess>({
-    queryKey: ["sales", page, pageSize, filtersKey, search],
+    queryKey: ["sales", filtersKey],
     queryFn: async () => {
       const result = await getSalesAction({
-        page,
-        pageSize,
-        search: search.trim() || undefined,
         filters: {
           seller: filterState.seller,
           client: filterState.client,
@@ -81,9 +78,36 @@ export function Sales() {
     refetchInterval: 30000,
   });
 
-  const sales = data?.data ?? [];
-  const total = data?.total ?? 0;
+  const allSales = data?.data ?? [];
   const filterOptions = data?.filterOptions;
+
+  // Filtrar en el frontend con la información ya obtenida
+  const filteredSales = useMemo(() => {
+    if (!search.trim()) {
+      return allSales;
+    }
+
+    const searchTerm = search.toLowerCase();
+    return allSales.filter((sale) => {
+      const searchableFields = [
+        sale.consecutivo.toString(),
+        sale.seller,
+        sale.client,
+      ]
+        .filter(Boolean)
+        .map((value) => value?.toLowerCase() ?? "");
+
+      return searchableFields.some((value) => value.includes(searchTerm));
+    });
+  }, [allSales, search]);
+
+  // Paginar los resultados filtrados
+  const sales = useMemo(() => {
+    const offset = (page - 1) * pageSize;
+    return filteredSales.slice(offset, offset + pageSize);
+  }, [filteredSales, page, pageSize]);
+
+  const total = filteredSales.length;
 
   const filterOptionsMap = useMemo(() => {
     const base = { ...normalizedOptions } as Record<
@@ -188,41 +212,43 @@ export function Sales() {
           const normalized = Math.max(1, next);
           if (normalized !== page) {
             setPage(normalized);
-            queueMicrotask(() => {
-              void refetch();
-            });
           }
         }}
         onPageSizeChange={(nextSize) => {
           setPageSize(nextSize);
           setPage(1);
-          queueMicrotask(() => {
-            void refetch();
-          });
         }}
         isLoading={isLoading || isFetching}
         searchValue={search}
         onSearchChange={(value) => {
           setSearch(value);
-          // El search está en el queryKey, React Query hará refetch automáticamente
-          // No necesitamos cambiar la página manualmente aquí
+          setPage(1); // Resetear a la primera página cuando se busca
         }}
         filters={filterDescriptors}
         filterState={filterState}
         onFilterStateChange={(next) => {
           setFilterState(next);
           setPage(1);
+          queueMicrotask(() => {
+            void refetch();
+          });
         }}
         pendingFilterState={pendingFilterState}
         onPendingFilterStateChange={setPendingFilterState}
         onApplyFilters={() => {
           applyFilters();
           setPage(1);
+          queueMicrotask(() => {
+            void refetch();
+          });
         }}
         onResetPendingFilters={resetPendingFilters}
         onClearFilters={() => {
           clearFilters();
           setPage(1);
+          queueMicrotask(() => {
+            void refetch();
+          });
         }}
         isFilterDialogOpen={isDialogOpen}
         setFilterDialogOpen={setDialogOpen}

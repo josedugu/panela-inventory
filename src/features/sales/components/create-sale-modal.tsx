@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { InputSearchDB } from "@/components/ui/input-search-db";
-import { Skeleton } from "@/components/ui/skeleton";
+import { InputSearchDBSkeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import { getSaleForEditAction } from "../actions/get-sale-for-edit";
 import { searchCustomersAction } from "../actions/search-customers";
@@ -290,7 +290,7 @@ export function CreateSaleModal({
           <div className="space-y-2">
             <span className="text-sm font-medium text-text">Cliente *</span>
             {isLoadingSaleForEdit ? (
-              <Skeleton className="h-10 w-full" />
+              <InputSearchDBSkeleton />
             ) : (
               <InputSearchDB
                 placeholder="Buscar por nombre o cédula"
@@ -359,7 +359,7 @@ export function CreateSaleModal({
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end">
                       {isLoadingSaleForEdit ? (
                         <div className="sm:col-span-12">
-                          <Skeleton className="h-10 w-full" />
+                          <InputSearchDBSkeleton />
                         </div>
                       ) : (
                         <div className="sm:col-span-12 md:col-span-6">
