@@ -9,7 +9,7 @@ export async function deleteProductAction(id: string) {
     await deleteProductDetail(id);
 
     revalidatePath("/dashboard/inventory");
-    revalidatePath("/dashboard/inventory/manage");
+    revalidatePath("/dashboard/inventory/search");
     revalidatePath("/dashboard");
 
     return {

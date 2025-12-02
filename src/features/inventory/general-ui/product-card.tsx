@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn, formatPrice } from "@/lib/utils";
+import { formatImeiForDisplay } from "@/lib/utils-imei";
 import { StockBadge, type StockStatus } from "./stock-badge";
 
 export interface Product {
@@ -59,7 +60,7 @@ export function ProductCard({
             <div className="flex-1 min-w-0">
               <h3 className="font-medium truncate">{product.name}</h3>
               <p className="text-sm text-text-secondary">
-                IMEI: {product.imei}
+                IMEI: {formatImeiForDisplay(product.imei)}
               </p>
             </div>
 
@@ -160,7 +161,7 @@ export function ProductCard({
         <div>
           <h3 className="font-medium line-clamp-1">{product.name}</h3>
           <p className="text-sm text-text-secondary font-mono">
-            {product.imei}
+            {formatImeiForDisplay(product.imei)}
           </p>
         </div>
 

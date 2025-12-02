@@ -1,5 +1,5 @@
-import { Inventory } from "@/features/inventory";
+import { redirect } from "next/navigation";
 
 export default function InventoryManagePage() {
-  return <Inventory />;
+  redirect("/dashboard/inventory/search");
 }

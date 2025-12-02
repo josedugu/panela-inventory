@@ -188,45 +188,94 @@ export async function createInventoryMovementWithDetails({
 
     let productDetailsIds: string[] = [];
 
-    if (imeis.length > 0) {
-      if (isIngreso) {
-        // Movimientos de ingreso: crear nuevos detalles
-        const createdDetails = await Promise.all(
-          imeis.map((imei) =>
-            tx.productoDetalle.create({
-              data: {
-                productoId: actualProductId,
-                imei,
-                nombre:
-                  product.descripcion ??
-                  product.modelo?.nombre ??
-                  product.marca?.nombre ??
-                  "Producto",
-              },
-            }),
-          ),
-        );
-        productDetailsIds = createdDetails.map((detail) => detail.id);
-      } else if (isSalida) {
-        // Movimientos de salida: marcar detalles existentes como inactivos
-        const existingDetails = await tx.productoDetalle.findMany({
-          where: {
-            productoId: actualProductId,
-            imei: {
-              in: imeis,
-            },
-            estado: true,
-          },
-        });
+    if (isIngreso) {
+      // Movimientos de ingreso: crear nuevos detalles
+      // Si no hay IMEIs o hay menos IMEIs que cantidad, generar automáticamente
+      const { generateImeiIfNeeded } = await import("@/lib/utils-imei");
 
-        if (existingDetails.length !== imeis.length) {
-          throw new Error(
-            "Algunos IMEI no están registrados o no están activos para este producto",
-          );
+      const imeisToUse: string[] = [];
+      for (let i = 0; i < quantity; i++) {
+        if (i < imeis.length && imeis[i]?.trim()) {
+          imeisToUse.push(imeis[i].trim());
+        } else {
+          imeisToUse.push(generateImeiIfNeeded(null));
         }
+      }
 
-        productDetailsIds = existingDetails.map((detail) => detail.id);
+      const createdDetails = await Promise.all(
+        imeisToUse.map((imei) =>
+          tx.productoDetalle.create({
+            data: {
+              productoId: actualProductId,
+              imei,
+              bodegaId: warehouseId || undefined,
+              nombre:
+                product.descripcion ??
+                product.modelo?.nombre ??
+                product.marca?.nombre ??
+                "Producto",
+            },
+          }),
+        ),
+      );
+      productDetailsIds = createdDetails.map((detail) => detail.id);
+    } else if (isSalida && imeis.length > 0) {
+      // Movimientos de salida: marcar detalles existentes como inactivos
+      const existingDetails = await tx.productoDetalle.findMany({
+        where: {
+          productoId: actualProductId,
+          imei: {
+            in: imeis,
+          },
+          estado: true,
+        },
+      });
 
+      if (existingDetails.length !== imeis.length) {
+        throw new Error(
+          "Algunos IMEI no están registrados o no están activos para este producto",
+        );
+      }
+
+      productDetailsIds = existingDetails.map((detail) => detail.id);
+
+      await tx.productoDetalle.updateMany({
+        where: {
+          id: {
+            in: productDetailsIds,
+          },
+        },
+        data: {
+          estado: false,
+        },
+      });
+    } else if (isHorizontal && imeis.length > 0) {
+      // Movimientos horizontales: solo obtener los detalles existentes (no crear ni marcar como inactivos)
+      const existingDetails = await tx.productoDetalle.findMany({
+        where: {
+          imei: {
+            in: imeis,
+          },
+          estado: true,
+        },
+      });
+
+      if (existingDetails.length !== imeis.length) {
+        throw new Error("Algunos IMEI no están registrados o no están activos");
+      }
+
+      // Verificar que todos los IMEIs pertenezcan al mismo producto
+      const productIds = new Set(
+        existingDetails.map((detail) => detail.productoId),
+      );
+      if (productIds.size > 1) {
+        throw new Error("Todos los IMEIs deben pertenecer al mismo producto");
+      }
+
+      productDetailsIds = existingDetails.map((detail) => detail.id);
+
+      // Actualizar la bodega de los detalles si se proporciona warehouseId
+      if (warehouseId) {
         await tx.productoDetalle.updateMany({
           where: {
             id: {
@@ -234,35 +283,9 @@ export async function createInventoryMovementWithDetails({
             },
           },
           data: {
-            estado: false,
+            bodegaId: warehouseId,
           },
         });
-      } else if (isHorizontal) {
-        // Movimientos horizontales: solo obtener los detalles existentes (no crear ni marcar como inactivos)
-        const existingDetails = await tx.productoDetalle.findMany({
-          where: {
-            imei: {
-              in: imeis,
-            },
-            estado: true,
-          },
-        });
-
-        if (existingDetails.length !== imeis.length) {
-          throw new Error(
-            "Algunos IMEI no están registrados o no están activos",
-          );
-        }
-
-        // Verificar que todos los IMEIs pertenezcan al mismo producto
-        const productIds = new Set(
-          existingDetails.map((detail) => detail.productoId),
-        );
-        if (productIds.size > 1) {
-          throw new Error("Todos los IMEIs deben pertenecer al mismo producto");
-        }
-
-        productDetailsIds = existingDetails.map((detail) => detail.id);
       }
     }
 
