@@ -760,13 +760,15 @@ export async function createProductDetail({
   name,
 }: {
   productId: string;
-  imei: string;
+  imei?: string | null;
   name?: string;
 }) {
+  const { generateImeiIfNeeded } = await import("@/lib/utils-imei");
+
   return prisma.productoDetalle.create({
     data: {
       productoId: productId,
-      imei,
+      imei: generateImeiIfNeeded(imei),
       nombre: name,
     },
   });

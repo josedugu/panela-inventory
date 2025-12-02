@@ -184,15 +184,17 @@ export async function createInventoryMovementAction(formData: FormData) {
     }
 
     // Validar IMEIs para movimientos de ingreso
+    // Si se proporcionan IMEIs, deben coincidir con la cantidad (los faltantes se generan automáticamente)
+    // Si no se proporcionan IMEIs, se generan automáticamente para todas las unidades
     if (
       movementTypeRecord.ingreso &&
       imeiList.length > 0 &&
-      imeiList.length !== quantity
+      imeiList.length > quantity
     ) {
       return {
         success: false,
         error:
-          "La cantidad de IMEIs no coincide con la cantidad del movimiento",
+          "La cantidad de IMEIs no puede ser mayor que la cantidad del movimiento",
       };
     }
 

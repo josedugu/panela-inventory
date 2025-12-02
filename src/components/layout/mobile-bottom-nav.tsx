@@ -29,7 +29,7 @@ const navItems: Array<{
   {
     title: "Inventario",
     icon: Package,
-    href: "/dashboard/inventory/manage",
+    href: "/dashboard/inventory/search",
     match: (pathname) => pathname.startsWith("/dashboard/inventory"),
   },
   {

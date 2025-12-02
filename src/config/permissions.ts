@@ -30,8 +30,8 @@ export const ROUTE_PERMISSIONS: Record<string, RoleName[]> = {
   // Inventario - Vista general
   "/dashboard/inventory": [ROLES.ADMIN, ROLES.ASESOR, ROLES.COLABORADOR],
 
-  // Inventario - Gestión
-  "/dashboard/inventory/manage": [ROLES.ADMIN, ROLES.COLABORADOR],
+  // Inventario - Búsqueda
+  "/dashboard/inventory/search": [ROLES.ADMIN, ROLES.ASESOR, ROLES.COLABORADOR],
 
   // Inventario - Movimientos
   "/dashboard/inventory/movements": [ROLES.ADMIN, ROLES.COLABORADOR],
@@ -99,10 +99,10 @@ export const ACTION_PERMISSIONS: Record<string, Record<RoleName, string[]>> = {
     [ROLES.COLABORADOR]: ["view"],
   },
 
-  // Inventario - Gestión - CRUD completo
-  "/dashboard/inventory/manage": {
+  // Inventario - Búsqueda - CRUD completo
+  "/dashboard/inventory/search": {
     [ROLES.ADMIN]: ["view", "create", "update", "delete"],
-    [ROLES.ASESOR]: [],
+    [ROLES.ASESOR]: ["view"],
     [ROLES.COLABORADOR]: ["view", "create", "update", "delete"],
   },
 

@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ViewModal, type ViewSection } from "@/components/ui/view-modal";
+import { formatImeiForDisplay } from "@/lib/utils-imei";
 import { getSaleDetailsAction } from "../actions/get-sale-details";
 
 interface ViewSaleModalProps {
@@ -98,7 +99,7 @@ export function ViewSaleModal({ isOpen, onClose, saleId }: ViewSaleModalProps) {
                           {producto.nombre}
                         </TableCell>
                         <TableCell className="text-text-secondary min-w-[180px] font-mono text-sm">
-                          {producto.imei ?? "-"}
+                          {formatImeiForDisplay(producto.imei)}
                         </TableCell>
                         <TableCell className="text-right min-w-[120px]">
                           {producto.descuentoFormatted}

@@ -45,14 +45,6 @@ export async function createProductAction(formData: FormData) {
     };
   }
 
-  // Validar que se proporcione IMEI (requerido para crear un detalle)
-  if (!imei || imei.trim().length === 0) {
-    return {
-      success: false,
-      error: "El IMEI es requerido para crear un detalle de producto",
-    };
-  }
-
   try {
     // Buscar o crear el producto basado en sus características
     const { id: productId } = await findOrCreateProduct({
@@ -65,15 +57,15 @@ export async function createProductAction(formData: FormData) {
       estado: validatedData.data.estado,
     });
 
-    // Crear el detalle de producto (esto es lo principal ahora)
+    // Crear el detalle de producto (el IMEI se genera automáticamente si no se proporciona)
     const productDetail = await createProductDetail({
       productId,
-      imei: imei.trim(),
+      imei: imei,
       name: validatedData.data.descripcion ?? undefined,
     });
 
     revalidatePath("/dashboard/inventory");
-    revalidatePath("/dashboard/inventory/manage");
+    revalidatePath("/dashboard/inventory/search");
     revalidatePath("/dashboard");
 
     return {

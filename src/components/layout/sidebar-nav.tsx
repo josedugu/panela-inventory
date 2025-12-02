@@ -50,8 +50,8 @@ const navItems: NavItem[] = [
     icon: Package,
     children: [
       {
-        title: "Gestión",
-        href: "/dashboard/inventory/manage",
+        title: "Búsqueda",
+        href: "/dashboard/inventory/search",
       },
       {
         title: "Movimientos",
