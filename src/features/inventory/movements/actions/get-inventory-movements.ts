@@ -22,12 +22,23 @@ export type InventoryMovementDTO = {
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
+  bodegaNombre?: string;
+  proveedorNombre?: string;
+  ventaConsecutivo?: number;
+  clienteNombre?: string;
 };
 
 async function normalizeMovement(
   movement: InventoryMovementWithRelations,
 ): Promise<InventoryMovementDTO> {
-  const { tipoMovimiento, productos, cantidad, costoUnitario } = movement;
+  const {
+    tipoMovimiento,
+    productos,
+    cantidad,
+    costoUnitario,
+    bodega,
+    proveedor,
+  } = movement;
   const primaryDetail = productos[0];
   const product = primaryDetail?.producto;
 
@@ -54,6 +65,19 @@ async function normalizeMovement(
 
   const unitCost = costoUnitario ? Number(costoUnitario) : 0;
 
+  // Buscar si alguno de los productos está relacionado con una venta
+  let ventaConsecutivo: number | undefined;
+  let clienteNombre: string | undefined;
+
+  for (const detail of productos) {
+    if (detail.ventaProducto?.venta) {
+      const venta = detail.ventaProducto.venta;
+      ventaConsecutivo = venta.consecutivo;
+      clienteNombre = venta.cliente?.nombre;
+      break; // Solo necesitamos la primera venta encontrada
+    }
+  }
+
   return {
     id: movement.id,
     typeId: movement.tipoMovimientoId ?? undefined,
@@ -69,6 +93,10 @@ async function normalizeMovement(
     updatedAt: movement.updatedAt.toISOString(),
     createdBy:
       movement.creadoPor?.nombre ?? movement.creadoPor?.email ?? undefined,
+    bodegaNombre: bodega?.nombre,
+    proveedorNombre: proveedor?.nombre,
+    ventaConsecutivo,
+    clienteNombre,
   };
 }
 

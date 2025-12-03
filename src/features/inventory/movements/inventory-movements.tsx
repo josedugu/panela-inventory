@@ -187,8 +187,6 @@ export function InventoryMovements() {
     return base;
   }, [filterOptions, normalizedOptions]);
 
-  const columns = useMemo(() => getInventoryMovementColumns(), []);
-
   const handlePageChange = useCallback(
     (nextPage: number) => {
       const normalizedPage = Math.max(1, nextPage);
@@ -217,31 +215,31 @@ export function InventoryMovements() {
     void refetch();
   };
 
-  const handleDuplicate = (movement: InventoryMovement) => {
+  const handleView = useCallback((movement: InventoryMovement) => {
     setMovementModalInitialData({
       product: movement.productId ?? "",
       movementType: movement.typeId ?? "",
       cost: movement.unitCost.toFixed(2),
       quantity: movement.quantity.toString(),
       imeis: movement.imeis.join(", "),
-    });
-    setMovementModalKey((prev) => prev + 1);
-    setMovementModalReadOnly(false);
-    setIsMovementModalOpen(true);
-  };
-
-  const handleView = (movement: InventoryMovement) => {
-    setMovementModalInitialData({
-      product: movement.productId ?? "",
-      movementType: movement.typeId ?? "",
-      cost: movement.unitCost.toFixed(2),
-      quantity: movement.quantity.toString(),
-      imeis: movement.imeis.join(", "),
+      bodegaNombre: movement.bodegaNombre,
+      proveedorNombre: movement.proveedorNombre,
+      ventaConsecutivo: movement.ventaConsecutivo,
+      clienteNombre: movement.clienteNombre,
+      createdBy: movement.createdBy,
     });
     setMovementModalReadOnly(true);
     setMovementModalKey((prev) => prev + 1);
     setIsMovementModalOpen(true);
-  };
+  }, []);
+
+  const columns = useMemo(
+    () =>
+      getInventoryMovementColumns({
+        onView: handleView,
+      }),
+    [handleView],
+  );
 
   return (
     <>
@@ -268,8 +266,6 @@ export function InventoryMovements() {
             onClick: () => toast.info("Función de exportar en desarrollo"),
           },
           columns,
-          onView: handleView,
-          onDuplicate: handleDuplicate,
           getRowId: (row: InventoryMovement) => row.id,
         }}
         data={movements}
