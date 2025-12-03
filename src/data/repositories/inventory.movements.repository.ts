@@ -19,6 +19,19 @@ export type InventoryMovementWithRelations =
   Prisma.MovimientoInventarioGetPayload<{
     include: {
       tipoMovimiento: true;
+      bodega: {
+        select: {
+          id: true;
+          nombre: true;
+          codigo: true;
+        };
+      };
+      proveedor: {
+        select: {
+          id: true;
+          nombre: true;
+        };
+      };
       productos: {
         include: {
           producto: {
@@ -34,6 +47,20 @@ export type InventoryMovementWithRelations =
               };
               modelo: true;
               tipoProducto: true;
+            };
+          };
+          ventaProducto: {
+            include: {
+              venta: {
+                include: {
+                  cliente: {
+                    select: {
+                      id: true;
+                      nombre: true;
+                    };
+                  };
+                };
+              };
             };
           };
         };
@@ -353,6 +380,19 @@ export async function listInventoryMovements(): Promise<
     },
     include: {
       tipoMovimiento: true,
+      bodega: {
+        select: {
+          id: true,
+          nombre: true,
+          codigo: true,
+        },
+      },
+      proveedor: {
+        select: {
+          id: true,
+          nombre: true,
+        },
+      },
       productos: {
         include: {
           producto: {
@@ -369,6 +409,20 @@ export async function listInventoryMovements(): Promise<
               },
               modelo: true,
               tipoProducto: true,
+            },
+          },
+          ventaProducto: {
+            include: {
+              venta: {
+                include: {
+                  cliente: {
+                    select: {
+                      id: true,
+                      nombre: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },

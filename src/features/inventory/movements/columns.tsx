@@ -1,5 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { formatPrice } from "@/lib/utils";
+import { Eye } from "lucide-react";
+import {
+  type TableAction,
+  TableActionsCell,
+} from "@/components/ui/table-actions-cell";
 import type { InventoryMovementDTO } from "./actions/get-inventory-movements";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
@@ -7,7 +11,15 @@ const dateTimeFormatter = new Intl.DateTimeFormat("es-CO", {
   timeStyle: "short",
 });
 
-export function getInventoryMovementColumns(): ColumnDef<InventoryMovementDTO>[] {
+interface InventoryMovementColumnsOptions {
+  onView: (movement: InventoryMovementDTO) => void;
+  isBusy?: boolean;
+}
+
+export function getInventoryMovementColumns({
+  onView,
+  isBusy = false,
+}: InventoryMovementColumnsOptions): ColumnDef<InventoryMovementDTO>[] {
   return [
     {
       accessorKey: "createdAt",
@@ -39,36 +51,26 @@ export function getInventoryMovementColumns(): ColumnDef<InventoryMovementDTO>[]
       minSize: 80,
     },
     {
-      accessorKey: "unitCost",
-      header: "Costo unitario",
-      cell: ({ row }) => (
-        <div className="text-center">
-          {formatPrice(row.original.unitCost, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          })}
-        </div>
-      ),
-      size: 150,
-    },
-    {
-      accessorKey: "totalCost",
-      header: "Total",
-      cell: ({ row }) => (
-        <div className="text-center">
-          {formatPrice(row.original.totalCost, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          })}
-        </div>
-      ),
-      size: 150,
-    },
-    {
-      accessorKey: "createdBy",
-      header: "Creado por",
-      cell: ({ row }) => row.original.createdBy ?? "-",
+      accessorKey: "typeName",
+      header: "Movimiento",
+      cell: ({ row }) => <div className="text-sm">{row.original.typeName}</div>,
       size: 200,
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => {
+        const actions: TableAction<InventoryMovementDTO>[] = [
+          {
+            label: "Ver",
+            icon: <Eye className="h-4 w-4" />,
+            onClick: () => onView(row.original),
+            disabled: isBusy,
+          },
+        ];
+
+        return <TableActionsCell row={row.original} actions={actions} />;
+      },
     },
   ];
 }

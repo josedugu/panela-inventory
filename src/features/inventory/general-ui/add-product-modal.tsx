@@ -49,6 +49,7 @@ import {
   type InventoryMovementFormValues,
   inventoryMovementFormSchema,
 } from "@/features/inventory/schemas/movement-form.schemas";
+import { formatPrice } from "@/lib/utils";
 
 export interface InventoryMovementInitialData {
   product?: string;
@@ -59,6 +60,11 @@ export interface InventoryMovementInitialData {
   warehouse?: string;
   supplier?: string;
   pvp?: string;
+  bodegaNombre?: string;
+  proveedorNombre?: string;
+  ventaConsecutivo?: number;
+  clienteNombre?: string;
+  createdBy?: string;
 }
 
 interface InventoryMovementModalProps {
@@ -269,175 +275,281 @@ export function InventoryMovementModal({
     });
   };
 
+  // Obtener valores para mostrar en modo solo lectura
+  const selectedWarehouse = warehouses?.find(
+    (w) => w.id === form.watch("warehouse"),
+  );
+  const selectedSupplier = suppliers?.find(
+    (s) => s.id === form.watch("supplier"),
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Registrar Movimiento de Inventario</DialogTitle>
+          <DialogTitle>
+            {isReadOnly
+              ? "Ver Movimiento de Inventario"
+              : "Registrar Movimiento de Inventario"}
+          </DialogTitle>
           <DialogDescription>
-            Seleccione un producto y los detalles del movimiento.
+            {isReadOnly
+              ? "Detalles del movimiento de inventario."
+              : "Seleccione un producto y los detalles del movimiento."}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="movementType"
-                  render={({ field }) => {
-                    const selectedType = movementTypes?.find(
-                      (type) => type.id === field.value,
-                    );
-                    return (
-                      <FormItem>
-                        <FormLabel>Tipo de Movimiento *</FormLabel>
-                        <FormControl>
-                          {isLoadingMovementTypes ? (
-                            <SelectSkeleton />
-                          ) : (
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={isReadOnly}
-                            >
-                              <SelectTrigger>
-                                {selectedType ? (
-                                  <span className="flex items-center gap-2">
-                                    <span>{selectedType.nombre}</span>
-                                    {selectedType.ingreso && (
-                                      <span className="text-green-600 dark:text-green-400">
-                                        +
-                                      </span>
-                                    )}
-                                    {selectedType.salida && (
-                                      <span className="text-red-600 dark:text-red-400">
-                                        -
-                                      </span>
-                                    )}
-                                  </span>
-                                ) : (
-                                  <SelectValue placeholder="Seleccionar tipo" />
-                                )}
-                              </SelectTrigger>
-                              <SelectContent>
-                                {movementTypes?.map((type) => (
-                                  <SelectItem key={type.id} value={type.id}>
+        {isReadOnly ? (
+          <div className="space-y-6 py-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-text-secondary">
+                  Tipo de Movimiento
+                </div>
+                <div className="text-sm">
+                  {selectedMovementType ? (
+                    <span className="flex items-center gap-2">
+                      <span>{selectedMovementType.nombre}</span>
+                      {selectedMovementType.ingreso && (
+                        <span className="text-green-600 dark:text-green-400">
+                          +
+                        </span>
+                      )}
+                      {selectedMovementType.salida && (
+                        <span className="text-red-600 dark:text-red-400">
+                          -
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    "-"
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-text-secondary">
+                  Bodega
+                </div>
+                <div className="text-sm">
+                  {selectedWarehouse?.nombre ??
+                    initialData?.bodegaNombre ??
+                    "-"}
+                </div>
+              </div>
+
+              {!isHorizontalMovement && (
+                <>
+                  <div className="space-y-2 sm:col-span-2">
+                    <div className="text-sm font-medium text-text-secondary">
+                      Producto
+                    </div>
+                    <div className="text-sm">
+                      {selectedProduct?.label ?? "-"}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-text-secondary">
+                      Proveedor
+                    </div>
+                    <div className="text-sm">
+                      {selectedSupplier?.nombre ??
+                        initialData?.proveedorNombre ??
+                        "-"}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-text-secondary">
+                      Costo Unitario
+                    </div>
+                    <div className="text-sm">
+                      {form.watch("cost") || initialData?.cost
+                        ? formatPrice(
+                            Number(
+                              form.watch("cost") || initialData?.cost || 0,
+                            ),
+                            {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0,
+                            },
+                          )
+                        : "-"}
+                    </div>
+                  </div>
+
+                  {isIngresoMovement && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-text-secondary">
+                        Precio de Venta al Público (PVP)
+                      </div>
+                      <div className="text-sm">
+                        {form.watch("pvp") || initialData?.pvp
+                          ? formatPrice(
+                              Number(
+                                form.watch("pvp") || initialData?.pvp || 0,
+                              ),
+                              {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              },
+                            )
+                          : "-"}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-text-secondary">
+                      Cantidad
+                    </div>
+                    <div className="text-sm">
+                      {form.watch("quantity") || initialData?.quantity || "-"}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-2 sm:col-span-2">
+                <div className="text-sm font-medium text-text-secondary">
+                  IMEIs (separados por coma)
+                </div>
+                <div className="text-sm whitespace-pre-wrap">
+                  {form.watch("imeis") || initialData?.imeis || "-"}
+                </div>
+              </div>
+            </div>
+
+            {(initialData?.bodegaNombre ||
+              initialData?.proveedorNombre ||
+              initialData?.createdBy ||
+              (initialData?.ventaConsecutivo &&
+                initialData?.clienteNombre)) && (
+              <div className="grid gap-4 sm:grid-cols-2 pt-4 border-t">
+                {initialData?.bodegaNombre && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-text-secondary">
+                      Bodega
+                    </div>
+                    <div className="text-sm">{initialData.bodegaNombre}</div>
+                  </div>
+                )}
+                {initialData?.proveedorNombre && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-text-secondary">
+                      Proveedor
+                    </div>
+                    <div className="text-sm">{initialData.proveedorNombre}</div>
+                  </div>
+                )}
+                {initialData?.createdBy && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-text-secondary">
+                      Creado por
+                    </div>
+                    <div className="text-sm">{initialData.createdBy}</div>
+                  </div>
+                )}
+                {initialData?.ventaConsecutivo &&
+                  initialData?.clienteNombre && (
+                    <div className="space-y-2 sm:col-span-2">
+                      <div className="text-sm font-medium text-text-secondary">
+                        Venta
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">
+                          #{initialData.ventaConsecutivo}
+                        </span>
+                        <span className="ml-2 text-text-secondary">
+                          - {initialData.clienteNombre}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="movementType"
+                    render={({ field }) => {
+                      const selectedType = movementTypes?.find(
+                        (type) => type.id === field.value,
+                      );
+                      return (
+                        <FormItem>
+                          <FormLabel>Tipo de Movimiento *</FormLabel>
+                          <FormControl>
+                            {isLoadingMovementTypes ? (
+                              <SelectSkeleton />
+                            ) : (
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={isReadOnly}
+                              >
+                                <SelectTrigger>
+                                  {selectedType ? (
                                     <span className="flex items-center gap-2">
-                                      <span>{type.nombre}</span>
-                                      {type.ingreso && (
+                                      <span>{selectedType.nombre}</span>
+                                      {selectedType.ingreso && (
                                         <span className="text-green-600 dark:text-green-400">
                                           +
                                         </span>
                                       )}
-                                      {type.salida && (
+                                      {selectedType.salida && (
                                         <span className="text-red-600 dark:text-red-400">
                                           -
                                         </span>
                                       )}
                                     </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="warehouse"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Bodega{isHorizontalMovement ? " *" : ""}
-                      </FormLabel>
-                      <FormControl>
-                        {isLoadingWarehouses ? (
-                          <SelectSkeleton />
-                        ) : (
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value ?? ""}
-                            disabled={isReadOnly}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar bodega" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {warehouses?.map((warehouse) => (
-                                <SelectItem
-                                  key={warehouse.id}
-                                  value={warehouse.id}
-                                >
-                                  {warehouse.nombre}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {!isHorizontalMovement && (
-                  <FormField
-                    control={form.control}
-                    name="product"
-                    render={({ field }) => (
-                      <FormItem className="sm:col-span-2">
-                        <FormLabel>Producto *</FormLabel>
-                        <FormControl>
-                          {isLoadingProduct ? (
-                            <InputSearchDBSkeleton />
-                          ) : (
-                            <InputSearchDB
-                              placeholder="Buscar producto"
-                              value={
-                                field.value && selectedProduct
-                                  ? {
-                                      value: field.value,
-                                      label: selectedProduct.label,
-                                    }
-                                  : undefined
-                              }
-                              onChange={(option) => {
-                                field.onChange(option?.value ?? "");
-                              }}
-                              searchFn={async (query) => {
-                                const products =
-                                  await searchProductsForInventoryAction(query);
-                                return products.map((p) => ({
-                                  value: p.id,
-                                  label: p.label,
-                                }));
-                              }}
-                              queryKeyBase="inventory-products"
-                              disabled={isReadOnly}
-                            />
-                          )}
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                                  ) : (
+                                    <SelectValue placeholder="Seleccionar tipo" />
+                                  )}
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {movementTypes?.map((type) => (
+                                    <SelectItem key={type.id} value={type.id}>
+                                      <span className="flex items-center gap-2">
+                                        <span>{type.nombre}</span>
+                                        {type.ingreso && (
+                                          <span className="text-green-600 dark:text-green-400">
+                                            +
+                                          </span>
+                                        )}
+                                        {type.salida && (
+                                          <span className="text-red-600 dark:text-red-400">
+                                            -
+                                          </span>
+                                        )}
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
-                )}
 
-                {!isHorizontalMovement && (
                   <FormField
                     control={form.control}
-                    name="supplier"
+                    name="warehouse"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Proveedor</FormLabel>
+                        <FormLabel>
+                          Bodega{isHorizontalMovement ? " *" : ""}
+                        </FormLabel>
                         <FormControl>
-                          {isLoadingSuppliers ? (
+                          {isLoadingWarehouses ? (
                             <SelectSkeleton />
                           ) : (
                             <Select
@@ -446,15 +558,15 @@ export function InventoryMovementModal({
                               disabled={isReadOnly}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar proveedor" />
+                                <SelectValue placeholder="Seleccionar bodega" />
                               </SelectTrigger>
                               <SelectContent>
-                                {suppliers?.map((supplier) => (
+                                {warehouses?.map((warehouse) => (
                                   <SelectItem
-                                    key={supplier.id}
-                                    value={supplier.id}
+                                    key={warehouse.id}
+                                    value={warehouse.id}
                                   >
-                                    {supplier.nombre}
+                                    {warehouse.nombre}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -465,110 +577,234 @@ export function InventoryMovementModal({
                       </FormItem>
                     )}
                   />
-                )}
 
-                {!isHorizontalMovement && (
-                  <FormField
-                    control={form.control}
-                    name="cost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Costo Unitario *</FormLabel>
-                        <FormControl>
-                          <CurrencyInput
-                            placeholder="0"
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            readOnly={isReadOnly}
-                            disabled={isReadOnly}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                  {!isHorizontalMovement && (
+                    <FormField
+                      control={form.control}
+                      name="product"
+                      render={({ field }) => (
+                        <FormItem className="sm:col-span-2">
+                          <FormLabel>Producto *</FormLabel>
+                          <FormControl>
+                            {isLoadingProduct ? (
+                              <InputSearchDBSkeleton />
+                            ) : (
+                              <InputSearchDB
+                                placeholder="Buscar producto"
+                                value={
+                                  field.value && selectedProduct
+                                    ? {
+                                        value: field.value,
+                                        label: selectedProduct.label,
+                                      }
+                                    : undefined
+                                }
+                                onChange={(option) => {
+                                  field.onChange(option?.value ?? "");
+                                }}
+                                searchFn={async (query) => {
+                                  const products =
+                                    await searchProductsForInventoryAction(
+                                      query,
+                                    );
+                                  return products.map((p) => ({
+                                    value: p.id,
+                                    label: p.label,
+                                  }));
+                                }}
+                                queryKeyBase="inventory-products"
+                                disabled={isReadOnly}
+                              />
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
-                {!isHorizontalMovement && isIngresoMovement && (
-                  <FormField
-                    control={form.control}
-                    name="pvp"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Precio de Venta al Público (PVP)</FormLabel>
-                        <FormControl>
-                          <CurrencyInput
-                            placeholder="0"
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            readOnly={isReadOnly}
-                            disabled={isReadOnly}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                  {!isHorizontalMovement && (
+                    <FormField
+                      control={form.control}
+                      name="supplier"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Proveedor</FormLabel>
+                          <FormControl>
+                            {isLoadingSuppliers ? (
+                              <SelectSkeleton />
+                            ) : (
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value ?? ""}
+                                disabled={isReadOnly}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Seleccionar proveedor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {suppliers?.map((supplier) => (
+                                    <SelectItem
+                                      key={supplier.id}
+                                      value={supplier.id}
+                                    >
+                                      {supplier.nombre}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
-                {!isHorizontalMovement && (
-                  <FormField
-                    control={form.control}
-                    name="quantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cantidad *</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            disabled={isIngresoMovement || isReadOnly}
-                            readOnly={isReadOnly}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                  {!isHorizontalMovement && (
+                    <FormField
+                      control={form.control}
+                      name="cost"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Costo Unitario *</FormLabel>
+                          <FormControl>
+                            <CurrencyInput
+                              placeholder="0"
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              readOnly={isReadOnly}
+                              disabled={isReadOnly}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {!isHorizontalMovement && isIngresoMovement && (
+                    <FormField
+                      control={form.control}
+                      name="pvp"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Precio de Venta al Público (PVP)
+                          </FormLabel>
+                          <FormControl>
+                            <CurrencyInput
+                              placeholder="0"
+                              value={field.value ?? ""}
+                              onChange={field.onChange}
+                              readOnly={isReadOnly}
+                              disabled={isReadOnly}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {!isHorizontalMovement && (
+                    <FormField
+                      control={form.control}
+                      name="quantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cantidad *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              disabled={isIngresoMovement || isReadOnly}
+                              readOnly={isReadOnly}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+                <FormField
+                  control={form.control}
+                  name="imeis"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        IMEIs (separados por coma)
+                        {isHorizontalMovement ? " *" : ""}
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="ej. 123..., 456..."
+                          className="min-h-[80px]"
+                          readOnly={isReadOnly}
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {isReadOnly && (
+                  <div className="grid gap-4 sm:grid-cols-2 pt-4 border-t">
+                    {initialData?.bodegaNombre && (
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-text-secondary">
+                          Bodega
+                        </div>
+                        <div className="text-sm">
+                          {initialData.bodegaNombre}
+                        </div>
+                      </div>
                     )}
-                  />
+                    {initialData?.proveedorNombre && (
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-text-secondary">
+                          Proveedor
+                        </div>
+                        <div className="text-sm">
+                          {initialData.proveedorNombre}
+                        </div>
+                      </div>
+                    )}
+                    {initialData?.ventaConsecutivo &&
+                      initialData?.clienteNombre && (
+                        <div className="space-y-1 sm:col-span-2">
+                          <div className="text-sm font-medium text-text-secondary">
+                            Venta
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium">
+                              #{initialData.ventaConsecutivo}
+                            </span>
+                            <span className="ml-2 text-text-secondary">
+                              - {initialData.clienteNombre}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                  </div>
                 )}
               </div>
-              <FormField
-                control={form.control}
-                name="imeis"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      IMEIs (separados por coma)
-                      {isHorizontalMovement ? " *" : ""}
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="ej. 123..., 456..."
-                        className="min-h-[80px]"
-                        readOnly={isReadOnly}
-                        disabled={isReadOnly}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                {isReadOnly ? "Cerrar" : "Cancelar"}
-              </Button>
-              {isReadOnly ? null : (
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={onClose}>
+                  Cancelar
+                </Button>
                 <Button type="submit" disabled={isPending}>
                   {isPending ? "Guardando..." : "Guardar Movimiento"}
                 </Button>
-              )}
-            </DialogFooter>
-          </form>
-        </Form>
+              </DialogFooter>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
