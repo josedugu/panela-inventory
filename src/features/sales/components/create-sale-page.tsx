@@ -49,6 +49,7 @@ export function CreateSalePage() {
     return {
       id: `${baseId}-line-${idCounterRef.current}`,
       productId: "",
+      productoDetalleId: undefined,
       quantity: 1,
       unitPrice: 0,
     };
@@ -185,6 +186,7 @@ export function CreateSalePage() {
       // Usar precios efectivos (con oferta aplicada si corresponde)
       const linesToSubmit = lineDetails.map((line) => ({
         productId: line.productId,
+        productoDetalleId: line.productoDetalleId,
         quantity: line.quantity,
         unitPrice: line.precioEfectivo,
       }));

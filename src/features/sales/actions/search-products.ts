@@ -1,94 +1,71 @@
 "use server";
 
 import { prisma } from "@/lib/prisma/client";
+import { formatImeiForDisplay } from "@/lib/utils-imei";
 
 export async function searchProductsAction(query: string) {
-  // Si la query es un UUID, buscar por ID exacto
-  const isUUID =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      query,
-    );
+  // Buscar solo por IMEI en productoDetalle
+  const trimmedQuery = query.trim();
 
-  if (isUUID) {
-    const product = await prisma.producto.findUnique({
-      where: {
-        id: query,
-        estado: true,
-        cantidad: {
-          gt: 0,
-        },
-      },
-      select: {
-        id: true,
-        nombre: true,
-        costo: true,
-        pvp: true,
-        precioOferta: true,
-        cantidad: true,
-        tipoProducto: {
-          select: {
-            productoBaseParaOferta: true,
-          },
-        },
-      },
-    });
-
-    if (product) {
-      return [
-        {
-          id: product.id,
-          label: product.nombre ?? "Producto sin nombre",
-          costo: product.costo ? Number(product.costo) : 0,
-          pvp: product.pvp ? Number(product.pvp) : 0,
-          precioOferta: product.precioOferta
-            ? Number(product.precioOferta)
-            : null,
-          esProductoBase: product.tipoProducto?.productoBaseParaOferta ?? false,
-          availableQuantity: product.cantidad ?? 0,
-        },
-      ];
-    }
+  if (!trimmedQuery) {
     return [];
   }
 
-  // Búsqueda por nombre
-  const products = await prisma.producto.findMany({
+  // Buscar productoDetalle por IMEI
+  const productoDetalles = await prisma.productoDetalle.findMany({
     where: {
       estado: true,
-      cantidad: {
-        gt: 0,
-      },
-      nombre: {
-        contains: query,
+      ventaProductoId: null, // Solo disponibles (sin venta asignada)
+      imei: {
+        contains: trimmedQuery,
         mode: "insensitive",
       },
     },
-    select: {
-      id: true,
-      nombre: true,
-      costo: true,
-      pvp: true,
-      precioOferta: true,
-      cantidad: true,
-      tipoProducto: {
+    include: {
+      producto: {
         select: {
-          productoBaseParaOferta: true,
+          id: true,
+          nombre: true,
+          costo: true,
+          pvp: true,
+          precioOferta: true,
+          cantidad: true,
+          estado: true,
+          tipoProducto: {
+            select: {
+              productoBaseParaOferta: true,
+            },
+          },
         },
       },
-    },
-    orderBy: {
-      nombre: "asc",
     },
     take: 10,
   });
 
-  return products.map((product) => ({
-    id: product.id,
-    label: product.nombre ?? "Producto sin nombre",
-    costo: product.costo ? Number(product.costo) : 0,
-    pvp: product.pvp ? Number(product.pvp) : 0,
-    precioOferta: product.precioOferta ? Number(product.precioOferta) : null,
-    esProductoBase: product.tipoProducto?.productoBaseParaOferta ?? false,
-    availableQuantity: product.cantidad ?? 0,
-  }));
+  // Filtrar solo productos activos con cantidad > 0
+  const filtered = productoDetalles.filter(
+    (detalle) =>
+      detalle.producto.estado === true && (detalle.producto.cantidad ?? 0) > 0,
+  );
+
+  return filtered.map((detalle) => {
+    const imeiFormatted = formatImeiForDisplay(detalle.imei);
+    const productoNombre = detalle.producto.nombre ?? "Producto sin nombre";
+    const label = `${imeiFormatted} - ${productoNombre}`;
+
+    return {
+      id: detalle.producto.id,
+      productoDetalleId: detalle.id,
+      imei: detalle.imei,
+      label,
+      costo: detalle.producto.costo ? Number(detalle.producto.costo) : 0,
+      pvp: detalle.producto.pvp ? Number(detalle.producto.pvp) : 0,
+      precioOferta: detalle.producto.precioOferta
+        ? Number(detalle.producto.precioOferta)
+        : null,
+      esProductoBase:
+        detalle.producto.tipoProducto?.productoBaseParaOferta ?? false,
+      availableQuantity: detalle.producto.cantidad ?? 0,
+    };
+  });
 }
