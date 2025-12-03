@@ -16,6 +16,7 @@ const baseSchema = z.object({
   imeis: z.string().optional(),
   warehouse: z.string().optional(),
   supplier: z.string().optional(),
+  pvp: z.string().optional(),
 });
 
 // Función para crear schema con validación condicional
@@ -54,6 +55,18 @@ export function createInventoryMovementFormSchema(
             code: z.ZodIssueCode.custom,
             message: "La cantidad debe ser mayor a 0",
             path: ["quantity"],
+          });
+        }
+      }
+
+      // Validación básica de formato para PVP (opcional)
+      if (data.pvp && data.pvp.trim() !== "") {
+        const pvpNum = Number.parseFloat(data.pvp);
+        if (Number.isNaN(pvpNum) || pvpNum < 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "El PVP no puede ser negativo",
+            path: ["pvp"],
           });
         }
       }

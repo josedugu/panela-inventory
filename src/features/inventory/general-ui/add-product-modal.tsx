@@ -58,6 +58,7 @@ export interface InventoryMovementInitialData {
   imeis?: string;
   warehouse?: string;
   supplier?: string;
+  pvp?: string;
 }
 
 interface InventoryMovementModalProps {
@@ -97,6 +98,7 @@ export function InventoryMovementModal({
       imeis: initialData?.imeis ?? "",
       warehouse: initialData?.warehouse ?? "",
       supplier: initialData?.supplier ?? "",
+      pvp: initialData?.pvp ?? "",
     };
   }, [initialData]);
 
@@ -240,6 +242,10 @@ export function InventoryMovementModal({
       payload.set("imeis", data.imeis ?? "");
       payload.set("warehouse", data.warehouse ?? "");
       payload.set("supplier", data.supplier ?? "");
+      // PVP es opcional, solo se envía si tiene valor
+      if (data.pvp && data.pvp.trim() !== "") {
+        payload.set("pvp", data.pvp);
+      }
 
       const result = await createInventoryMovementAction(payload);
 
@@ -468,6 +474,28 @@ export function InventoryMovementModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Costo Unitario *</FormLabel>
+                        <FormControl>
+                          <CurrencyInput
+                            placeholder="0"
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            readOnly={isReadOnly}
+                            disabled={isReadOnly}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {!isHorizontalMovement && isIngresoMovement && (
+                  <FormField
+                    control={form.control}
+                    name="pvp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Precio de Venta al Público (PVP)</FormLabel>
                         <FormControl>
                           <CurrencyInput
                             placeholder="0"
