@@ -35,6 +35,12 @@ const baseSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((val) => (val === "" ? undefined : val)),
+  pvp: z
+    .string()
+    .optional()
+    .transform((val) =>
+      val && val.trim() !== "" ? Number.parseFloat(val) : undefined,
+    ),
 });
 
 export async function createInventoryMovementAction(formData: FormData) {
@@ -43,6 +49,7 @@ export async function createInventoryMovementAction(formData: FormData) {
   const productValue = formData.get("product");
   const costValue = formData.get("cost");
   const quantityValue = formData.get("quantity");
+  const pvpValue = formData.get("pvp");
 
   const parsed = baseSchema.safeParse({
     product: productValue?.toString() || "",
@@ -52,6 +59,7 @@ export async function createInventoryMovementAction(formData: FormData) {
     imeis: formData.get("imeis")?.toString() || "",
     warehouse: warehouseValue?.toString() || "",
     supplier: supplierValue?.toString() || "",
+    pvp: pvpValue?.toString() || "",
   });
 
   if (!parsed.success) {
@@ -62,8 +70,16 @@ export async function createInventoryMovementAction(formData: FormData) {
     };
   }
 
-  const { product, movementType, quantity, cost, imeis, warehouse, supplier } =
-    parsed.data;
+  const {
+    product,
+    movementType,
+    quantity,
+    cost,
+    imeis,
+    warehouse,
+    supplier,
+    pvp,
+  } = parsed.data;
 
   // Obtener el tipo de movimiento para validación condicional
   const movementTypeRecord = await getInventoryMovementTypeById(movementType);
@@ -120,6 +136,7 @@ export async function createInventoryMovementAction(formData: FormData) {
         imeis: imeiList,
         warehouseId: warehouse,
         supplierId: supplier || undefined,
+        pvp: pvp, // Opcional
       });
 
       return {
@@ -198,6 +215,19 @@ export async function createInventoryMovementAction(formData: FormData) {
       };
     }
 
+    // Validar PVP si se proporciona (solo para movimientos de ingreso)
+    if (pvp !== undefined && pvp !== null) {
+      if (pvp < 0) {
+        return {
+          success: false,
+          error: "El PVP no puede ser negativo",
+          errors: {
+            pvp: ["El PVP no puede ser negativo"],
+          },
+        };
+      }
+    }
+
     try {
       await createInventoryMovementWithDetails({
         productId: product,
@@ -207,6 +237,7 @@ export async function createInventoryMovementAction(formData: FormData) {
         imeis: imeiList,
         warehouseId: warehouse || undefined,
         supplierId: supplier || undefined,
+        pvp: pvp, // Opcional, solo para movimientos de ingreso
       });
 
       return {

@@ -112,6 +112,7 @@ interface CreateInventoryMovementInput {
   imeis: string[];
   warehouseId?: string;
   supplierId?: string;
+  pvp?: number;
 }
 
 export async function createInventoryMovementWithDetails({
@@ -122,6 +123,7 @@ export async function createInventoryMovementWithDetails({
   imeis,
   warehouseId,
   supplierId,
+  pvp,
 }: CreateInventoryMovementInput) {
   return prisma.$transaction(async (tx) => {
     const movementType = await tx.tipoMovimientoInventario.findUnique({
@@ -319,11 +321,22 @@ export async function createInventoryMovementWithDetails({
         throw new Error("La cantidad resulta negativa para el producto");
       }
 
+      // Preparar datos de actualización
+      const updateData: {
+        cantidad: number;
+        pvp?: Prisma.Decimal;
+      } = {
+        cantidad: updatedQuantity,
+      };
+
+      // Actualizar PVP solo para movimientos de ingreso si se proporciona
+      if (isIngreso && pvp !== undefined && pvp !== null && pvp >= 0) {
+        updateData.pvp = new Prisma.Decimal(pvp.toString());
+      }
+
       await tx.producto.update({
         where: { id: actualProductId },
-        data: {
-          cantidad: updatedQuantity,
-        },
+        data: updateData,
       });
     }
 
