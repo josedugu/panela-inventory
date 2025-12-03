@@ -35,6 +35,7 @@ import {
 import {
   InputSearchDBSkeleton,
   SelectSkeleton,
+  Skeleton,
 } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { createInventoryMovementAction } from "@/features/inventory/actions/create-inventory-movement";
@@ -308,11 +309,13 @@ export function InventoryMovementModal({
           <div className="space-y-6 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <div className="text-sm font-medium text-text-secondary">
+                <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                   Tipo de Movimiento
                 </div>
                 <div className="text-sm">
-                  {selectedMovementType ? (
+                  {isLoadingMovementTypes ? (
+                    <Skeleton className="h-4 w-32" />
+                  ) : selectedMovementType ? (
                     <span className="flex items-center gap-2">
                       <span>{selectedMovementType.nombre}</span>
                       {selectedMovementType.ingreso && (
@@ -333,40 +336,52 @@ export function InventoryMovementModal({
               </div>
 
               <div className="space-y-2">
-                <div className="text-sm font-medium text-text-secondary">
+                <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                   Bodega
                 </div>
                 <div className="text-sm">
-                  {selectedWarehouse?.nombre ??
+                  {isLoadingWarehouses ? (
+                    <Skeleton className="h-4 w-32" />
+                  ) : (
+                    (selectedWarehouse?.nombre ??
                     initialData?.bodegaNombre ??
-                    "-"}
+                    "-")
+                  )}
                 </div>
               </div>
 
               {!isHorizontalMovement && (
                 <>
                   <div className="space-y-2 sm:col-span-2">
-                    <div className="text-sm font-medium text-text-secondary">
+                    <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                       Producto
                     </div>
                     <div className="text-sm">
-                      {selectedProduct?.label ?? "-"}
+                      {isLoadingProduct ? (
+                        <Skeleton className="h-4 w-48" />
+                      ) : (
+                        (selectedProduct?.label ?? "-")
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-text-secondary">
+                    <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                       Proveedor
                     </div>
                     <div className="text-sm">
-                      {selectedSupplier?.nombre ??
+                      {isLoadingSuppliers ? (
+                        <Skeleton className="h-4 w-32" />
+                      ) : (
+                        (selectedSupplier?.nombre ??
                         initialData?.proveedorNombre ??
-                        "-"}
+                        "-")
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-text-secondary">
+                    <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                       Costo Unitario
                     </div>
                     <div className="text-sm">
@@ -384,29 +399,25 @@ export function InventoryMovementModal({
                     </div>
                   </div>
 
-                  {isIngresoMovement && (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium text-text-secondary">
-                        Precio de Venta al Público (PVP)
-                      </div>
-                      <div className="text-sm">
-                        {form.watch("pvp") || initialData?.pvp
-                          ? formatPrice(
-                              Number(
-                                form.watch("pvp") || initialData?.pvp || 0,
-                              ),
-                              {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0,
-                              },
-                            )
-                          : "-"}
-                      </div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
+                      Precio de Venta al Público (PVP)
                     </div>
-                  )}
+                    <div className="text-sm">
+                      {form.watch("pvp") || initialData?.pvp
+                        ? formatPrice(
+                            Number(form.watch("pvp") || initialData?.pvp || 0),
+                            {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0,
+                            },
+                          )
+                        : "-"}
+                    </div>
+                  </div>
 
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-text-secondary">
+                    <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                       Cantidad
                     </div>
                     <div className="text-sm">
@@ -417,7 +428,7 @@ export function InventoryMovementModal({
               )}
 
               <div className="space-y-2 sm:col-span-2">
-                <div className="text-sm font-medium text-text-secondary">
+                <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                   IMEIs (separados por coma)
                 </div>
                 <div className="text-sm whitespace-pre-wrap">
@@ -426,7 +437,7 @@ export function InventoryMovementModal({
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <div className="text-sm font-medium text-text-secondary">
+                <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                   Comentario
                 </div>
                 <div className="text-sm whitespace-pre-wrap">
@@ -442,7 +453,7 @@ export function InventoryMovementModal({
               <div className="grid gap-4 sm:grid-cols-2 pt-4 border-t">
                 {initialData?.proveedorNombre && (
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-text-secondary">
+                    <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                       Proveedor
                     </div>
                     <div className="text-sm">{initialData.proveedorNombre}</div>
@@ -450,7 +461,7 @@ export function InventoryMovementModal({
                 )}
                 {initialData?.createdBy && (
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-text-secondary">
+                    <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                       Creado por
                     </div>
                     <div className="text-sm">{initialData.createdBy}</div>
@@ -459,7 +470,7 @@ export function InventoryMovementModal({
                 {initialData?.ventaConsecutivo &&
                   initialData?.clienteNombre && (
                     <div className="space-y-2 sm:col-span-2">
-                      <div className="text-sm font-medium text-text-secondary">
+                      <div className="text-sm font-medium text-foreground/90 dark:text-foreground/80">
                         Venta
                       </div>
                       <div className="text-sm">

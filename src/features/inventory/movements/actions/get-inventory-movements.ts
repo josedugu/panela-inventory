@@ -19,6 +19,7 @@ export type InventoryMovementDTO = {
   quantity: number;
   unitCost: number;
   totalCost: number;
+  pvp?: number;
   imeis: string[];
   createdAt: string;
   updatedAt: string;
@@ -66,6 +67,7 @@ async function normalizeMovement(
     tipoMovimiento?.ingreso && !tipoMovimiento.salida ? "ingreso" : "salida";
 
   const unitCost = costoUnitario ? Number(costoUnitario) : 0;
+  const pvp = movement.pvp ? Number(movement.pvp) : undefined;
 
   // Buscar si alguno de los productos está relacionado con una venta
   let ventaConsecutivo: number | undefined;
@@ -91,6 +93,7 @@ async function normalizeMovement(
     quantity: cantidad,
     unitCost,
     totalCost: cantidad * unitCost,
+    pvp,
     imeis,
     createdAt: movement.createdAt.toISOString(),
     updatedAt: movement.updatedAt.toISOString(),
