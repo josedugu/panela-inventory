@@ -140,6 +140,7 @@ interface CreateInventoryMovementInput {
   warehouseId?: string;
   supplierId?: string;
   pvp?: number;
+  comentario?: string;
 }
 
 export async function createInventoryMovementWithDetails({
@@ -151,6 +152,7 @@ export async function createInventoryMovementWithDetails({
   warehouseId,
   supplierId,
   pvp,
+  comentario,
 }: CreateInventoryMovementInput) {
   return prisma.$transaction(async (tx) => {
     const movementType = await tx.tipoMovimientoInventario.findUnique({
@@ -328,6 +330,7 @@ export async function createInventoryMovementWithDetails({
         tipoMovimientoId: movementTypeId,
         bodegaId: warehouseId || null,
         proveedorId: supplierId || null,
+        comentario: comentario || null,
         productos:
           productDetailsIds.length > 0
             ? {

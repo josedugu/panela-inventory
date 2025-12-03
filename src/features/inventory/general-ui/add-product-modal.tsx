@@ -60,6 +60,7 @@ export interface InventoryMovementInitialData {
   warehouse?: string;
   supplier?: string;
   pvp?: string;
+  comentario?: string;
   bodegaNombre?: string;
   proveedorNombre?: string;
   ventaConsecutivo?: number;
@@ -105,6 +106,7 @@ export function InventoryMovementModal({
       warehouse: initialData?.warehouse ?? "",
       supplier: initialData?.supplier ?? "",
       pvp: initialData?.pvp ?? "",
+      comentario: initialData?.comentario ?? "",
     };
   }, [initialData]);
 
@@ -251,6 +253,10 @@ export function InventoryMovementModal({
       // PVP es opcional, solo se envía si tiene valor
       if (data.pvp && data.pvp.trim() !== "") {
         payload.set("pvp", data.pvp);
+      }
+      // Comentario es opcional, solo se envía si tiene valor
+      if (data.comentario && data.comentario.trim() !== "") {
+        payload.set("comentario", data.comentario);
       }
 
       const result = await createInventoryMovementAction(payload);
@@ -418,22 +424,22 @@ export function InventoryMovementModal({
                   {form.watch("imeis") || initialData?.imeis || "-"}
                 </div>
               </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <div className="text-sm font-medium text-text-secondary">
+                  Comentario
+                </div>
+                <div className="text-sm whitespace-pre-wrap">
+                  {form.watch("comentario") || initialData?.comentario || "-"}
+                </div>
+              </div>
             </div>
 
-            {(initialData?.bodegaNombre ||
-              initialData?.proveedorNombre ||
+            {(initialData?.proveedorNombre ||
               initialData?.createdBy ||
               (initialData?.ventaConsecutivo &&
                 initialData?.clienteNombre)) && (
               <div className="grid gap-4 sm:grid-cols-2 pt-4 border-t">
-                {initialData?.bodegaNombre && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-text-secondary">
-                      Bodega
-                    </div>
-                    <div className="text-sm">{initialData.bodegaNombre}</div>
-                  </div>
-                )}
                 {initialData?.proveedorNombre && (
                   <div className="space-y-2">
                     <div className="text-sm font-medium text-text-secondary">
@@ -741,6 +747,26 @@ export function InventoryMovementModal({
                       <FormControl>
                         <Textarea
                           placeholder="ej. 123..., 456..."
+                          className="min-h-[80px]"
+                          readOnly={isReadOnly}
+                          disabled={isReadOnly}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="comentario"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Comentario</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Agregar un comentario opcional..."
                           className="min-h-[80px]"
                           readOnly={isReadOnly}
                           disabled={isReadOnly}

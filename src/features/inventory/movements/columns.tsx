@@ -22,14 +22,13 @@ export function getInventoryMovementColumns({
 }: InventoryMovementColumnsOptions): ColumnDef<InventoryMovementDTO>[] {
   return [
     {
-      accessorKey: "createdAt",
-      header: "Fecha",
+      accessorKey: "consecutivo",
+      header: "Consecutivo",
       cell: ({ row }) => (
-        <div className="text-sm text-text-secondary">
-          {dateTimeFormatter.format(new Date(row.original.createdAt))}
-        </div>
+        <div className="text-sm font-medium">#{row.original.consecutivo}</div>
       ),
-      size: 200,
+      size: 120,
+      minSize: 100,
     },
     {
       accessorKey: "productLabel",
@@ -54,6 +53,27 @@ export function getInventoryMovementColumns({
       accessorKey: "typeName",
       header: "Movimiento",
       cell: ({ row }) => <div className="text-sm">{row.original.typeName}</div>,
+      size: 200,
+    },
+    {
+      accessorKey: "createdBy",
+      header: "Creado Por",
+      cell: ({ row }) => (
+        <div className="text-sm text-text-secondary">
+          {row.original.createdBy ?? "-"}
+        </div>
+      ),
+      size: 180,
+      minSize: 150,
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Fecha",
+      cell: ({ row }) => (
+        <div className="text-sm text-text-secondary">
+          {dateTimeFormatter.format(new Date(row.original.createdAt))}
+        </div>
+      ),
       size: 200,
     },
     {
