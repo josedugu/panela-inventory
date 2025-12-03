@@ -10,6 +10,7 @@ export type MovementOperation = "ingreso" | "salida";
 
 export type InventoryMovementDTO = {
   id: string;
+  consecutivo: number;
   typeId?: string;
   typeName: string;
   operation: MovementOperation;
@@ -26,6 +27,7 @@ export type InventoryMovementDTO = {
   proveedorNombre?: string;
   ventaConsecutivo?: number;
   clienteNombre?: string;
+  comentario?: string;
 };
 
 async function normalizeMovement(
@@ -80,6 +82,7 @@ async function normalizeMovement(
 
   return {
     id: movement.id,
+    consecutivo: movement.consecutivo,
     typeId: movement.tipoMovimientoId ?? undefined,
     typeName: tipoMovimiento?.nombre ?? "Movimiento",
     operation,
@@ -97,6 +100,7 @@ async function normalizeMovement(
     proveedorNombre: proveedor?.nombre,
     ventaConsecutivo,
     clienteNombre,
+    comentario: movement.comentario ?? undefined,
   };
 }
 

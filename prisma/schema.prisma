@@ -260,6 +260,8 @@ model MovimientoInventario {
   id               String                    @id @default(uuid()) @db.Uuid
   consecutivo      Int                       @unique @default(autoincrement()) @map("consecutivo") @db.Integer
   cantidad         Int                       @default(0)
+  pvp              Decimal?                  @default(0) @map("pvp") @db.Decimal(10, 2)
+  comentario       String?                   @map("comentario")
   estado           Boolean                   @default(true)
   costoUnitario    Decimal?                  @default(0) @map("costo_unitario") @db.Decimal(10, 2)
   creadoPor        Usuario?                  @relation("MovimientosCreadosPor", fields: [creadoPorId], references: [id])

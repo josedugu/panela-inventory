@@ -17,6 +17,7 @@ const baseSchema = z.object({
   warehouse: z.string().optional(),
   supplier: z.string().optional(),
   pvp: z.string().optional(),
+  comentario: z.string().optional(),
 });
 
 // Función para crear schema con validación condicional

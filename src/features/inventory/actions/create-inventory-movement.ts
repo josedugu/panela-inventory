@@ -41,6 +41,7 @@ const baseSchema = z.object({
     .transform((val) =>
       val && val.trim() !== "" ? Number.parseFloat(val) : undefined,
     ),
+  comentario: z.string().optional(),
 });
 
 export async function createInventoryMovementAction(formData: FormData) {
@@ -50,6 +51,7 @@ export async function createInventoryMovementAction(formData: FormData) {
   const costValue = formData.get("cost");
   const quantityValue = formData.get("quantity");
   const pvpValue = formData.get("pvp");
+  const comentarioValue = formData.get("comentario");
 
   const parsed = baseSchema.safeParse({
     product: productValue?.toString() || "",
@@ -60,6 +62,7 @@ export async function createInventoryMovementAction(formData: FormData) {
     warehouse: warehouseValue?.toString() || "",
     supplier: supplierValue?.toString() || "",
     pvp: pvpValue?.toString() || "",
+    comentario: comentarioValue?.toString() || "",
   });
 
   if (!parsed.success) {
@@ -79,6 +82,7 @@ export async function createInventoryMovementAction(formData: FormData) {
     warehouse,
     supplier,
     pvp,
+    comentario,
   } = parsed.data;
 
   // Obtener el tipo de movimiento para validación condicional
@@ -137,6 +141,7 @@ export async function createInventoryMovementAction(formData: FormData) {
         warehouseId: warehouse,
         supplierId: supplier || undefined,
         pvp: pvp, // Opcional
+        comentario: comentario?.trim() || undefined,
       });
 
       return {
@@ -238,6 +243,7 @@ export async function createInventoryMovementAction(formData: FormData) {
         warehouseId: warehouse || undefined,
         supplierId: supplier || undefined,
         pvp: pvp, // Opcional, solo para movimientos de ingreso
+        comentario: comentario?.trim() || undefined,
       });
 
       return {
