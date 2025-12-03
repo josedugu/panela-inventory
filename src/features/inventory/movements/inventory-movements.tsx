@@ -222,6 +222,7 @@ export function InventoryMovements() {
       cost: movement.unitCost.toFixed(2),
       quantity: movement.quantity.toString(),
       imeis: movement.imeis.join(", "),
+      pvp: movement.pvp?.toFixed(2),
       comentario: movement.comentario,
       bodegaNombre: movement.bodegaNombre,
       proveedorNombre: movement.proveedorNombre,

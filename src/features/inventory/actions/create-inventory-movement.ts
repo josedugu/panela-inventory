@@ -5,6 +5,7 @@ import {
   createInventoryMovementWithDetails,
   getInventoryMovementTypeById,
 } from "@/data/repositories/inventory.movements.repository";
+import { getCurrentUserWithRole } from "@/lib/auth/get-current-user";
 
 // Schema base con campos opcionales
 const baseSchema = z.object({
@@ -45,6 +46,15 @@ const baseSchema = z.object({
 });
 
 export async function createInventoryMovementAction(formData: FormData) {
+  // Obtener usuario actual
+  const currentUser = await getCurrentUserWithRole();
+  if (!currentUser) {
+    return {
+      success: false,
+      error: "Usuario no autenticado",
+    };
+  }
+
   const warehouseValue = formData.get("warehouse");
   const supplierValue = formData.get("supplier");
   const productValue = formData.get("product");
@@ -142,6 +152,7 @@ export async function createInventoryMovementAction(formData: FormData) {
         supplierId: supplier || undefined,
         pvp: pvp, // Opcional
         comentario: comentario?.trim() || undefined,
+        creadoPorId: currentUser.id,
       });
 
       return {
@@ -244,6 +255,7 @@ export async function createInventoryMovementAction(formData: FormData) {
         supplierId: supplier || undefined,
         pvp: pvp, // Opcional, solo para movimientos de ingreso
         comentario: comentario?.trim() || undefined,
+        creadoPorId: currentUser.id,
       });
 
       return {

@@ -25,7 +25,7 @@ export function getInventoryMovementColumns({
       accessorKey: "consecutivo",
       header: "Consecutivo",
       cell: ({ row }) => (
-        <div className="text-sm font-medium">#{row.original.consecutivo}</div>
+        <div className="text-sm font-medium">{row.original.consecutivo}</div>
       ),
       size: 120,
       minSize: 100,
