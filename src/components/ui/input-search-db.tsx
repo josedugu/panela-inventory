@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronsUpDown, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import {
@@ -31,6 +31,8 @@ interface InputSearchDBProps {
   debounceMs?: number;
   queryKeyBase?: string;
   valueClassName?: string;
+  onQueryChange?: (query: string) => void;
+  onSubmit?: (query: string) => void;
 }
 
 export function InputSearchDB({
@@ -45,6 +47,8 @@ export function InputSearchDB({
   debounceMs = 300,
   queryKeyBase,
   valueClassName,
+  onQueryChange,
+  onSubmit,
 }: InputSearchDBProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -94,6 +98,25 @@ export function InputSearchDB({
     setOpen(false);
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter" || !onSubmit) return;
+
+    const trimmed = search.trim();
+    if (!trimmed) return;
+
+    const commandElement = event.currentTarget.closest("[data-slot=command]");
+    const hasSelectedItem = commandElement?.querySelector(
+      '[data-slot="command-item"][data-selected="true"]',
+    );
+
+    if (hasSelectedItem) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    onSubmit(trimmed);
+    setOpen(false);
+  };
+
   const normalizedValue = value?.label ?? "";
 
   return (
@@ -134,7 +157,11 @@ export function InputSearchDB({
           <Command shouldFilter={false}>
             <CommandInput
               value={search}
-              onValueChange={setSearch}
+              onValueChange={(value) => {
+                setSearch(value);
+                onQueryChange?.(value);
+              }}
+              onKeyDown={handleKeyDown}
               placeholder={placeholder}
             />
             <CommandList

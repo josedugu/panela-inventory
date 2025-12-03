@@ -12,6 +12,7 @@ import { searchProductsAction } from "../actions/search-products";
 export interface SaleLine {
   id: string;
   productId: string;
+  productoDetalleId?: string;
   quantity: number;
   unitPrice: number;
 }
@@ -23,6 +24,8 @@ export interface ProductData {
   precioOferta: number | null;
   esProductoBase: boolean;
   availableQuantity: number;
+  productoDetalleId?: string;
+  imei?: string | null;
 }
 
 interface SaleProductListProps {
@@ -128,13 +131,22 @@ export function SaleProductList({
           precioOferta: number | null;
           esProductoBase: boolean;
           availableQuantity: number;
+          productoDetalleId?: string;
+          imei?: string | null;
         }
       | undefined,
   ) => {
     if (!product) {
       setLines(
         lines.map((line) =>
-          line.id === lineId ? { ...line, productId: "", unitPrice: 0 } : line,
+          line.id === lineId
+            ? {
+                ...line,
+                productId: "",
+                productoDetalleId: undefined,
+                unitPrice: 0,
+              }
+            : line,
         ),
       );
       return;
@@ -149,6 +161,8 @@ export function SaleProductList({
         precioOferta: product.precioOferta,
         esProductoBase: product.esProductoBase,
         availableQuantity: product.availableQuantity,
+        productoDetalleId: product.productoDetalleId,
+        imei: product.imei,
       });
       return newMap;
     });
@@ -161,6 +175,7 @@ export function SaleProductList({
         return {
           ...line,
           productId: product.value,
+          productoDetalleId: product.productoDetalleId,
           unitPrice: product.pvp,
           quantity: Math.min(
             line.quantity,
@@ -269,7 +284,7 @@ export function SaleProductList({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end">
                 <div className="sm:col-span-12 md:col-span-6">
                   <InputSearchDB
-                    placeholder="Buscar producto"
+                    placeholder="Buscar por IMEI"
                     value={
                       line.productId
                         ? {
@@ -295,6 +310,8 @@ export function SaleProductList({
                             precioOferta: cachedProduct.precioOferta,
                             esProductoBase: cachedProduct.esProductoBase,
                             availableQuantity: cachedProduct.availableQuantity,
+                            productoDetalleId: cachedProduct.productoDetalleId,
+                            imei: cachedProduct.imei,
                           });
                         }
                       } else {
@@ -313,6 +330,8 @@ export function SaleProductList({
                             precioOferta: p.precioOferta,
                             esProductoBase: p.esProductoBase,
                             availableQuantity: p.availableQuantity,
+                            productoDetalleId: p.productoDetalleId,
+                            imei: p.imei,
                           });
                           return newMap;
                         });

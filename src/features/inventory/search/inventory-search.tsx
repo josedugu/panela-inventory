@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { PackageSearch } from "lucide-react";
+import { PackageSearch, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  InputSearchDB,
-  type InputSearchOption,
-} from "@/components/ui/input-search-db";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -26,17 +23,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { searchProductsForInventoryAction } from "@/features/inventory/actions/search-products-for-inventory";
 import type { InventoryProduct } from "@/features/inventory/functions/types";
 import type { ProductLocation } from "@/features/inventory/management/actions/get-product-locations";
 import { getProductLocationsAction } from "@/features/inventory/management/actions/get-product-locations";
 import { getInventoryColumns } from "@/features/inventory/management/columns";
-import { getInventoryProductByIdAction } from "./actions/get-inventory-product-by-id";
+import { searchInventoryProductsAction } from "./actions/search-inventory-products";
 
 export function InventorySearch() {
-  const [selectedOption, setSelectedOption] = useState<
-    InputSearchOption | undefined
-  >();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [submittedTerm, setSubmittedTerm] = useState("");
   const [selectedProduct, setSelectedProduct] =
     useState<InventoryProduct | null>(null);
   const [isLocationsModalOpen, setIsLocationsModalOpen] = useState(false);
@@ -44,22 +39,18 @@ export function InventorySearch() {
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
   const {
-    data: product,
-    isLoading,
-    isFetching,
-    error,
+    data: freeSearchResults = [],
+    isLoading: isFreeSearchLoading,
+    isFetching: isFreeSearchFetching,
+    error: freeSearchError,
   } = useQuery({
-    queryKey: ["inventory", "search", selectedOption?.value],
-    enabled: Boolean(selectedOption?.value),
+    queryKey: ["inventory", "search", "free", submittedTerm],
+    enabled: Boolean(submittedTerm),
     queryFn: async () => {
-      if (!selectedOption?.value) return null;
-
-      const result = await getInventoryProductByIdAction(selectedOption.value);
-
+      const result = await searchInventoryProductsAction(submittedTerm);
       if (!result.success) {
         throw new Error(result.error);
       }
-
       return result.data;
     },
     retry: false,
@@ -67,14 +58,14 @@ export function InventorySearch() {
   });
 
   useEffect(() => {
-    if (error) {
+    if (freeSearchError) {
       const message =
-        error instanceof Error
-          ? error.message
+        freeSearchError instanceof Error
+          ? freeSearchError.message
           : "No se pudo cargar el producto";
       toast.error(message);
     }
-  }, [error]);
+  }, [freeSearchError]);
 
   const handleViewLocations = useCallback(
     async (productRow: InventoryProduct) => {
@@ -109,13 +100,33 @@ export function InventorySearch() {
     [handleViewLocations],
   );
 
-  const tableData = useMemo(() => (product ? [product] : []), [product]);
+  const tableData = useMemo(
+    () => (submittedTerm ? freeSearchResults : []),
+    [freeSearchResults, submittedTerm],
+  );
 
   const clearSelection = () => {
-    setSelectedOption(undefined);
     setSelectedProduct(null);
     setLocations([]);
+    setSearchTerm("");
+    setSubmittedTerm("");
   };
+
+  const handleSearch = useCallback(() => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) {
+      toast.error("Ingresa un término de búsqueda para continuar");
+      return;
+    }
+
+    setSubmittedTerm(trimmed);
+    setSelectedProduct(null);
+    setLocations([]);
+  }, [searchTerm]);
+
+  const isTableLoading = isFreeSearchLoading || isFreeSearchFetching;
+
+  const shouldShowTable = tableData.length > 0 || isTableLoading;
 
   return (
     <div className="space-y-6 p-4 lg:p-6">
@@ -135,45 +146,53 @@ export function InventorySearch() {
           <div className="space-y-1">
             <CardTitle>Buscar producto</CardTitle>
             <p className="text-sm text-text-secondary">
-              Empieza a escribir nombre, modelo o IMEI. Al seleccionar una
-              opción verás el detalle en la grilla.
+              Escribe nombre, modelo o IMEI y presiona Enter o
+              &quot;Buscar&quot; para ver todas las coincidencias en la grilla.
             </p>
           </div>
-          {selectedOption ? (
-            <Button variant="ghost" size="sm" onClick={clearSelection}>
-              Limpiar selección
-            </Button>
-          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
-          <InputSearchDB
-            placeholder="Buscar por nombre, modelo o IMEI"
-            value={selectedOption}
-            onChange={setSelectedOption}
-            searchFn={async (query) => {
-              if (!query.trim()) return [];
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <Input
+              placeholder="Buscar por nombre, modelo o IMEI"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleSearch();
+                }
+              }}
+              className="md:flex-1"
+            />
+            <Button type="button" onClick={handleSearch}>
+              Buscar
+            </Button>
+            {submittedTerm || searchTerm ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearSelection}
+                aria-label="Limpiar selección"
+              >
+                <XCircle className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            ) : null}
+          </div>
 
-              const products = await searchProductsForInventoryAction(query);
-              return products.map((productOption) => ({
-                value: productOption.id,
-                label: productOption.label,
-              }));
-            }}
-            queryKeyBase="inventory-search"
-            maxOptions={8}
-          />
-
-          {selectedOption ? (
+          {shouldShowTable ? (
             <DataGrid
               data={tableData}
               columns={columns}
-              isLoading={isLoading || isFetching}
+              isLoading={isTableLoading}
               showIndexColumn={false}
               getRowId={(row) => row.id}
             />
           ) : (
             <div className="flex min-h-[260px] items-center justify-center rounded-lg border border-dashed border-border bg-surface-1/40 text-text-secondary">
-              Comienza buscando un producto para ver el detalle.
+              Escribe un término y presiona Enter o &quot;Buscar&quot; para ver
+              todas las coincidencias.
             </div>
           )}
         </CardContent>

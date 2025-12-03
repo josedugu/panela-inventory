@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma/client";
 
 const saleLineSchema = z.object({
   productId: z.string().min(1, "El producto es requerido"),
+  productoDetalleId: z.string().min(1, "El IMEI es requerido").optional(),
   quantity: z.number().int().positive("La cantidad debe ser mayor a 0"),
   unitPrice: z.number().nonnegative("El precio no puede ser negativo"),
 });
@@ -249,20 +250,45 @@ export async function createSaleAction(
       for (const [index, line] of lines.entries()) {
         const product = products.find((p) => p.id === line.productId)!;
 
-        // Obtener productos detalles disponibles (sin venta asignada)
-        const availableDetails = await tx.productoDetalle.findMany({
-          where: {
-            productoId: line.productId,
-            estado: true,
-            ventaProductoId: null,
-          },
-          take: line.quantity,
-        });
+        // Si hay productoDetalleId específico, usar ese; si no, buscar disponibles
+        let productoDetalleIds: string[] = [];
 
-        if (availableDetails.length < line.quantity) {
-          throw new Error(
-            `No hay suficientes productos detalles disponibles para ${product.nombre ?? product.id}`,
-          );
+        if (line.productoDetalleId) {
+          // Validar que el productoDetalle existe, está disponible y pertenece al producto correcto
+          const productoDetalle = await tx.productoDetalle.findUnique({
+            where: {
+              id: line.productoDetalleId,
+              estado: true,
+              ventaProductoId: null,
+              productoId: line.productId,
+            },
+          });
+
+          if (!productoDetalle) {
+            throw new Error(
+              `El IMEI seleccionado no está disponible para ${product.nombre ?? product.id}`,
+            );
+          }
+
+          productoDetalleIds = [line.productoDetalleId];
+        } else {
+          // Fallback: buscar productos detalles disponibles (sin venta asignada)
+          const availableDetails = await tx.productoDetalle.findMany({
+            where: {
+              productoId: line.productId,
+              estado: true,
+              ventaProductoId: null,
+            },
+            take: line.quantity,
+          });
+
+          if (availableDetails.length < line.quantity) {
+            throw new Error(
+              `No hay suficientes productos detalles disponibles para ${product.nombre ?? product.id}`,
+            );
+          }
+
+          productoDetalleIds = availableDetails.map((detail) => detail.id);
         }
 
         // Crear movimiento de inventario
@@ -274,7 +300,7 @@ export async function createSaleAction(
             creadoPorId: currentUser.id,
             costoUnitario: null, // Las ventas no tienen costo unitario
             productos: {
-              connect: availableDetails.map((detail) => ({ id: detail.id })),
+              connect: productoDetalleIds.map((id) => ({ id })),
             },
           },
         });
@@ -296,7 +322,7 @@ export async function createSaleAction(
             where: { id: ventaProducto.id },
             data: {
               productosDetalles: {
-                connect: availableDetails.map((detail) => ({ id: detail.id })),
+                connect: productoDetalleIds.map((id) => ({ id })),
               },
             },
           });
