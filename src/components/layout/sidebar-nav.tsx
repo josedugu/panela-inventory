@@ -89,7 +89,12 @@ const navItems: NavItem[] = [
   {
     title: "Reportes",
     icon: FileText,
-    href: "/dashboard/reports",
+    children: [
+      {
+        title: "Caja",
+        href: "/dashboard/reports/caja",
+      },
+    ],
   },
   {
     title: "Analíticas",
