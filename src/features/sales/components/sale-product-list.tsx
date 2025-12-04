@@ -284,7 +284,7 @@ export function SaleProductList({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end">
                 <div className="sm:col-span-12 md:col-span-6">
                   <InputSearchDB
-                    placeholder="Buscar por IMEI"
+                    placeholder="Buscar por IMEI o nombre"
                     value={
                       line.productId
                         ? {
