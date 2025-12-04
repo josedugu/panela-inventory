@@ -57,6 +57,7 @@ export const ROUTE_PERMISSIONS: Record<string, RoleName[]> = {
 
   // Reportes
   "/dashboard/reports": [ROLES.ADMIN, ROLES.ASESOR],
+  "/dashboard/reports/caja": [ROLES.ADMIN, ROLES.ASESOR],
 
   // Ventas
   "/dashboard/sales": [ROLES.ADMIN, ROLES.ASESOR],
@@ -206,6 +207,11 @@ export const ACTION_PERMISSIONS: Record<string, Record<RoleName, string[]>> = {
 
   // Reportes - solo lectura
   "/dashboard/reports": {
+    [ROLES.ADMIN]: ["view"],
+    [ROLES.ASESOR]: ["view"],
+    [ROLES.COLABORADOR]: [],
+  },
+  "/dashboard/reports/caja": {
     [ROLES.ADMIN]: ["view"],
     [ROLES.ASESOR]: ["view"],
     [ROLES.COLABORADOR]: [],

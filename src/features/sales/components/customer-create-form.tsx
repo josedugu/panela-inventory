@@ -53,7 +53,7 @@ export function CustomerCreateForm({
 
   // Observar cambios en el formulario y notificar al padre si es válido
   useEffect(() => {
-    const subscription = form.watch((_value, { name, type }) => {
+    const subscription = form.watch(() => {
       // Verificamos si el formulario es válido con los valores actuales
       // No usamos form.formState.isValid directamente aquí porque puede tener un ligero retraso
       // en el ciclo de renderizado al usar watch, así que disparamos la validación
