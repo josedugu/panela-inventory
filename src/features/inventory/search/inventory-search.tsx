@@ -32,6 +32,8 @@ import { searchInventoryProductsAction } from "./actions/search-inventory-produc
 export function InventorySearch() {
   const [searchTerm, setSearchTerm] = useState("");
   const [submittedTerm, setSubmittedTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedProduct, setSelectedProduct] =
     useState<InventoryProduct | null>(null);
   const [isLocationsModalOpen, setIsLocationsModalOpen] = useState(false);
@@ -39,23 +41,30 @@ export function InventorySearch() {
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
   const {
-    data: freeSearchResults = [],
+    data: searchResult,
     isLoading: isFreeSearchLoading,
     isFetching: isFreeSearchFetching,
     error: freeSearchError,
   } = useQuery({
-    queryKey: ["inventory", "search", "free", submittedTerm],
+    queryKey: ["inventory", "search", "free", submittedTerm, page, pageSize],
     enabled: Boolean(submittedTerm),
     queryFn: async () => {
-      const result = await searchInventoryProductsAction(submittedTerm);
+      const result = await searchInventoryProductsAction(
+        submittedTerm,
+        page,
+        pageSize,
+      );
       if (!result.success) {
         throw new Error(result.error);
       }
-      return result.data;
+      return result;
     },
     retry: false,
     staleTime: 1000 * 30,
   });
+
+  const freeSearchResults = searchResult?.data ?? [];
+  const totalResults = searchResult?.total ?? 0;
 
   useEffect(() => {
     if (freeSearchError) {
@@ -110,6 +119,7 @@ export function InventorySearch() {
     setLocations([]);
     setSearchTerm("");
     setSubmittedTerm("");
+    setPage(1);
   };
 
   const handleSearch = useCallback(() => {
@@ -122,7 +132,17 @@ export function InventorySearch() {
     setSubmittedTerm(trimmed);
     setSelectedProduct(null);
     setLocations([]);
+    setPage(1); // Resetear a la primera página en cada búsqueda nueva
   }, [searchTerm]);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  const handlePageSizeChange = useCallback((newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPage(1); // Resetear a la primera página al cambiar el tamaño
+  }, []);
 
   const isTableLoading = isFreeSearchLoading || isFreeSearchFetching;
 
@@ -188,6 +208,17 @@ export function InventorySearch() {
               isLoading={isTableLoading}
               showIndexColumn={false}
               getRowId={(row) => row.id}
+              pagination={
+                submittedTerm
+                  ? {
+                      page,
+                      pageSize,
+                      total: totalResults,
+                      onPageChange: handlePageChange,
+                      onPageSizeChange: handlePageSizeChange,
+                    }
+                  : undefined
+              }
             />
           ) : (
             <div className="flex min-h-[260px] items-center justify-center rounded-lg border border-dashed border-border bg-surface-1/40 text-text-secondary">

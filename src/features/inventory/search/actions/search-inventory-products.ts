@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma/client";
 interface SearchInventoryProductsSuccess {
   success: true;
   data: InventoryProduct[];
+  total: number;
 }
 
 interface SearchInventoryProductsError {
@@ -18,32 +19,14 @@ export type SearchInventoryProductsResult =
   | SearchInventoryProductsSuccess
   | SearchInventoryProductsError;
 
-const MAX_RESULTS = 100;
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 100;
 
 function calculateStatus(quantity: number): InventoryProduct["status"] {
   const minStock = 10;
   if (quantity <= 0) return "out-of-stock";
   if (quantity <= minStock) return "low-stock";
   return "in-stock";
-}
-
-function buildDisplayName(product: {
-  marca: { nombre: string | null } | null;
-  modelo: {
-    nombre: string | null;
-    almacenamiento: string | null;
-    color: string | null;
-  } | null;
-  descripcion: string | null;
-}) {
-  const nameParts = [
-    product.marca?.nombre,
-    product.modelo?.nombre,
-    product.modelo?.almacenamiento,
-    product.modelo?.color,
-  ].filter(Boolean);
-
-  return nameParts.join(" ") || product.descripcion || "Producto sin nombre";
 }
 
 function mapToInventoryProduct(product: {
@@ -65,7 +48,7 @@ function mapToInventoryProduct(product: {
 
   return {
     id: product.id,
-    name: buildDisplayName(product),
+    name: product.nombre || "Producto sin nombre",
     quantity,
     pvp: product.pvp ? Number(product.pvp) : 0,
     cost: product.costo ? Number(product.costo) : 0,
@@ -76,16 +59,22 @@ function mapToInventoryProduct(product: {
 
 export async function searchInventoryProductsAction(
   query: string,
-  take: number = MAX_RESULTS,
+  page: number = 1,
+  pageSize: number = DEFAULT_PAGE_SIZE,
 ): Promise<SearchInventoryProductsResult> {
   const trimmedQuery = query.trim();
 
   if (!trimmedQuery) {
-    return { success: true, data: [] };
+    return { success: true, data: [], total: 0 };
   }
 
-  const normalizedTake =
-    take > MAX_RESULTS ? MAX_RESULTS : Math.max(1, Math.floor(take));
+  // Normalizar parámetros de paginación
+  const normalizedPage = Math.max(1, Math.floor(page));
+  const normalizedPageSize = Math.min(
+    Math.max(1, Math.floor(pageSize)),
+    MAX_PAGE_SIZE,
+  );
+  const skip = (normalizedPage - 1) * normalizedPageSize;
 
   // Si la query es un UUID, buscar por ID exacto para acelerar
   const isUUID =
@@ -108,86 +97,34 @@ export async function searchInventoryProductsAction(
       });
 
       if (!product) {
-        return { success: true, data: [] };
+        return { success: true, data: [], total: 0 };
       }
 
       return {
         success: true,
         data: [mapToInventoryProduct(product)],
+        total: 1,
       };
     }
 
-    const isFullUuidSearch =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        trimmedQuery,
-      );
-    const isAutoImeiSearch = trimmedQuery.startsWith("AUTO-");
-
-    const products = await prisma.producto.findMany({
-      where: {
-        estado: true,
-        OR: [
-          {
-            nombre: {
-              contains: trimmedQuery,
-              mode: "insensitive",
-            },
-          },
-          {
-            descripcion: {
-              contains: trimmedQuery,
-              mode: "insensitive",
-            },
-          },
-          {
-            marca: {
-              nombre: {
-                contains: trimmedQuery,
-                mode: "insensitive",
-              },
-            },
-          },
-          {
-            modelo: {
-              nombre: {
-                contains: trimmedQuery,
-                mode: "insensitive",
-              },
-            },
-          },
-          {
-            modelo: {
-              almacenamiento: {
-                contains: trimmedQuery,
-                mode: "insensitive",
-              },
-            },
-          },
-          {
-            modelo: {
-              color: {
-                contains: trimmedQuery,
-                mode: "insensitive",
-              },
-            },
-          },
-          ...(isFullUuidSearch || isAutoImeiSearch
-            ? [
-                {
-                  productosDetalles: {
-                    some: {
-                      estado: true,
-                      imei: {
-                        contains: trimmedQuery,
-                        mode: "insensitive" as const,
-                      },
-                    },
-                  },
-                },
-              ]
-            : []),
-        ],
+    // Búsqueda simplificada: solo en el campo nombre de productos activos
+    // Esto permite encontrar accesorios que solo tienen nombre sin relaciones
+    const whereClause: Prisma.ProductoWhereInput = {
+      estado: true,
+      nombre: {
+        contains: trimmedQuery,
+        mode: "insensitive" as const,
       },
+    };
+
+    // Contar el total de resultados
+    const total = await prisma.producto.count({
+      where: whereClause,
+    });
+
+    // Obtener los resultados paginados
+    const products = await prisma.producto.findMany({
+      where: whereClause,
       include: {
         tipoProducto: true,
         marca: true,
@@ -196,12 +133,14 @@ export async function searchInventoryProductsAction(
       orderBy: {
         updatedAt: "desc",
       },
-      take: normalizedTake,
+      skip,
+      take: normalizedPageSize,
     });
 
     return {
       success: true,
       data: products.map(mapToInventoryProduct),
+      total,
     };
   } catch (error) {
     const message =
