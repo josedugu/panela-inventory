@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EntityTableLayout } from "@/features/entity-table/components/entity-table-layout";
+import { useEntityFilters } from "@/features/entity-table/hooks/use-entity-filters";
+import type { EntityFilterDescriptor } from "@/features/entity-table/types";
 import {
   type InventoryMovementInitialData,
   InventoryMovementModal,
@@ -14,8 +16,44 @@ import {
   type InventoryMovementDTO,
 } from "./actions/get-inventory-movements";
 import { getInventoryMovementColumns } from "./columns";
+import { DateRangeInputFilter } from "./components/date-range-input-filter";
 
 type InventoryMovement = InventoryMovementDTO;
+
+const FILTER_DESCRIPTORS: EntityFilterDescriptor[] = [
+  {
+    key: "movementType",
+    label: "Tipo de Movimiento",
+    type: "input-search",
+  },
+  {
+    key: "warehouse",
+    label: "Bodega",
+    type: "input-search",
+  },
+  {
+    key: "supplier",
+    label: "Proveedor",
+    type: "input-search",
+  },
+  {
+    key: "user",
+    label: "Creado por",
+    type: "input-search",
+  },
+  {
+    key: "dateRange",
+    label: "Fecha de Creación",
+    type: "custom",
+    render: ({ value, onChange }) => (
+      <DateRangeInputFilter
+        label="Fecha de Creación"
+        value={value}
+        onChange={onChange}
+      />
+    ),
+  },
+];
 
 export function InventoryMovements() {
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
@@ -27,14 +65,43 @@ export function InventoryMovements() {
   const [pageSize, setPageSize] = useState(10);
   const [searchValue, setSearchValue] = useState("");
 
+  const {
+    filterState,
+    setFilterState,
+    pendingFilterState,
+    setPendingFilterState,
+    applyFilters,
+    resetPendingFilters,
+    clearFilters,
+    filtersKey,
+    isDialogOpen,
+    setDialogOpen,
+    normalizedOptions,
+  } = useEntityFilters({
+    filters: FILTER_DESCRIPTORS,
+  });
+
   const { data, isLoading, isFetching, refetch } =
     useQuery<GetInventoryMovementsSuccess>({
-      queryKey: ["inventory-movements", page, pageSize, searchValue],
+      queryKey: [
+        "inventory-movements",
+        page,
+        pageSize,
+        searchValue,
+        filtersKey,
+      ],
       queryFn: async () => {
         const result = await getInventoryMovementsAction({
           page,
           pageSize,
           search: searchValue.trim() || undefined,
+          filters: {
+            movementType: filterState.movementType,
+            warehouse: filterState.warehouse,
+            supplier: filterState.supplier,
+            user: filterState.user,
+            dateRange: filterState.dateRange,
+          },
         });
 
         if (!result.success) {
@@ -49,6 +116,42 @@ export function InventoryMovements() {
 
   const movements = data?.data ?? [];
   const total = data?.total ?? 0;
+  const filterOptions = data?.filterOptions;
+
+  // Build filter options map from server data
+  const filterOptionsMap = useMemo(() => {
+    const base = { ...normalizedOptions } as Record<
+      string,
+      { label: string; value: string }[]
+    >;
+
+    if (filterOptions) {
+      base.movementType = filterOptions.movementTypes.map((value) => ({
+        value,
+        label: value,
+      }));
+      base.warehouse = filterOptions.warehouses.map((value) => ({
+        value,
+        label: value,
+      }));
+      base.supplier = filterOptions.suppliers.map((value) => ({
+        value,
+        label: value,
+      }));
+      base.user = filterOptions.users.map((value) => ({
+        value,
+        label: value,
+      }));
+    }
+
+    // Fallback empty arrays
+    base.movementType ??= [];
+    base.warehouse ??= [];
+    base.supplier ??= [];
+    base.user ??= [];
+
+    return base;
+  }, [filterOptions, normalizedOptions]);
 
   const handlePageChange = useCallback(
     (nextPage: number) => {
@@ -114,6 +217,9 @@ export function InventoryMovements() {
           description:
             "Consulta el historial de movimientos, cantidades y costos asociados a tu inventario.",
           searchPlaceholder: "Buscar por consecutivo, producto o IMEI...",
+          filterDialogTitle: "Filtrar movimientos",
+          filterDialogDescription:
+            "Selecciona filtros y aplica para actualizar la tabla.",
           addAction: {
             label: "Registrar Movimiento",
             onClick: () => {
@@ -142,6 +248,36 @@ export function InventoryMovements() {
           setSearchValue(value);
           setPage(1);
         }}
+        filters={FILTER_DESCRIPTORS}
+        filterState={filterState}
+        onFilterStateChange={(next) => {
+          setFilterState(next);
+          setPage(1);
+          queueMicrotask(() => {
+            void refetch();
+          });
+        }}
+        pendingFilterState={pendingFilterState}
+        onPendingFilterStateChange={setPendingFilterState}
+        onApplyFilters={() => {
+          applyFilters();
+          setPage(1);
+          queueMicrotask(() => {
+            void refetch();
+          });
+        }}
+        onResetPendingFilters={resetPendingFilters}
+        onClearFilters={() => {
+          clearFilters();
+          setPage(1);
+          queueMicrotask(() => {
+            void refetch();
+          });
+        }}
+        isFilterDialogOpen={isDialogOpen}
+        setFilterDialogOpen={setDialogOpen}
+        filterOptions={filterOptionsMap}
+        isLoadingFilterOptions={isLoading && !filterOptions}
       />
 
       <InventoryMovementModal
