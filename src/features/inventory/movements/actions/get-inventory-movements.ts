@@ -29,6 +29,7 @@ export type InventoryMovementDTO = {
   ventaConsecutivo?: number;
   clienteNombre?: string;
   comentario?: string;
+  estado: boolean;
 };
 
 async function normalizeMovement(
@@ -104,6 +105,7 @@ async function normalizeMovement(
     ventaConsecutivo,
     clienteNombre,
     comentario: movement.comentario ?? undefined,
+    estado: movement.estado,
   };
 }
 
@@ -148,13 +150,63 @@ function applyNumericFilter(
   });
 }
 
+interface ParsedDateRange {
+  from?: Date;
+  to?: Date;
+}
+
+const normalizeStartOfDay = (date: Date) => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
+const normalizeEndOfDay = (date: Date) => {
+  const normalized = new Date(date);
+  normalized.setHours(23, 59, 59, 999);
+  return normalized;
+};
+
+const parseDateRangeFilter = (
+  rawValue: string | undefined,
+): ParsedDateRange | null => {
+  if (!rawValue) return null;
+
+  const [fromRaw = "", toRaw = ""] = rawValue.split("..");
+  const from = fromRaw ? new Date(fromRaw) : undefined;
+  const to = toRaw ? new Date(toRaw) : undefined;
+
+  const hasValidFrom = from ? !Number.isNaN(from.getTime()) : true;
+  const hasValidTo = to ? !Number.isNaN(to.getTime()) : true;
+
+  if (!hasValidFrom || !hasValidTo) {
+    return null;
+  }
+
+  return {
+    from: from ? normalizeStartOfDay(from) : undefined,
+    to: to ? normalizeEndOfDay(to) : undefined,
+  };
+};
+
 interface GetMovementsFilters {
-  type?: string;
+  movementType?: string;
   product?: string;
   operation?: MovementOperation;
+  warehouse?: string;
+  supplier?: string;
   user?: string;
+  cliente?: string;
+  imei?: string;
+  comentario?: string;
+  estado?: string;
+  consecutive?: string;
+  ventaConsecutivo?: string;
   quantity?: string;
   unitCost?: string;
+  pvp?: string;
+  dateRange?: string;
+  updateDateRange?: string;
 }
 
 interface GetMovementsParams {
@@ -201,9 +253,12 @@ export async function getInventoryMovementsAction(
       const searchTerm = params.search.toLowerCase();
       normalized = normalized.filter((movement) => {
         const base = [
+          movement.consecutivo.toString(),
           movement.typeName,
           movement.productLabel,
           movement.createdBy,
+          movement.bodegaNombre,
+          movement.proveedorNombre,
           ...movement.imeis,
         ]
           .filter((value): value is string => Boolean(value))
@@ -214,8 +269,8 @@ export async function getInventoryMovementsAction(
 
     const filters = params?.filters ?? {};
 
-    if (filters.type) {
-      const typeLower = filters.type.toLowerCase();
+    if (filters.movementType) {
+      const typeLower = filters.movementType.toLowerCase();
       normalized = normalized.filter(
         (movement) => movement.typeName.toLowerCase() === typeLower,
       );
@@ -234,12 +289,66 @@ export async function getInventoryMovementsAction(
       );
     }
 
+    if (filters.warehouse) {
+      const warehouseLower = filters.warehouse.toLowerCase();
+      normalized = normalized.filter(
+        (movement) => movement.bodegaNombre?.toLowerCase() === warehouseLower,
+      );
+    }
+
+    if (filters.supplier) {
+      const supplierLower = filters.supplier.toLowerCase();
+      normalized = normalized.filter(
+        (movement) => movement.proveedorNombre?.toLowerCase() === supplierLower,
+      );
+    }
+
     if (filters.user) {
       const userLower = filters.user.toLowerCase();
       normalized = normalized.filter((movement) =>
         (movement.createdBy ?? "").toLowerCase().includes(userLower),
       );
     }
+
+    if (filters.cliente) {
+      const clienteLower = filters.cliente.toLowerCase();
+      normalized = normalized.filter((movement) =>
+        (movement.clienteNombre ?? "").toLowerCase().includes(clienteLower),
+      );
+    }
+
+    if (filters.imei) {
+      const imeiLower = filters.imei.toLowerCase();
+      normalized = normalized.filter((movement) =>
+        movement.imeis.some((imei) => imei.toLowerCase().includes(imeiLower)),
+      );
+    }
+
+    if (filters.comentario) {
+      const comentarioLower = filters.comentario.toLowerCase();
+      normalized = normalized.filter((movement) =>
+        (movement.comentario ?? "").toLowerCase().includes(comentarioLower),
+      );
+    }
+
+    if (filters.estado) {
+      const estadoBool = filters.estado === "true";
+      normalized = normalized.filter(
+        (movement) => movement.estado === estadoBool,
+      );
+    }
+
+    normalized = applyNumericFilter(
+      normalized,
+      filters.consecutive,
+      (movement) => movement.consecutivo,
+    );
+
+    normalized = applyNumericFilter(
+      normalized,
+      filters.ventaConsecutivo,
+      (movement) => movement.ventaConsecutivo ?? 0,
+    );
 
     normalized = applyNumericFilter(
       normalized,
@@ -252,6 +361,55 @@ export async function getInventoryMovementsAction(
       filters.unitCost,
       (movement) => movement.unitCost,
     );
+
+    normalized = applyNumericFilter(
+      normalized,
+      filters.pvp,
+      (movement) => movement.pvp ?? 0,
+    );
+
+    const parsedDateRange = parseDateRangeFilter(filters.dateRange);
+    const parsedUpdateDateRange = parseDateRangeFilter(filters.updateDateRange);
+    if (parsedDateRange) {
+      normalized = normalized.filter((movement) => {
+        const createdAt = new Date(movement.createdAt);
+        if (Number.isNaN(createdAt.getTime())) {
+          return false;
+        }
+
+        if (parsedDateRange.from && createdAt < parsedDateRange.from) {
+          return false;
+        }
+
+        if (parsedDateRange.to && createdAt > parsedDateRange.to) {
+          return false;
+        }
+
+        return true;
+      });
+    }
+
+    if (parsedUpdateDateRange) {
+      normalized = normalized.filter((movement) => {
+        const updatedAt = new Date(movement.updatedAt);
+        if (Number.isNaN(updatedAt.getTime())) {
+          return false;
+        }
+
+        if (
+          parsedUpdateDateRange.from &&
+          updatedAt < parsedUpdateDateRange.from
+        ) {
+          return false;
+        }
+
+        if (parsedUpdateDateRange.to && updatedAt > parsedUpdateDateRange.to) {
+          return false;
+        }
+
+        return true;
+      });
+    }
 
     const total = normalized.length;
     const paginated = normalized.slice(offset, offset + pageSize);

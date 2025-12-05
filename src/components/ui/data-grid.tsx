@@ -54,6 +54,7 @@ interface DataGridProps<TData> {
   getRowId?: (row: TData) => string;
   showIndexColumn?: boolean;
   getIndexValue?: (row: TData, index: number) => number | string;
+  enableContextMenu?: boolean; // Nueva prop para controlar el menú contextual
 }
 
 export function DataGrid<TData>({
@@ -68,6 +69,7 @@ export function DataGrid<TData>({
   getRowId,
   showIndexColumn = true,
   getIndexValue,
+  enableContextMenu = true, // Por defecto activo para no romper otros componentes
 }: DataGridProps<TData>) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
@@ -112,6 +114,8 @@ export function DataGrid<TData>({
   });
 
   const handleContextMenu = (e: React.MouseEvent, rowId: string) => {
+    if (!enableContextMenu) return; // Si está deshabilitado, no hacemos nada (deja pasar el nativo)
+
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, rowId });
     setSelectedRowId(rowId);
@@ -173,6 +177,8 @@ export function DataGrid<TData>({
             className="relative flex flex-col h-full"
             role="application"
             onContextMenu={(e) => {
+              if (!enableContextMenu) return; // Deja pasar el evento nativo
+
               if (!(e.target as HTMLElement).closest("tr")) {
                 e.preventDefault();
               }
@@ -343,7 +349,7 @@ export function DataGrid<TData>({
         </CardContent>
       </Card>
 
-      {contextMenu && (
+      {enableContextMenu && contextMenu && (
         <>
           <button
             type="button"

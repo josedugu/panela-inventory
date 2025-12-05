@@ -450,6 +450,8 @@ export interface InventoryMovementFilterOptions {
   products: string[];
   operations: Array<"ingreso" | "salida">;
   users: string[];
+  warehouses: string[];
+  suppliers: string[];
 }
 
 export async function getInventoryMovementFilterOptions(): Promise<InventoryMovementFilterOptions> {
@@ -489,6 +491,16 @@ export async function getInventoryMovementFilterOptions(): Promise<InventoryMove
           email: true,
         },
       },
+      bodega: {
+        select: {
+          nombre: true,
+        },
+      },
+      proveedor: {
+        select: {
+          nombre: true,
+        },
+      },
     },
   });
 
@@ -496,6 +508,8 @@ export async function getInventoryMovementFilterOptions(): Promise<InventoryMove
   const products = new Set<string>();
   const operations = new Set<"ingreso" | "salida">();
   const users = new Set<string>();
+  const warehouses = new Set<string>();
+  const suppliers = new Set<string>();
 
   for (const movement of movements) {
     if (movement.tipoMovimiento?.nombre) {
@@ -528,6 +542,14 @@ export async function getInventoryMovementFilterOptions(): Promise<InventoryMove
     if (userLabel) {
       users.add(userLabel);
     }
+
+    if (movement.bodega?.nombre) {
+      warehouses.add(movement.bodega.nombre);
+    }
+
+    if (movement.proveedor?.nombre) {
+      suppliers.add(movement.proveedor.nombre);
+    }
   }
 
   if (operations.size === 0) {
@@ -546,5 +568,7 @@ export async function getInventoryMovementFilterOptions(): Promise<InventoryMove
     products: toSorted(products),
     operations: Array.from(operations),
     users: toSorted(users),
+    warehouses: toSorted(warehouses),
+    suppliers: toSorted(suppliers),
   };
 }
