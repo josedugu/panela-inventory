@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { InputSearch } from "@/components/ui/input-search";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { EntityTableLayoutProps } from "../types";
 
@@ -47,9 +48,22 @@ export function EntityTableLayout<TData>({
   filterTriggerClassName,
   filtersChipsWrapperClassName,
 }: EntityTableLayoutProps<TData>) {
-  const activeFilters = Object.entries(filterState).filter(
-    ([, value]) => value,
+  const hasFilters = Boolean(
+    filters &&
+      filterState &&
+      onFilterStateChange &&
+      pendingFilterState &&
+      onPendingFilterStateChange &&
+      onApplyFilters &&
+      onResetPendingFilters &&
+      onClearFilters &&
+      isFilterDialogOpen !== undefined &&
+      setFilterDialogOpen,
   );
+
+  const activeFilters = hasFilters
+    ? Object.entries(filterState ?? {}).filter(([, value]) => value)
+    : [];
   const activeFiltersCount = activeFilters.length;
 
   const searchPlaceholder = config.searchPlaceholder ?? "Buscar...";
@@ -59,11 +73,26 @@ export function EntityTableLayout<TData>({
     "Selecciona uno o varios filtros y aplica para actualizar la tabla.";
 
   const handleOpenFilters = () => {
-    onPendingFilterStateChange({ ...filterState });
-    setFilterDialogOpen(true);
+    if (
+      hasFilters &&
+      onPendingFilterStateChange &&
+      filterState &&
+      setFilterDialogOpen
+    ) {
+      onPendingFilterStateChange({ ...filterState });
+      setFilterDialogOpen(true);
+    }
   };
 
   const handleRemoveFilter = (key: string) => {
+    if (
+      !hasFilters ||
+      !onFilterStateChange ||
+      !filterState ||
+      !onPendingFilterStateChange ||
+      !pendingFilterState
+    )
+      return;
     const updated = { ...filterState };
     delete updated[key];
     onFilterStateChange(updated);
@@ -73,10 +102,19 @@ export function EntityTableLayout<TData>({
   };
 
   const handleClearFilters = () => {
-    onClearFilters();
+    if (hasFilters && onClearFilters) {
+      onClearFilters();
+    }
   };
 
   const handleDialogChange = (open: boolean) => {
+    if (
+      !hasFilters ||
+      !setFilterDialogOpen ||
+      !onPendingFilterStateChange ||
+      !filterState
+    )
+      return;
     setFilterDialogOpen(open);
     if (open) {
       onPendingFilterStateChange({ ...filterState });
@@ -144,28 +182,30 @@ export function EntityTableLayout<TData>({
           />
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleOpenFilters}
-          className={cn(
-            "w-full sm:w-auto justify-between sm:justify-start gap-2",
-            filterTriggerClassName,
-          )}
-        >
-          <span className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filtros
-          </span>
-          {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="ml-auto">
-              {activeFiltersCount}
-            </Badge>
-          )}
-        </Button>
+        {hasFilters && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleOpenFilters}
+            className={cn(
+              "w-full sm:w-auto justify-between sm:justify-start gap-2",
+              filterTriggerClassName,
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filtros
+            </span>
+            {activeFiltersCount > 0 && (
+              <Badge variant="secondary" className="ml-auto">
+                {activeFiltersCount}
+              </Badge>
+            )}
+          </Button>
+        )}
       </div>
 
-      {activeFiltersCount > 0 && (
+      {hasFilters && activeFiltersCount > 0 && (
         <div
           className={cn(
             "flex flex-wrap items-center gap-2",
@@ -179,7 +219,7 @@ export function EntityTableLayout<TData>({
               className="flex items-center gap-2"
             >
               <span>
-                {filters.find((filter) => filter.key === key)?.label ?? key}:{" "}
+                {filters?.find((filter) => filter.key === key)?.label ?? key}:{" "}
                 {value}
               </span>
               <button
@@ -198,90 +238,106 @@ export function EntityTableLayout<TData>({
         </div>
       )}
 
-      <Dialog open={isFilterDialogOpen} onOpenChange={handleDialogChange}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto px-4 py-5 sm:px-8 sm:py-6">
-          <DialogHeader>
-            <DialogTitle>{filterDialogTitle}</DialogTitle>
-            <DialogDescription>{filterDialogDescription}</DialogDescription>
-          </DialogHeader>
+      {hasFilters && (
+        <Dialog
+          open={isFilterDialogOpen ?? false}
+          onOpenChange={handleDialogChange}
+        >
+          <DialogContent className="max-h-[90vh] overflow-y-auto px-4 py-5 sm:px-8 sm:py-6">
+            <DialogHeader>
+              <DialogTitle>{filterDialogTitle}</DialogTitle>
+              <DialogDescription>{filterDialogDescription}</DialogDescription>
+            </DialogHeader>
 
-          <div className="flex flex-col gap-4">
-            {filters.map((filter) => {
-              if (filter.type === "custom" && filter.render) {
+            <div className="flex flex-col gap-4">
+              {filters?.map((filter) => {
+                if (filter.type === "custom" && filter.render) {
+                  return (
+                    <div key={filter.key} className="space-y-2">
+                      {filter.render({
+                        value: pendingFilterState?.[filter.key],
+                        onChange: (value) =>
+                          onPendingFilterStateChange?.({
+                            ...pendingFilterState,
+                            [filter.key]: value,
+                          }),
+                      })}
+                    </div>
+                  );
+                }
+
+                const options = filterOptions?.[filter.key] ?? [];
+                const currentValue = pendingFilterState?.[filter.key];
+
+                if (isLoadingFilterOptions && options.length === 0) {
+                  return (
+                    <div key={filter.key} className="space-y-2">
+                      <span className="text-sm font-medium text-text-secondary">
+                        {filter.label}
+                      </span>
+                      <Skeleton className="h-11 w-full" />
+                    </div>
+                  );
+                }
+
                 return (
-                  <div key={filter.key} className="space-y-2">
-                    {filter.render({
-                      value: pendingFilterState[filter.key],
-                      onChange: (value) =>
-                        onPendingFilterStateChange({
-                          ...pendingFilterState,
-                          [filter.key]: value,
-                        }),
-                    })}
-                  </div>
+                  <InputSearch
+                    key={filter.key}
+                    label={filter.label}
+                    options={options}
+                    value={
+                      currentValue
+                        ? {
+                            label: currentValue,
+                            value: currentValue,
+                          }
+                        : undefined
+                    }
+                    onChange={(option) =>
+                      onPendingFilterStateChange?.({
+                        ...pendingFilterState,
+                        [filter.key]: option?.value,
+                      })
+                    }
+                    maxOptions={filter.maxOptions}
+                    loading={isLoadingFilterOptions && options.length === 0}
+                    placeholder={`Selecciona o escribe ${filter.label.toLowerCase()}`}
+                  />
                 );
-              }
-
-              const options = filterOptions[filter.key] ?? [];
-              const currentValue = pendingFilterState[filter.key];
-
-              return (
-                <InputSearch
-                  key={filter.key}
-                  label={filter.label}
-                  options={options}
-                  value={
-                    currentValue
-                      ? {
-                          label: currentValue,
-                          value: currentValue,
-                        }
-                      : undefined
-                  }
-                  onChange={(option) =>
-                    onPendingFilterStateChange({
-                      ...pendingFilterState,
-                      [filter.key]: option?.value,
-                    })
-                  }
-                  maxOptions={filter.maxOptions}
-                  loading={isLoadingFilterOptions && options.length === 0}
-                  placeholder={`Selecciona o escribe ${filter.label.toLowerCase()}`}
-                />
-              );
-            })}
-          </div>
-
-          <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onResetPendingFilters}
-              className="w-full sm:w-auto sm:mr-auto"
-            >
-              Limpiar selección
-            </Button>
-            <div className="flex w-full flex-col-reverse sm:flex-row sm:w-auto gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setFilterDialogOpen(false)}
-                className="w-full sm:w-auto"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                onClick={onApplyFilters}
-                disabled={isLoadingFilterOptions}
-                className="w-full sm:w-auto"
-              >
-                Aplicar filtros
-              </Button>
+              })}
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+            <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onResetPendingFilters}
+                className="w-full sm:w-auto sm:mr-auto"
+              >
+                Limpiar selección
+              </Button>
+              <div className="flex w-full flex-col-reverse sm:flex-row sm:w-auto gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setFilterDialogOpen?.(false)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={onApplyFilters}
+                  disabled={isLoadingFilterOptions}
+                  className="w-full sm:w-auto"
+                >
+                  Aplicar filtros
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <DataGrid
         data={data}
