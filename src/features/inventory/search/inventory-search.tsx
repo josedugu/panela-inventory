@@ -32,7 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { InventoryProduct } from "@/features/inventory/functions/types";
-import type { ProductLocation } from "@/features/inventory/management/actions/get-product-locations";
+import type { ProductLocationSummary } from "@/features/inventory/management/actions/get-product-locations";
 import { getProductLocationsAction } from "@/features/inventory/management/actions/get-product-locations";
 import { getInventoryColumns } from "@/features/inventory/management/columns";
 import { searchInventoryProductsAction } from "./actions/search-inventory-products";
@@ -59,7 +59,7 @@ export function InventorySearch() {
     { imei: string; productName: string } | undefined
   >(undefined);
 
-  const [locations, setLocations] = useState<ProductLocation[]>([]);
+  const [locations, setLocations] = useState<ProductLocationSummary[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
   const {

@@ -47,7 +47,7 @@ import {
 import { getInventoryFilterOptionsAction } from "./actions/get-filter-options";
 import {
   getProductLocationsAction,
-  type ProductLocation,
+  type ProductLocationSummary,
 } from "./actions/get-product-locations";
 import {
   type GetProductsSuccess,
@@ -140,7 +140,7 @@ export function Inventory() {
   const [isLocationsModalOpen, setIsLocationsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] =
     useState<InventoryProduct | null>(null);
-  const [locations, setLocations] = useState<ProductLocation[]>([]);
+  const [locations, setLocations] = useState<ProductLocationSummary[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
