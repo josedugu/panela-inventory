@@ -445,6 +445,212 @@ export async function listInventoryMovements(): Promise<
   });
 }
 
+// ============================================
+// PAGINATED & FILTERED QUERY (100% DB)
+// ============================================
+
+export interface ListMovementsPaginatedFilters {
+  search?: string;
+  movementType?: string;
+  warehouse?: string;
+  supplier?: string;
+  user?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+export interface ListMovementsPaginatedParams {
+  page: number;
+  pageSize: number;
+  filters?: ListMovementsPaginatedFilters;
+}
+
+export interface ListMovementsPaginatedResult {
+  data: InventoryMovementWithRelations[];
+  total: number;
+}
+
+export async function listInventoryMovementsPaginated(
+  params: ListMovementsPaginatedParams,
+): Promise<ListMovementsPaginatedResult> {
+  const { page, pageSize, filters } = params;
+  const skip = (page - 1) * pageSize;
+
+  // Build dynamic where clause
+  const where: Prisma.MovimientoInventarioWhereInput = {
+    estado: true,
+  };
+
+  // Filter by movement type name
+  if (filters?.movementType) {
+    where.tipoMovimiento = {
+      nombre: {
+        equals: filters.movementType,
+        mode: "insensitive",
+      },
+    };
+  }
+
+  // Filter by warehouse name
+  if (filters?.warehouse) {
+    where.bodega = {
+      nombre: {
+        equals: filters.warehouse,
+        mode: "insensitive",
+      },
+    };
+  }
+
+  // Filter by supplier name
+  if (filters?.supplier) {
+    where.proveedor = {
+      nombre: {
+        equals: filters.supplier,
+        mode: "insensitive",
+      },
+    };
+  }
+
+  // Filter by user (creator) name or email
+  if (filters?.user) {
+    where.creadoPor = {
+      OR: [
+        { nombre: { contains: filters.user, mode: "insensitive" } },
+        { email: { contains: filters.user, mode: "insensitive" } },
+      ],
+    };
+  }
+
+  // Filter by date range
+  if (filters?.dateFrom || filters?.dateTo) {
+    where.createdAt = {};
+    if (filters.dateFrom) {
+      where.createdAt.gte = filters.dateFrom;
+    }
+    if (filters.dateTo) {
+      where.createdAt.lte = filters.dateTo;
+    }
+  }
+
+  // Filter by search term (consecutivo, IMEI, or product details)
+  if (filters?.search) {
+    const searchTerm = filters.search.trim();
+    const searchNumber = Number.parseInt(searchTerm, 10);
+
+    where.OR = [
+      // Search by consecutivo if it's a number
+      ...(Number.isFinite(searchNumber) ? [{ consecutivo: searchNumber }] : []),
+      // Search by IMEI in related products
+      {
+        productos: {
+          some: {
+            imei: {
+              contains: searchTerm,
+              mode: "insensitive" as const,
+            },
+          },
+        },
+      },
+      // Search by product description/marca/modelo
+      {
+        productos: {
+          some: {
+            producto: {
+              OR: [
+                { descripcion: { contains: searchTerm, mode: "insensitive" } },
+                {
+                  marca: {
+                    nombre: { contains: searchTerm, mode: "insensitive" },
+                  },
+                },
+                {
+                  modelo: {
+                    nombre: { contains: searchTerm, mode: "insensitive" },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+      // Search by movement type name
+      {
+        tipoMovimiento: {
+          nombre: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        },
+      },
+    ];
+  }
+
+  // Execute count and data queries in parallel
+  const [total, data] = await Promise.all([
+    prisma.movimientoInventario.count({ where }),
+    prisma.movimientoInventario.findMany({
+      where,
+      include: {
+        tipoMovimiento: true,
+        bodega: {
+          select: {
+            id: true,
+            nombre: true,
+            codigo: true,
+          },
+        },
+        proveedor: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
+        productos: {
+          include: {
+            producto: {
+              include: {
+                marca: {
+                  select: {
+                    id: true,
+                    nombre: true,
+                    descripcion: true,
+                    createdAt: true,
+                    updatedAt: true,
+                  },
+                },
+                modelo: true,
+                tipoProducto: true,
+              },
+            },
+            ventaProducto: {
+              include: {
+                venta: {
+                  include: {
+                    cliente: {
+                      select: {
+                        id: true,
+                        nombre: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        creadoPor: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: pageSize,
+    }),
+  ]);
+
+  return { data, total };
+}
+
 export interface InventoryMovementFilterOptions {
   movementTypes: string[];
   products: string[];

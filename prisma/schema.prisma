@@ -278,6 +278,13 @@ model MovimientoInventario {
   updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
   productos        ProductoDetalle[]
 
+  // Indexes for optimized filtering
+  @@index([tipoMovimientoId])
+  @@index([bodegaId])
+  @@index([proveedorId])
+  @@index([creadoPorId])
+  @@index([createdAt])
+  @@index([estado])
   @@map("movimiento_inventario")
   @@schema("dev")
 }
