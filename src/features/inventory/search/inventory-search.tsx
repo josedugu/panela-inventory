@@ -1,9 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { PackageSearch, XCircle } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  History,
+  MapPin,
+  PackageSearch,
+  XCircle,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataGrid } from "@/components/ui/data-grid";
@@ -28,6 +36,8 @@ import type { ProductLocation } from "@/features/inventory/management/actions/ge
 import { getProductLocationsAction } from "@/features/inventory/management/actions/get-product-locations";
 import { getInventoryColumns } from "@/features/inventory/management/columns";
 import { searchInventoryProductsAction } from "./actions/search-inventory-products";
+import { LocationList } from "./location-list";
+import { ProductTimelineModal } from "./product-timeline-modal";
 
 export function InventorySearch() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,7 +46,19 @@ export function InventorySearch() {
   const [pageSize, setPageSize] = useState(10);
   const [selectedProduct, setSelectedProduct] =
     useState<InventoryProduct | null>(null);
+
+  // Modales
   const [isLocationsModalOpen, setIsLocationsModalOpen] = useState(false);
+  const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
+
+  // Estado para timeline
+  const [timelineProductDetailId, setTimelineProductDetailId] = useState<
+    string | null
+  >(null);
+  const [timelineInitialData, setTimelineInitialData] = useState<
+    { imei: string; productName: string } | undefined
+  >(undefined);
+
   const [locations, setLocations] = useState<ProductLocation[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
 
@@ -65,6 +87,10 @@ export function InventorySearch() {
 
   const freeSearchResults = searchResult?.data ?? [];
   const totalResults = searchResult?.total ?? 0;
+
+  // Detectar si hubo un match exacto por IMEI
+  const matchedImeiInfo = searchResult?.matchedImeiInfo;
+  const isImeiMatch = searchResult?.matchType === "imei" && !!matchedImeiInfo;
 
   useEffect(() => {
     if (freeSearchError) {
@@ -101,12 +127,25 @@ export function InventorySearch() {
     [],
   );
 
+  // Función para ver el timeline desde la tabla principal (botón de acción)
+  const handleViewTimeline = useCallback((productRow: InventoryProduct) => {
+    if (productRow.foundByImei && productRow.matchedProductDetailId) {
+      setTimelineProductDetailId(productRow.matchedProductDetailId);
+      setTimelineInitialData({
+        imei: productRow.matchedImei || "Desconocido",
+        productName: productRow.name,
+      });
+      setIsTimelineModalOpen(true);
+    }
+  }, []);
+
   const columns = useMemo(
     () =>
       getInventoryColumns({
         onViewLocations: handleViewLocations,
+        onViewTimeline: handleViewTimeline,
       }),
-    [handleViewLocations],
+    [handleViewLocations, handleViewTimeline],
   );
 
   const tableData = useMemo(
@@ -144,6 +183,32 @@ export function InventorySearch() {
     setPage(1); // Resetear a la primera página al cambiar el tamaño
   }, []);
 
+  const handleOpenTimeline = () => {
+    if (matchedImeiInfo) {
+      setTimelineProductDetailId(matchedImeiInfo.productDetailId);
+      setTimelineInitialData({
+        imei: matchedImeiInfo.imei,
+        productName: matchedImeiInfo.productName,
+      });
+      setIsTimelineModalOpen(true);
+    }
+  };
+
+  // Abrir timeline desde el modal de ubicaciones
+  const handleOpenTimelineFromItem = (
+    productDetailId: string,
+    imei: string,
+  ) => {
+    // Cerrar modal de ubicaciones temporalmente si se desea, o mantenerlo abajo
+    // Preferiblemente abrir el timeline encima
+    setTimelineProductDetailId(productDetailId);
+    setTimelineInitialData({
+      imei: imei || "Sin IMEI",
+      productName: selectedProduct?.name || "Producto",
+    });
+    setIsTimelineModalOpen(true);
+  };
+
   const isTableLoading = isFreeSearchLoading || isFreeSearchFetching;
 
   const shouldShowTable = tableData.length > 0 || isTableLoading;
@@ -160,6 +225,46 @@ export function InventorySearch() {
           vistazo.
         </p>
       </div>
+
+      {/* IMEI Match Card - aparece SOLO si hay match exacto de IMEI */}
+      {isImeiMatch && matchedImeiInfo && (
+        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20 p-4 lg:p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-900/50">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+                    ¡Producto encontrado por IMEI!
+                  </h3>
+                  <p className="text-emerald-700 dark:text-emerald-300 mt-1">
+                    {matchedImeiInfo.productName}{" "}
+                    <span className="mx-1">•</span>
+                    <span className="font-mono bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded text-sm">
+                      {matchedImeiInfo.imei}
+                    </span>
+                  </p>
+                  <div className="flex items-center gap-2 mt-3 text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                    <MapPin className="h-4 w-4" />
+                    Ubicación actual:{" "}
+                    {matchedImeiInfo.bodegaNombre || "Sin asignar"}
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleOpenTimeline}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shrink-0 self-start sm:self-center"
+              >
+                Ver Historial y Movimientos
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -208,6 +313,7 @@ export function InventorySearch() {
               isLoading={isTableLoading}
               showIndexColumn={false}
               getRowId={(row) => row.id}
+              enableContextMenu={false} // Deshabilitar menú contextual nativo de DataGrid
               pagination={
                 submittedTerm
                   ? {
@@ -229,6 +335,7 @@ export function InventorySearch() {
         </CardContent>
       </Card>
 
+      {/* Modal de Ubicaciones (Mejorado) */}
       <Dialog
         open={isLocationsModalOpen}
         onOpenChange={(isOpen) => {
@@ -239,53 +346,35 @@ export function InventorySearch() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Ubicaciones del Producto</DialogTitle>
             <DialogDescription>
               {selectedProduct
-                ? `Distribución del producto "${selectedProduct.name}" por bodega`
+                ? `Distribución del producto "${selectedProduct.name}" por bodega e items individuales`
                 : "Distribución del producto por bodega"}
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4">
-            {isLoadingLocations ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-text-secondary">
-                  Cargando ubicaciones...
-                </div>
-              </div>
-            ) : locations.length === 0 ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-text-secondary">
-                  No se encontraron ubicaciones para este producto
-                </div>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Bodega</TableHead>
-                    <TableHead className="text-center">Cantidad</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {locations.map((location) => (
-                    <TableRow key={location.bodega}>
-                      <TableCell className="font-medium">
-                        {location.bodega}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {location.cantidad}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+          <div className="mt-4 max-h-[60vh] overflow-y-auto pr-2">
+            <LocationList
+              locations={locations}
+              productId={selectedProduct?.id || ""}
+              onViewHistory={(item) =>
+                handleOpenTimelineFromItem(item.id, item.imei || "")
+              }
+              isLoading={isLoadingLocations}
+            />
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Timeline */}
+      <ProductTimelineModal
+        isOpen={isTimelineModalOpen}
+        onClose={() => setIsTimelineModalOpen(false)}
+        productDetailId={timelineProductDetailId}
+        initialData={timelineInitialData}
+      />
     </div>
   );
 }
