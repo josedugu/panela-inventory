@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
 import type { ColumnSizingState } from "@tanstack/react-table";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Debounce hook para limitar operaciones costosas
@@ -31,7 +31,7 @@ function useDebounce<T>(value: T, delay: number): T {
  */
 export function useTableColumnResize(
   tableId: string,
-  enableResizing: boolean = true
+  enableResizing: boolean = true,
 ) {
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
 
@@ -52,7 +52,7 @@ export function useTableColumnResize(
     (
       newSizing:
         | ColumnSizingState
-        | ((prev: ColumnSizingState) => ColumnSizingState)
+        | ((prev: ColumnSizingState) => ColumnSizingState),
     ) => {
       setColumnSizing((prev) => {
         const nextState =
@@ -69,7 +69,7 @@ export function useTableColumnResize(
         return nextState;
       });
     },
-    []
+    [],
   );
 
   // Load from localStorage on mount
@@ -77,7 +77,7 @@ export function useTableColumnResize(
     if (enableResizing && !initialLoadComplete.current) {
       try {
         const savedSizing = localStorage.getItem(
-          `table-column-sizing-${tableId}`
+          `table-column-sizing-${tableId}`,
         );
         if (savedSizing) {
           const parsed = JSON.parse(savedSizing);
@@ -85,6 +85,7 @@ export function useTableColumnResize(
           prevSizingRef.current = parsed;
         }
       } catch (error) {
+        // biome-ignore lint/suspicious/noConsole: Expected error logging
         console.warn("Failed to load column sizing from localStorage:", error);
       } finally {
         initialLoadComplete.current = true;
@@ -102,9 +103,10 @@ export function useTableColumnResize(
       try {
         localStorage.setItem(
           `table-column-sizing-${tableId}`,
-          JSON.stringify(debouncedColumnSizing)
+          JSON.stringify(debouncedColumnSizing),
         );
       } catch (error) {
+        // biome-ignore lint/suspicious/noConsole: Expected error logging
         console.warn("Failed to save column sizing to localStorage:", error);
       }
     }
@@ -120,9 +122,10 @@ export function useTableColumnResize(
       try {
         localStorage.removeItem(`table-column-sizing-${tableId}`);
       } catch (error) {
+        // biome-ignore lint/suspicious/noConsole: Expected error logging
         console.warn(
           "Failed to remove column sizing from localStorage:",
-          error
+          error,
         );
       }
     }

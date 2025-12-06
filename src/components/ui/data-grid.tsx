@@ -6,8 +6,8 @@ import {
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
   type SortingState,
+  useReactTable,
 } from "@tanstack/react-table";
 import {
   ChevronLeft,
@@ -17,7 +17,14 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState, } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTableResizer } from "@/components/ui/data-table/data-table-resizer";
@@ -81,9 +88,6 @@ export function DataGrid<TData>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const { columnSizing, setColumnSizing } = useTableColumnResize(tableId);
 
-  // Memoize columns to prevent unnecessary re-renders
-  const memoizedColumns = useMemo(() => columns, [columns]);
-
   const columnsWithIndex: ColumnDef<TData, unknown>[] = showIndexColumn
     ? [
         {
@@ -121,7 +125,12 @@ export function DataGrid<TData>({
     state: {
       columnSizing,
       sorting,
-      ...(pagination && { pagination: { pageIndex: pagination.page - 1, pageSize: pagination.pageSize } }),
+      ...(pagination && {
+        pagination: {
+          pageIndex: pagination.page - 1,
+          pageSize: pagination.pageSize,
+        },
+      }),
     },
     onColumnSizingChange: setColumnSizing,
     onSortingChange: setSorting,
@@ -264,7 +273,7 @@ export function DataGrid<TData>({
                     rows.map((row) => {
                       const rowId = getRowId
                         ? getRowId(row.original)
-                        : (row.original as { id: string }).id ?? row.id;
+                        : ((row.original as { id: string }).id ?? row.id);
                       const isSelected = rowId === selectedRowId;
 
                       return (
@@ -273,7 +282,7 @@ export function DataGrid<TData>({
                           className={cn(
                             "group border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
                             isSelected && "bg-muted",
-                            isLoading && "opacity-50 pointer-events-none" // Feedback visual para refetching
+                            isLoading && "opacity-50 pointer-events-none", // Feedback visual para refetching
                           )}
                           data-state={row.getIsSelected() && "selected"}
                           onClick={() => handleRowClick(rowId)}
@@ -298,7 +307,8 @@ export function DataGrid<TData>({
                         </tr>
                       );
                     })
-                  )}</tbody>
+                  )}
+                </tbody>
               </table>
             </div>
 
