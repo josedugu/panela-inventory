@@ -2,10 +2,12 @@
 
 import {
   type ColumnDef,
-  type ColumnSizingState,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
   useReactTable,
+  type SortingState,
 } from "@tanstack/react-table";
 import {
   ChevronLeft,
@@ -15,9 +17,10 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState, } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DataTableResizer } from "@/components/ui/data-table/data-table-resizer";
 import {
   Select,
   SelectContent,
@@ -25,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import { useTableColumnResize } from "@/hooks/use-table-column-resize";
 import { cn } from "@/lib/utils";
 
 interface ContextMenu {
@@ -54,13 +57,14 @@ interface DataGridProps<TData> {
   getRowId?: (row: TData) => string;
   showIndexColumn?: boolean;
   getIndexValue?: (row: TData, index: number) => number | string;
-  enableContextMenu?: boolean; // Nueva prop para controlar el menú contextual
+  enableContextMenu?: boolean;
+  tableId?: string; // Para persistencia de column sizing
 }
 
 export function DataGrid<TData>({
   data,
   columns,
-  isLoading: _isLoading = false,
+  isLoading = false,
   pagination,
   onView,
   onEdit,
@@ -69,11 +73,16 @@ export function DataGrid<TData>({
   getRowId,
   showIndexColumn = true,
   getIndexValue,
-  enableContextMenu = true, // Por defecto activo para no romper otros componentes
+  enableContextMenu = false,
+  tableId = "default-data-grid",
 }: DataGridProps<TData>) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
-  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const { columnSizing, setColumnSizing } = useTableColumnResize(tableId);
+
+  // Memoize columns to prevent unnecessary re-renders
+  const memoizedColumns = useMemo(() => columns, [columns]);
 
   const columnsWithIndex: ColumnDef<TData, unknown>[] = showIndexColumn
     ? [
@@ -105,12 +114,17 @@ export function DataGrid<TData>({
     data,
     columns: columnsWithIndex,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     manualPagination: !!pagination,
     columnResizeMode: "onChange",
     state: {
       columnSizing,
+      sorting,
+      ...(pagination && { pagination: { pageIndex: pagination.page - 1, pageSize: pagination.pageSize } }),
     },
     onColumnSizingChange: setColumnSizing,
+    onSortingChange: setSorting,
   });
 
   const handleContextMenu = (e: React.MouseEvent, rowId: string) => {
@@ -171,10 +185,10 @@ export function DataGrid<TData>({
 
   return (
     <>
-      <Card className="flex h-full flex-col overflow-hidden">
-        <CardContent className="p-0 h-full">
+      <Card className="flex flex-col overflow-hidden flex-1 min-h-0">
+        <CardContent className="p-0 flex-1 min-h-0">
           <div
-            className="relative flex flex-col h-full"
+            className="relative flex flex-col h-full flex-1 min-h-0"
             role="application"
             onContextMenu={(e) => {
               if (!enableContextMenu) return; // Deja pasar el evento nativo
@@ -184,8 +198,8 @@ export function DataGrid<TData>({
               }
             }}
           >
-            <div className="overflow-auto max-h-[calc(100vh-260px)] min-h-[520px] h-full">
-              <table className="w-full h-full caption-bottom text-sm border-collapse">
+            <div className="overflow-auto flex-1 min-h-0">
+              <table className="w-full caption-bottom text-sm border-collapse">
                 <thead className="sticky top-0 bg-surface-1 dark:bg-surface-1 z-10 shadow-sm">
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
@@ -193,7 +207,7 @@ export function DataGrid<TData>({
                         <th
                           key={header.id}
                           className={cn(
-                            "relative h-10 px-4 text-center align-middle font-medium whitespace-nowrap border-b border-border select-none",
+                            "group/th relative h-10 px-4 text-center align-middle font-medium whitespace-nowrap border-b border-border select-none",
                             headerIndex !== headerGroup.headers.length - 1 &&
                               "border-r border-border/40",
                           )}
@@ -209,18 +223,7 @@ export function DataGrid<TData>({
                                 header.getContext(),
                               )}
                           {header.column.getCanResize() && (
-                            <button
-                              type="button"
-                              aria-label="Resize column"
-                              onMouseDown={header.getResizeHandler()}
-                              onTouchStart={header.getResizeHandler()}
-                              className={cn(
-                                "absolute top-0 right-0 h-full w-1 cursor-col-resize select-none bg-border/0 transition-opacity border-0 p-0",
-                                header.column.getIsResizing()
-                                  ? "bg-border"
-                                  : "hover:bg-border/80",
-                              )}
-                            />
+                            <DataTableResizer header={header} table={table} />
                           )}
                         </th>
                       ))}
@@ -228,50 +231,74 @@ export function DataGrid<TData>({
                   ))}
                 </thead>
                 <tbody>
-                  {rows.map((row) => {
-                    const rowId = getRowId
-                      ? getRowId(row.original)
-                      : (row.original as { id: string }).id;
-                    const isSelected = selectedRowId === rowId;
-
-                    return (
+                  {isLoading && isEmpty ? (
+                    Array.from({ length: 10 }).map((_, rowIndex) => (
                       <tr
-                        key={row.id}
-                        className={cn(
-                          "border-b transition-colors cursor-pointer",
-                          "hover:bg-surface-2/50",
-                          isSelected && "bg-surface-2",
-                        )}
-                        onContextMenu={(e) => handleContextMenu(e, rowId)}
-                        onClick={() => handleRowClick(rowId)}
+                        key={`skeleton-row-${rowIndex}`}
+                        className="border-b border-border/50 transition-colors last:border-0"
                       >
-                        {row.getVisibleCells().map((cell, cellIndex) => (
+                        {columnsWithIndex.map((column, colIndex) => (
                           <td
-                            key={cell.id}
-                            className={cn(
-                              "p-4 align-middle whitespace-nowrap text-center",
-                              cellIndex !== row.getVisibleCells().length - 1 &&
-                                "border-r border-border/40",
-                            )}
+                            key={`skeleton-cell-${rowIndex}-${colIndex}`}
+                            className="p-4 align-middle"
                           >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            )}
+                            <div className="flex items-center">
+                              <div className="h-4 w-full animate-pulse rounded bg-muted/50" />
+                            </div>
                           </td>
                         ))}
                       </tr>
-                    );
-                  })}
-                  {isEmpty && (
+                    ))
+                  ) : isEmpty ? (
                     <tr>
                       <td
-                        colSpan={table.getAllColumns().length}
-                        className="h-[320px]"
-                      />
+                        colSpan={columnsWithIndex.length}
+                        className="h-24 text-center align-middle"
+                      >
+                        <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                          <p>No hay datos disponibles</p>
+                        </div>
+                      </td>
                     </tr>
-                  )}
-                </tbody>
+                  ) : (
+                    rows.map((row) => {
+                      const rowId = getRowId
+                        ? getRowId(row.original)
+                        : (row.original as { id: string }).id ?? row.id;
+                      const isSelected = rowId === selectedRowId;
+
+                      return (
+                        <tr
+                          key={row.id}
+                          className={cn(
+                            "group border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+                            isSelected && "bg-muted",
+                            isLoading && "opacity-50 pointer-events-none" // Feedback visual para refetching
+                          )}
+                          data-state={row.getIsSelected() && "selected"}
+                          onClick={() => handleRowClick(rowId)}
+                          onContextMenu={(e) => handleContextMenu(e, rowId)}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <td
+                              key={cell.id}
+                              style={{
+                                width: cell.column.getSize(),
+                                minWidth: cell.column.getSize(),
+                                maxWidth: cell.column.getSize(),
+                              }}
+                              className="p-4 align-middle h-14"
+                            >
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })
+                  )}</tbody>
               </table>
             </div>
 

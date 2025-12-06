@@ -124,7 +124,10 @@ export function getInventoryColumns({
 
         return <TableActionsCell row={row.original} actions={actions} />;
       },
-      size: 100,
+      size: 80,
+      minSize: 80,
+      maxSize: 80,
+      enableResizing: false,
     },
   ];
 }

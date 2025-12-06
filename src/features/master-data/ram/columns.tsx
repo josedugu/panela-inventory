@@ -28,6 +28,10 @@ export function getRamColumns({
     {
       id: "actions",
       header: "Acciones",
+      size: 80,
+      minSize: 80,
+      maxSize: 80,
+      enableResizing: false,
       cell: ({ row }) => {
         const actions: TableAction<RamDTO>[] = [
           {

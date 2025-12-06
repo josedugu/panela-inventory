@@ -1,5 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Gift, Pencil, Trash2 } from "lucide-react";
+import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import type { TableAction } from "@/components/ui/table-actions-cell";
 import { TableActionsCell } from "@/components/ui/table-actions-cell";
 import type { TipoProductoDTO } from "@/data/repositories/shared.repository";
@@ -18,7 +19,9 @@ export function getTipoProductoColumns({
   return [
     {
       accessorKey: "nombre",
-      header: "Nombre",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Nombre" />
+      ),
       cell: ({ row }) => (
         <span className="font-medium text-text">{row.original.nombre}</span>
       ),
@@ -44,6 +47,10 @@ export function getTipoProductoColumns({
     {
       id: "actions",
       header: "Acciones",
+      size: 80,
+      minSize: 80,
+      maxSize: 80,
+      enableResizing: false,
       cell: ({ row }) => {
         const actions: TableAction<TipoProductoDTO>[] = [
           {
