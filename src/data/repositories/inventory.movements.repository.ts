@@ -661,120 +661,36 @@ export interface InventoryMovementFilterOptions {
 }
 
 export async function getInventoryMovementFilterOptions(): Promise<InventoryMovementFilterOptions> {
-  const movements = await prisma.movimientoInventario.findMany({
-    select: {
-      tipoMovimiento: {
-        select: {
-          nombre: true,
-          ingreso: true,
-          salida: true,
-        },
-      },
-      productos: {
-        select: {
-          producto: {
-            select: {
-              descripcion: true,
-              marca: {
-                select: {
-                  nombre: true,
-                },
-              },
-              modelo: {
-                select: {
-                  nombre: true,
-                  almacenamiento: true,
-                  color: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      creadoPor: {
-        select: {
-          nombre: true,
-          email: true,
-        },
-      },
-      bodega: {
-        select: {
-          nombre: true,
-        },
-      },
-      proveedor: {
-        select: {
-          nombre: true,
-        },
-      },
-    },
-  });
-
-  const movementTypes = new Set<string>();
-  const products = new Set<string>();
-  const operations = new Set<"ingreso" | "salida">();
-  const users = new Set<string>();
-  const warehouses = new Set<string>();
-  const suppliers = new Set<string>();
-
-  for (const movement of movements) {
-    if (movement.tipoMovimiento?.nombre) {
-      movementTypes.add(movement.tipoMovimiento.nombre);
-      if (movement.tipoMovimiento.ingreso) {
-        operations.add("ingreso");
-      } else if (movement.tipoMovimiento.salida) {
-        operations.add("salida");
-      }
-    }
-
-    const productCandidate = movement.productos[0]?.producto;
-    if (productCandidate) {
-      const label = [
-        productCandidate.marca?.nombre,
-        productCandidate.modelo?.nombre,
-        productCandidate.modelo?.almacenamiento,
-        productCandidate.modelo?.color,
-        productCandidate.descripcion,
-      ]
-        .filter(Boolean)
-        .join(" ");
-      if (label.trim().length > 0) {
-        products.add(label.trim());
-      }
-    }
-
-    const userLabel =
-      movement.creadoPor?.nombre ?? movement.creadoPor?.email ?? undefined;
-    if (userLabel) {
-      users.add(userLabel);
-    }
-
-    if (movement.bodega?.nombre) {
-      warehouses.add(movement.bodega.nombre);
-    }
-
-    if (movement.proveedor?.nombre) {
-      suppliers.add(movement.proveedor.nombre);
-    }
-  }
-
-  if (operations.size === 0) {
-    operations.add("ingreso");
-    operations.add("salida");
-  }
-
-  const toSorted = <T extends string>(set: Set<T>) =>
-    Array.from(set)
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0)
-      .sort((a, b) => a.localeCompare(b));
+  const [movementTypes, warehouses, suppliers, users] = await Promise.all([
+    // Get all movement types
+    prisma.tipoMovimientoInventario.findMany({
+      select: { nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
+    // Get all warehouses
+    prisma.bodega.findMany({
+      select: { nombre: true },
+      orderBy: { nombre: "asc" },
+      where: { estado: true }, // Optional: only show active warehouses
+    }),
+    // Get all suppliers
+    prisma.proveedor.findMany({
+      select: { nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
+    // Get all users
+    prisma.usuario.findMany({
+      select: { nombre: true, email: true },
+      orderBy: { nombre: "asc" },
+    }),
+  ]);
 
   return {
-    movementTypes: toSorted(movementTypes),
-    products: toSorted(products),
-    operations: Array.from(operations),
-    users: toSorted(users),
-    warehouses: toSorted(warehouses),
-    suppliers: toSorted(suppliers),
+    movementTypes: movementTypes.map((t) => t.nombre),
+    products: [], // Optimized: Global search handles products now
+    operations: ["ingreso", "salida"],
+    users: users.map((u) => u.nombre || u.email || "").filter(Boolean),
+    warehouses: warehouses.map((w) => w.nombre),
+    suppliers: suppliers.map((s) => s.nombre),
   };
 }

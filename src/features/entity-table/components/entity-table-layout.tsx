@@ -1,6 +1,6 @@
 "use client";
 
-import { Filter, Search, X } from "lucide-react";
+import { Check, Eraser, Filter, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataGrid } from "@/components/ui/data-grid";
@@ -299,7 +299,7 @@ export function EntityTableLayout<TData>({
                         [filter.key]: option?.value,
                       })
                     }
-                    maxOptions={filter.maxOptions}
+                    maxOptions={filter.maxOptions ?? 7}
                     loading={isLoadingFilterOptions && options.length === 0}
                     placeholder={`Selecciona o escribe ${filter.label.toLowerCase()}`}
                   />
@@ -314,23 +314,17 @@ export function EntityTableLayout<TData>({
                 onClick={onResetPendingFilters}
                 className="w-full sm:w-auto sm:mr-auto"
               >
+                <Eraser className="mr-2 h-4 w-4" />
                 Limpiar selección
               </Button>
               <div className="flex w-full flex-col-reverse sm:flex-row sm:w-auto gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setFilterDialogOpen?.(false)}
-                  className="w-full sm:w-auto"
-                >
-                  Cancelar
-                </Button>
                 <Button
                   type="button"
                   onClick={onApplyFilters}
                   disabled={isLoadingFilterOptions}
                   className="w-full sm:w-auto"
                 >
+                  <Check className="mr-2 h-4 w-4" />
                   Aplicar filtros
                 </Button>
               </div>
