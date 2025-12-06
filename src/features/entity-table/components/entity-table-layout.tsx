@@ -130,13 +130,7 @@ export function EntityTableLayout<TData>({
         )}
       >
         <div>
-          <h1
-            className={cn(
-              "flex items-center gap-2 text-2xl font-semibold transition-[color,opacity]",
-              isLoading &&
-                "animate-[entityTitlePulse_1.6s_ease-in-out_infinite]",
-            )}
-          >
+          <h1 className="flex items-center gap-2 text-2xl font-semibold">
             {config.title}
           </h1>
           {config.description ? (

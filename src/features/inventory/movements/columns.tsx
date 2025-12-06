@@ -79,6 +79,10 @@ export function getInventoryMovementColumns({
     {
       id: "actions",
       header: "Acciones",
+      size: 80,
+      minSize: 80,
+      maxSize: 80,
+      enableResizing: false,
       cell: ({ row }) => {
         const actions: TableAction<InventoryMovementDTO>[] = [
           {
