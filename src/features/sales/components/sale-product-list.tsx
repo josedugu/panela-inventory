@@ -1,12 +1,21 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { InputSearchDB } from "@/components/ui/input-search-db";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import { SelectSkeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
+import { getAccessibleWarehousesAction } from "../actions/get-accessible-warehouses";
 import { searchProductsAction } from "../actions/search-products";
 
 export interface SaleLine {
@@ -45,6 +54,28 @@ export function SaleProductList({
   setSelectedProductData,
   onAddLine,
 }: SaleProductListProps) {
+  // Estado para la bodega seleccionada
+  const [selectedBodegaId, setSelectedBodegaId] = useState<string | null>(null);
+
+  // Obtener bodegas accesibles
+  const { data: warehouses = [], isLoading: isLoadingWarehouses } = useQuery({
+    queryKey: ["accessible-warehouses"],
+    queryFn: async () => {
+      const result = await getAccessibleWarehousesAction();
+      if (result.success) {
+        return result.data;
+      }
+      return [];
+    },
+  });
+
+  // Auto-seleccionar la primera bodega si hay solo una disponible
+  useEffect(() => {
+    if (warehouses.length === 1 && !selectedBodegaId) {
+      setSelectedBodegaId(warehouses[0].id);
+    }
+  }, [warehouses, selectedBodegaId]);
+
   // Detectar si hay al menos un producto base en la lista
   const hayProductoBase = useMemo(() => {
     return lines.some((line) => {
@@ -248,13 +279,62 @@ export function SaleProductList({
     setLines(lines.filter((line) => line.id !== lineId));
   };
 
+  const handleBodegaChange = (bodegaId: string) => {
+    setSelectedBodegaId(bodegaId);
+    // Limpiar productos seleccionados cuando cambia la bodega
+    setSelectedProductData(new Map());
+    // Limpiar las líneas de productos
+    setLines(
+      lines.map((line) => ({
+        ...line,
+        productId: "",
+        productoDetalleId: undefined,
+        unitPrice: 0,
+      })),
+    );
+  };
+
   return (
     <div className="space-y-4">
+      {/* Select de Bodegas */}
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-text">Bodega</div>
+        {isLoadingWarehouses ? (
+          <SelectSkeleton />
+        ) : (
+          <Select
+            value={selectedBodegaId ?? ""}
+            onValueChange={handleBodegaChange}
+          >
+            <SelectTrigger>
+              <span className="truncate">
+                {selectedBodegaId
+                  ? (warehouses.find((w) => w.id === selectedBodegaId)
+                      ?.nombre ?? "Seleccionar bodega")
+                  : "Seleccionar bodega"}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {warehouses.map((warehouse) => (
+                <SelectItem key={warehouse.id} value={warehouse.id}>
+                  {warehouse.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-text">
           Productos seleccionados
         </span>
-        <Button type="button" variant="outline" onClick={onAddLine}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onAddLine}
+          disabled={!selectedBodegaId}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Agregar producto
         </Button>
@@ -284,7 +364,11 @@ export function SaleProductList({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 sm:items-end">
                 <div className="sm:col-span-12 md:col-span-6">
                   <InputSearchDB
-                    placeholder="Buscar por IMEI o nombre"
+                    placeholder={
+                      selectedBodegaId
+                        ? "Buscar por IMEI o nombre"
+                        : "Selecciona una bodega primero"
+                    }
                     value={
                       line.productId
                         ? {
@@ -319,7 +403,13 @@ export function SaleProductList({
                       }
                     }}
                     searchFn={async (query) => {
-                      const products = await searchProductsAction(query);
+                      if (!selectedBodegaId) {
+                        return [];
+                      }
+                      const products = await searchProductsAction(
+                        query,
+                        selectedBodegaId,
+                      );
                       products.forEach((p) => {
                         setSelectedProductData((prev) => {
                           const newMap = new Map(prev);
@@ -341,6 +431,7 @@ export function SaleProductList({
                         label: p.label,
                       }));
                     }}
+                    disabled={!selectedBodegaId}
                     queryKeyBase="products"
                     valueClassName="whitespace-normal break-words text-left"
                   />

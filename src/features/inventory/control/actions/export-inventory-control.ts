@@ -99,7 +99,7 @@ export async function exportInventoryControlAction(): Promise<ExportInventoryCon
       (detail) => ({
         nombre: detail.producto.nombre || "Producto sin nombre",
         imei: detail.imei || "",
-        bodega: detail.bodega.nombre,
+        bodega: detail.bodega?.nombre || "",
       }),
     );
 

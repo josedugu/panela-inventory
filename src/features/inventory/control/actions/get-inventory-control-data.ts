@@ -46,7 +46,7 @@ async function getAccessibleBodegaIds(currentUser: {
 // Tipos auxiliares
 interface ProductDetailWithMovement {
   id: string;
-  bodegaId: string;
+  bodegaId: string | null;
   movimientoInventario: Array<{
     tipoMovimiento: {
       ingreso: boolean;
@@ -83,6 +83,7 @@ function calculateBodegaQuantities(
   const bodegaMap = new Map<string, number>();
 
   for (const detail of productDetails) {
+    if (!detail.bodegaId) continue;
     const lastMovement = detail.movimientoInventario[0];
     if (!lastMovement?.tipoMovimiento || lastMovement.tipoMovimiento.salida)
       continue;
@@ -214,12 +215,20 @@ export async function getInventoryControlDataAction(): Promise<GetInventoryContr
       },
     });
 
+    const normalizedProducts: ProductWithDetails[] =
+      productsWithPhysicalStatus.map((product) => ({
+        ...product,
+        costo: product.costo !== null ? Number(product.costo) : null,
+        pvp: product.pvp !== null ? Number(product.pvp) : null,
+        cantidad: product.cantidad !== null ? Number(product.cantidad) : null,
+      }));
+
     // 4. Procesar productos físicos y calcular totales
     const {
       products: physicalProducts,
       totalCosto,
       totalPvp,
-    } = processPhysicalProducts(productsWithPhysicalStatus);
+    } = processPhysicalProducts(normalizedProducts);
 
     // 5. Obtener nombres de bodegas y actualizar productos
     const bodegaIds = [
