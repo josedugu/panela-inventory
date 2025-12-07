@@ -114,6 +114,13 @@ export const ACTION_PERMISSIONS: Record<string, Record<RoleName, string[]>> = {
     [ROLES.COLABORADOR]: ["view", "create"],
   },
 
+  // Inventario - Control - ver inventario físico
+  "/dashboard/inventory/control": {
+    [ROLES.ADMIN]: ["view"],
+    [ROLES.ASESOR]: ["view"],
+    [ROLES.COLABORADOR]: ["view"],
+  },
+
   // Datos Maestros - Vista general - solo admin
   "/dashboard/master-data": {
     [ROLES.ADMIN]: ["view"],

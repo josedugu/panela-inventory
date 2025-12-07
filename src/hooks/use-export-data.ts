@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -12,6 +12,47 @@ interface ExportOptions<TData> {
   filename?: string;
   title?: string;
 }
+
+type ExportableColumn = {
+  header: string;
+  accessorKey: string;
+};
+
+const getFilename = (
+  format: ExportFormat,
+  filename?: string,
+  title?: string,
+) => {
+  const dateSuffix = new Date().toISOString().split("T")[0];
+  const baseName = filename || `${title || "datos"}_${dateSuffix}`;
+  const extension = format === "xlsx" ? "xlsx" : format;
+  const normalizedBase = baseName.replace(/\.+$/, "");
+
+  if (normalizedBase.toLowerCase().endsWith(`.${extension}`)) {
+    return normalizedBase;
+  }
+
+  return `${normalizedBase}.${extension}`;
+};
+
+const getExportableColumns = <TData>(
+  columns: ColumnDef<TData, unknown>[],
+): ExportableColumn[] =>
+  columns
+    .filter(
+      (col) =>
+        "accessorKey" in col &&
+        col.accessorKey &&
+        col.id !== "actions" &&
+        col.id !== "select",
+    )
+    .map((col) => ({
+      accessorKey: String(col.accessorKey),
+      header:
+        typeof col.header === "string"
+          ? col.header
+          : col.id || String(col.accessorKey) || "Unknown",
+    }));
 
 export function useExportData<TData>() {
   const exportToCSV = ({
@@ -26,54 +67,32 @@ export function useExportData<TData>() {
         return;
       }
 
-      // Filtrar columnas que tienen accessorKey (son datos reales)
-      const exportableColumns = columns.filter(
-        (col) =>
-          "accessorKey" in col && col.id !== "actions" && col.id !== "select",
+      const exportableColumns = getExportableColumns(columns);
+
+      if (exportableColumns.length === 0) {
+        toast.warning("No hay columnas exportables");
+        return;
+      }
+
+      const headers = exportableColumns.map((col) => col.header);
+      const csvRows = data.map((item) =>
+        exportableColumns
+          .map(({ accessorKey }) => {
+            const value = (item as Record<string, unknown>)[accessorKey];
+            const stringValue = String(value ?? "");
+            if (stringValue.includes(",") || stringValue.includes('"')) {
+              return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            return stringValue;
+          })
+          .join(","),
       );
 
-      // Crear headers
-      const headers = exportableColumns.map((col) => {
-        const header = col.header;
-        return typeof header === "string" ? header : (col.id ?? "Unknown");
-      });
+      const csvContent = [headers.join(","), ...csvRows].join("\n");
 
-      // Mapear datos a filas
-      const rows = data.map((item) => {
-        const rowData: Record<string, unknown> = {};
-        exportableColumns.forEach((col) => {
-          // @ts-expect-error - accessorKey exists checked above
-          const key = col.accessorKey as string;
-          // @ts-expect-error
-          rowData[key] = item[key];
-        });
-        return rowData;
-      });
-
-      // Crear CSV
-      const csvContent = [
-        headers.join(","),
-        ...rows.map((row) =>
-          headers
-            .map((header) => {
-              const value = row[header];
-              // Escapar comillas y envolver en comillas si contiene coma o comillas
-              const stringValue = String(value ?? "");
-              if (stringValue.includes(",") || stringValue.includes('"')) {
-                return `"${stringValue.replace(/"/g, '""')}"`;
-              }
-              return stringValue;
-            })
-            .join(","),
-        ),
-      ].join("\n");
-
-      // Descargar archivo
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
-      const exportFilename =
-        filename ||
-        `${title || "datos"}_${new Date().toISOString().split("T")[0]}.csv`;
+      const exportFilename = getFilename("csv", filename, title);
       link.href = URL.createObjectURL(blob);
       link.download = exportFilename;
       link.click();
@@ -96,44 +115,29 @@ export function useExportData<TData>() {
         return;
       }
 
-      // Filtrar columnas que tienen accessorKey (son datos reales)
-      const exportableColumns = columns.filter(
-        (col) =>
-          "accessorKey" in col && col.id !== "actions" && col.id !== "select",
-      );
+      const exportableColumns = getExportableColumns(columns);
 
-      // Crear headers
-      const headers = exportableColumns.map((col) => {
-        const header = col.header;
-        return typeof header === "string" ? header : (col.id ?? "Unknown");
-      });
+      if (exportableColumns.length === 0) {
+        toast.warning("No hay columnas exportables");
+        return;
+      }
 
-      // Mapear datos a filas
       const rows = data.map((item) => {
         const rowData: Record<string, unknown> = {};
-        exportableColumns.forEach((col) => {
-          // @ts-expect-error - accessorKey exists checked above
-          const key = col.accessorKey as string;
-          // @ts-expect-error
-          rowData[key] = item[key];
+        exportableColumns.forEach(({ header, accessorKey }) => {
+          rowData[header] = (item as Record<string, unknown>)[accessorKey];
         });
         return rowData;
       });
 
-      // Crear hoja de trabajo
       const worksheet = XLSX.utils.json_to_sheet(rows);
-
-      // Agregar headers en la primera fila
+      const headers = exportableColumns.map((col) => col.header);
       XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A1" });
 
-      // Crear libro
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Datos");
 
-      // Generar archivo y descargar
-      const exportFilename =
-        filename ||
-        `${title || "datos"}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const exportFilename = getFilename("xlsx", filename, title);
       XLSX.writeFile(workbook, exportFilename);
 
       toast.success("Datos exportados a Excel correctamente");
@@ -154,29 +158,21 @@ export function useExportData<TData>() {
         return;
       }
 
-      // Filtrar columnas que tienen accessorKey (son datos reales)
-      const exportableColumns = columns.filter(
-        (col) =>
-          "accessorKey" in col && col.id !== "actions" && col.id !== "select",
+      const exportableColumns = getExportableColumns(columns);
+
+      if (exportableColumns.length === 0) {
+        toast.warning("No hay columnas exportables");
+        return;
+      }
+
+      const headers = exportableColumns.map((col) => col.header);
+
+      const tableData = data.map((item) =>
+        exportableColumns.map(
+          ({ accessorKey }) =>
+            (item as Record<string, unknown>)[accessorKey] ?? "",
+        ),
       );
-
-      // Crear headers
-      const headers = exportableColumns.map((col) => {
-        const header = col.header;
-        return typeof header === "string" ? header : (col.id ?? "Unknown");
-      });
-
-      // Preparar datos para la tabla PDF
-      const tableData = data.map((item) => {
-        const rowData: unknown[] = [];
-        exportableColumns.forEach((col) => {
-          // @ts-expect-error - accessorKey exists checked above
-          const key = col.accessorKey as string;
-          // @ts-expect-error
-          rowData.push(item[key] ?? "");
-        });
-        return rowData;
-      });
 
       // Crear PDF
       const pdf = new jsPDF();
@@ -186,8 +182,7 @@ export function useExportData<TData>() {
       pdf.text(title || "Datos Exportados", 14, 20);
 
       // Agregar tabla
-      // @ts-expect-error - jsPDF with autoTable plugin
-      pdf.autoTable({
+      autoTable(pdf, {
         head: [headers],
         body: tableData,
         startY: 30,
@@ -206,9 +201,7 @@ export function useExportData<TData>() {
       });
 
       // Descargar PDF
-      const exportFilename =
-        filename ||
-        `${title || "datos"}_${new Date().toISOString().split("T")[0]}.pdf`;
+      const exportFilename = getFilename("pdf", filename, title);
       pdf.save(exportFilename);
 
       toast.success("Datos exportados a PDF correctamente");
