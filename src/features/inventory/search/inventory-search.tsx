@@ -4,16 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   CheckCircle2,
-  History,
   MapPin,
   PackageSearch,
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataGrid } from "@/components/ui/data-grid";
 import {
   Dialog,
@@ -23,14 +21,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import type { InventoryProduct } from "@/features/inventory/functions/types";
 import type { ProductLocationSummary } from "@/features/inventory/management/actions/get-product-locations";
 import { getProductLocationsAction } from "@/features/inventory/management/actions/get-product-locations";
@@ -221,8 +211,8 @@ export function InventorySearch() {
           <h1 className="text-2xl font-semibold">Búsqueda de inventario</h1>
         </div>
         <p className="text-text-secondary">
-          Escribe para encontrar un producto y consulta sus ubicaciones en un
-          vistazo.
+          Escribe nombre, modelo o IMEI y presiona Enter o &quot;Buscar&quot;
+          para ver todas las coincidencias en la grilla.
         </p>
       </div>
 
@@ -267,16 +257,7 @@ export function InventorySearch() {
       )}
 
       <Card>
-        <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle>Buscar producto</CardTitle>
-            <p className="text-sm text-text-secondary">
-              Escribe nombre, modelo o IMEI y presiona Enter o
-              &quot;Buscar&quot; para ver todas las coincidencias en la grilla.
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Input
               placeholder="Buscar por nombre, modelo o IMEI"

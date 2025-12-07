@@ -19,9 +19,7 @@ export function getTipoProductoColumns({
   return [
     {
       accessorKey: "nombre",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Nombre" />
-      ),
+      header: "Nombre",
       cell: ({ row }) => (
         <span className="font-medium text-text">{row.original.nombre}</span>
       ),

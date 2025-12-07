@@ -53,10 +53,12 @@ export interface EntityTableConfig<TData> {
     label: string;
     onClick: () => void;
   };
-  exportAction?: {
-    label?: string;
-    onClick: () => void;
-  };
+  exportAction?:
+    | {
+        label?: string;
+        onClick?: () => void;
+      }
+    | false;
   columns: ColumnDef<TData, unknown>[];
   onView?: (row: TData) => void;
   onEdit?: (row: TData) => void;
