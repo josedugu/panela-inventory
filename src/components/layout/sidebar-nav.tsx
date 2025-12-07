@@ -57,6 +57,10 @@ const navItems: NavItem[] = [
         title: "Movimientos",
         href: "/dashboard/inventory/movements",
       },
+      {
+        title: "Control",
+        href: "/dashboard/inventory/control",
+      },
     ],
   },
   {
