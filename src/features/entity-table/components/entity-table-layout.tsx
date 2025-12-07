@@ -12,9 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ExportDropdown } from "@/components/ui/export-dropdown";
 import { Input } from "@/components/ui/input";
 import { InputSearch } from "@/components/ui/input-search";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useExportData } from "@/hooks/use-export-data";
 import { cn } from "@/lib/utils";
 import type { EntityTableLayoutProps } from "../types";
 
@@ -72,6 +74,16 @@ export function EntityTableLayout<TData>({
     config.filterDialogDescription ??
     "Selecciona uno o varios filtros y aplica para actualizar la tabla.";
 
+  const { exportData } = useExportData<TData>();
+
+  const handleExport = (format: "csv" | "xlsx" | "pdf") => {
+    exportData(format, {
+      data,
+      columns: config.columns,
+      title: config.title.toLowerCase().replace(/\s+/g, "_"),
+    });
+  };
+
   const handleOpenFilters = () => {
     if (
       hasFilters &&
@@ -121,6 +133,31 @@ export function EntityTableLayout<TData>({
     }
   };
 
+  const renderActionButtons = () => (
+    <div className="flex gap-2">
+      {config.exportAction !== false &&
+        (config.exportAction?.onClick ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={config.exportAction.onClick}
+          >
+            {config.exportAction.label ?? "Exportar"}
+          </Button>
+        ) : (
+          <ExportDropdown
+            onExport={handleExport}
+            disabled={!data || data.length === 0}
+          />
+        ))}
+      {config.addAction ? (
+        <Button size="sm" onClick={config.addAction.onClick}>
+          {config.addAction.label}
+        </Button>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className={cn("flex h-full flex-col space-y-6 p-4 lg:p-6", className)}>
       <div
@@ -137,22 +174,7 @@ export function EntityTableLayout<TData>({
             <p className="text-text-secondary mt-1">{config.description}</p>
           ) : null}
         </div>
-        <div className="flex gap-2">
-          {config.exportAction ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={config.exportAction.onClick}
-            >
-              {config.exportAction.label ?? "Exportar"}
-            </Button>
-          ) : null}
-          {config.addAction ? (
-            <Button size="sm" onClick={config.addAction.onClick}>
-              {config.addAction.label}
-            </Button>
-          ) : null}
-        </div>
+        {renderActionButtons()}
       </div>
 
       {renderExtraContent}

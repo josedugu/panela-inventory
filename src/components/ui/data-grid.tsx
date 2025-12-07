@@ -7,6 +7,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   type SortingState,
+  type Table,
   useReactTable,
 } from "@tanstack/react-table";
 import {
@@ -17,14 +18,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTableResizer } from "@/components/ui/data-table/data-table-resizer";
@@ -56,6 +50,7 @@ interface DataGridProps<TData> {
   data: TData[];
   columns: ColumnDef<TData, unknown>[];
   isLoading?: boolean;
+  onTableInstance?: (table: Table<TData>) => void;
   pagination?: PaginationConfig;
   onView?: (row: TData) => void;
   onEdit?: (row: TData) => void;
@@ -82,6 +77,7 @@ export function DataGrid<TData>({
   getIndexValue,
   enableContextMenu = false,
   tableId = "default-data-grid",
+  onTableInstance,
 }: DataGridProps<TData>) {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
@@ -135,6 +131,12 @@ export function DataGrid<TData>({
     onColumnSizingChange: setColumnSizing,
     onSortingChange: setSorting,
   });
+
+  useEffect(() => {
+    if (onTableInstance) {
+      onTableInstance(table);
+    }
+  }, [table, onTableInstance]);
 
   const handleContextMenu = (e: React.MouseEvent, rowId: string) => {
     if (!enableContextMenu) return; // Si está deshabilitado, no hacemos nada (deja pasar el nativo)
@@ -246,10 +248,14 @@ export function DataGrid<TData>({
                         key={`skeleton-row-${rowIndex}`}
                         className="border-b border-border/50 transition-colors last:border-0"
                       >
-                        {columnsWithIndex.map((column, colIndex) => (
+                        {columnsWithIndex.map((_column, colIndex) => (
                           <td
                             key={`skeleton-cell-${rowIndex}-${colIndex}`}
-                            className="p-4 align-middle"
+                            className={cn(
+                              "p-4 align-middle",
+                              colIndex !== columnsWithIndex.length - 1 &&
+                                "border-r border-border/40",
+                            )}
                           >
                             <div className="flex items-center">
                               <div className="h-4 w-full animate-pulse rounded bg-muted/50" />
@@ -288,22 +294,28 @@ export function DataGrid<TData>({
                           onClick={() => handleRowClick(rowId)}
                           onContextMenu={(e) => handleContextMenu(e, rowId)}
                         >
-                          {row.getVisibleCells().map((cell) => (
-                            <td
-                              key={cell.id}
-                              style={{
-                                width: cell.column.getSize(),
-                                minWidth: cell.column.getSize(),
-                                maxWidth: cell.column.getSize(),
-                              }}
-                              className="p-4 align-middle h-14"
-                            >
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext(),
-                              )}
-                            </td>
-                          ))}
+                          {row
+                            .getVisibleCells()
+                            .map((cell, cellIndex, cells) => (
+                              <td
+                                key={cell.id}
+                                style={{
+                                  width: cell.column.getSize(),
+                                  minWidth: cell.column.getSize(),
+                                  maxWidth: cell.column.getSize(),
+                                }}
+                                className={cn(
+                                  "p-4 align-middle h-14 text-center",
+                                  cellIndex !== cells.length - 1 &&
+                                    "border-r border-border/40",
+                                )}
+                              >
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext(),
+                                )}
+                              </td>
+                            ))}
                         </tr>
                       );
                     })

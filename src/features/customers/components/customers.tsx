@@ -328,7 +328,6 @@ export function Customers() {
           },
           exportAction: {
             label: "Exportar",
-            onClick: () => toast.info("Función de exportar en desarrollo"),
           },
           columns,
           onView: handleView,
