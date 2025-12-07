@@ -70,7 +70,8 @@ export async function getImeiListAction(
     const imeiItems: ImeiItem[] = productDetails
       .filter((detail) => {
         const lastMovement = detail.movimientoInventario[0];
-        return !lastMovement || !lastMovement.tipoMovimiento?.salida;
+        // Debe existir un movimiento y no puede ser salida
+        return Boolean(lastMovement && !lastMovement.tipoMovimiento?.salida);
       })
       .map((detail) => ({
         id: detail.id,

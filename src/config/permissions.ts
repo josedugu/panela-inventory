@@ -36,6 +36,13 @@ export const ROUTE_PERMISSIONS: Record<string, RoleName[]> = {
   // Inventario - Movimientos
   "/dashboard/inventory/movements": [ROLES.ADMIN, ROLES.COLABORADOR],
 
+  // Inventario - Control de inventario físico
+  "/dashboard/inventory/control": [
+    ROLES.ADMIN,
+    ROLES.ASESOR,
+    ROLES.COLABORADOR,
+  ],
+
   // Datos Maestros - Vista general
   "/dashboard/master-data": [ROLES.ADMIN],
 

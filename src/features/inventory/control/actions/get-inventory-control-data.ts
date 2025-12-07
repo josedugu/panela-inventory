@@ -60,6 +60,7 @@ interface ProductWithDetails {
   nombre: string | null;
   costo: number | null;
   pvp: number | null;
+  cantidad: number | null;
   productosDetalles: ProductDetailWithMovement[];
 }
 
@@ -140,10 +141,7 @@ function processPhysicalProducts(
     physicalProducts.push(productData);
 
     // Acumular totales
-    const totalUnidades = productBodegas.reduce(
-      (sum, b) => sum + b.cantidad,
-      0,
-    );
+    const totalUnidades = Number(product.cantidad ?? 0);
     totalCosto += productData.costo * totalUnidades;
     totalPvp += productData.pvp * totalUnidades;
   }
@@ -187,6 +185,7 @@ export async function getInventoryControlDataAction(): Promise<GetInventoryContr
         nombre: true,
         costo: true,
         pvp: true,
+        cantidad: true,
         productosDetalles: {
           where: {
             estado: true,

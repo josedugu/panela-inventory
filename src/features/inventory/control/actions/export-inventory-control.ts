@@ -90,8 +90,8 @@ export async function exportInventoryControlAction(): Promise<ExportInventoryCon
     // 4. Filtrar productos que existen físicamente (último movimiento no es salida)
     const physicalProducts = allProductDetails.filter((detail) => {
       const lastMovement = detail.movimientoInventario[0];
-      // Si no hay movimiento o el último movimiento no es salida, existe físicamente
-      return !lastMovement || !lastMovement.tipoMovimiento?.salida;
+      // Debe existir un movimiento y el último no puede ser salida
+      return Boolean(lastMovement && !lastMovement.tipoMovimiento?.salida);
     });
 
     // 5. Formatear datos para exportación
