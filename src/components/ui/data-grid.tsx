@@ -18,7 +18,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTableResizer } from "@/components/ui/data-table/data-table-resizer";
@@ -194,6 +194,19 @@ export function DataGrid<TData>({
   const rows = table.getRowModel().rows;
   const isEmpty = rows.length === 0;
 
+  // Generar IDs únicos para los skeletons
+  const skeletonRowIds = useMemo(
+    () =>
+      Array.from({ length: 10 }, (_, i) => ({
+        rowId: `skeleton-row-${i}-${crypto.randomUUID()}`,
+        cellIds: Array.from(
+          { length: columnsWithIndex.length },
+          (_, j) => `skeleton-cell-${i}-${j}-${crypto.randomUUID()}`,
+        ),
+      })),
+    [columnsWithIndex.length],
+  );
+
   return (
     <>
       <Card className="flex flex-col overflow-hidden flex-1 min-h-0">
@@ -243,14 +256,14 @@ export function DataGrid<TData>({
                 </thead>
                 <tbody>
                   {isLoading && isEmpty ? (
-                    Array.from({ length: 10 }).map((_, rowIndex) => (
+                    skeletonRowIds.map(({ rowId, cellIds }) => (
                       <tr
-                        key={`skeleton-row-${rowIndex}`}
+                        key={rowId}
                         className="border-b border-border/50 transition-colors last:border-0"
                       >
                         {columnsWithIndex.map((_column, colIndex) => (
                           <td
-                            key={`skeleton-cell-${rowIndex}-${colIndex}`}
+                            key={cellIds[colIndex]}
                             className={cn(
                               "p-4 align-middle",
                               colIndex !== columnsWithIndex.length - 1 &&

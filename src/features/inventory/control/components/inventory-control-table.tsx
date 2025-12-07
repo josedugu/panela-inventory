@@ -77,6 +77,19 @@ export function InventoryControlTable({
       return [productColumn, ...bodegaColumns];
     }, [bodegas, onQuantityClick]);
 
+  // Generar IDs únicos para los skeletons (se usa en mobile)
+  const skeletonIds = useMemo(
+    () =>
+      Array.from({ length: 5 }, (_, i) => ({
+        rowId: `skeleton-row-${i}-${crypto.randomUUID()}`,
+        cellIds: Array.from(
+          { length: 3 },
+          (_, j) => `skeleton-cell-${i}-${j}-${crypto.randomUUID()}`,
+        ),
+      })),
+    [],
+  );
+
   // Vista desktop - tabla completa
   if (!isMobile) {
     return (
@@ -105,11 +118,14 @@ export function InventoryControlTable({
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex space-x-4">
+            {skeletonIds.map(({ rowId, cellIds }) => (
+              <div key={rowId} className="flex space-x-4">
                 <div className="flex-1 h-4 rounded bg-surface-2"></div>
-                {Array.from({ length: 3 }).map((_, j) => (
-                  <div key={j} className="h-4 w-16 rounded bg-surface-2"></div>
+                {cellIds.map((cellId) => (
+                  <div
+                    key={cellId}
+                    className="h-4 w-16 rounded bg-surface-2"
+                  ></div>
                 ))}
               </div>
             ))}

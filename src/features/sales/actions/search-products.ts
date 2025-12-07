@@ -3,7 +3,10 @@
 import { prisma } from "@/lib/prisma/client";
 import { formatImeiForDisplay } from "@/lib/utils-imei";
 
-export async function searchProductsAction(query: string) {
+export async function searchProductsAction(
+  query: string,
+  bodegaId?: string | null,
+) {
   // Buscar por IMEI en productoDetalle y por nombre en producto
   const trimmedQuery = query.trim();
 
@@ -11,11 +14,17 @@ export async function searchProductsAction(query: string) {
     return [];
   }
 
+  // Construir el filtro base
+  const baseWhere = {
+    estado: true,
+    ventaProductoId: null, // Solo disponibles (sin venta asignada)
+    ...(bodegaId ? { bodegaId } : {}),
+  };
+
   // Buscar productoDetalle por IMEI
   const productoDetalles = await prisma.productoDetalle.findMany({
     where: {
-      estado: true,
-      ventaProductoId: null, // Solo disponibles (sin venta asignada)
+      ...baseWhere,
       imei: {
         contains: trimmedQuery,
         mode: "insensitive",
@@ -51,8 +60,7 @@ export async function searchProductsAction(query: string) {
   // Esto busca detalles disponibles cuyo producto tenga el nombre que coincide
   const productoDetallesPorNombre = await prisma.productoDetalle.findMany({
     where: {
-      estado: true,
-      ventaProductoId: null, // Solo disponibles (sin venta asignada)
+      ...baseWhere,
       producto: {
         estado: true,
         cantidad: {
@@ -111,10 +119,8 @@ export async function searchProductsAction(query: string) {
   const resultadosPorImei = filteredDetalles.map((detalle) => {
     const imeiFormatted = formatImeiForDisplay(detalle.imei);
     const productoNombre = detalle.producto.nombre ?? "Producto sin nombre";
-    const bodegaNombre = detalle.bodega?.nombre ?? "";
-    const label = bodegaNombre
-      ? `${imeiFormatted} - ${productoNombre} - ${bodegaNombre}`
-      : `${imeiFormatted} - ${productoNombre}`;
+    // Formato: imei - nombre (sin bodega)
+    const label = `${imeiFormatted} - ${productoNombre}`;
 
     return {
       id: detalle.producto.id,
@@ -140,14 +146,10 @@ export async function searchProductsAction(query: string) {
     .filter((detalle) => !productosIdsEncontrados.has(detalle.producto.id))
     .map((detalle) => {
       const productoNombre = detalle.producto.nombre ?? "Producto sin nombre";
-      const bodegaNombre = detalle.bodega?.nombre ?? "";
-      // Formato: imei - nombre - bodega (o nombre - bodega si no hay IMEI)
+      // Formato: imei - nombre (sin bodega)
       let label = productoNombre;
       if (detalle.imei) {
         label = `${formatImeiForDisplay(detalle.imei)} - ${label}`;
-      }
-      if (bodegaNombre) {
-        label = `${label} - ${bodegaNombre}`;
       }
 
       return {

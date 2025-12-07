@@ -18,6 +18,11 @@ type ExportableColumn = {
   accessorKey: string;
 };
 
+const hasAccessorKey = <TData>(
+  col: ColumnDef<TData, unknown>,
+): col is ColumnDef<TData, unknown> & { accessorKey: string } =>
+  typeof (col as { accessorKey?: unknown }).accessorKey === "string";
+
 const getFilename = (
   format: ExportFormat,
   filename?: string,
@@ -40,14 +45,11 @@ const getExportableColumns = <TData>(
 ): ExportableColumn[] =>
   columns
     .filter(
-      (col) =>
-        "accessorKey" in col &&
-        col.accessorKey &&
-        col.id !== "actions" &&
-        col.id !== "select",
+      (col): col is ColumnDef<TData, unknown> & { accessorKey: string } =>
+        hasAccessorKey(col) && col.id !== "actions" && col.id !== "select",
     )
     .map((col) => ({
-      accessorKey: String(col.accessorKey),
+      accessorKey: col.accessorKey,
       header:
         typeof col.header === "string"
           ? col.header
