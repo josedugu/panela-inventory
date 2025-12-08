@@ -10,6 +10,7 @@ export interface PaymentHistoryItem {
   ventaConsecutivo: number;
   ventaTotal: number;
   clienteNombre: string | null;
+  asesorNombre: string | null;
   ventaCreatedAt: Date;
   createdAt: Date;
   consecutivo: number | null;
@@ -46,10 +47,12 @@ export type GetCajaDataResult = GetCajaDataSuccess | GetCajaDataError;
  * Obtiene los datos de caja para un rango de fechas
  * @param fechaDesde - Fecha inicial del rango (por defecto: día actual)
  * @param fechaHasta - Fecha final del rango (por defecto: día actual)
+ * @param centroCostoId - ID del centro de costos para filtrar (opcional)
  */
 export async function getCajaDataAction(
   fechaDesde?: Date | string,
   fechaHasta?: Date | string,
+  centroCostoId?: string,
 ): Promise<GetCajaDataResult> {
   try {
     // Normalizar las fechas
@@ -92,6 +95,11 @@ export async function getCajaDataAction(
           gte: startOfDay,
           lte: endOfDay,
         },
+        ...(centroCostoId && {
+          vendidoPor: {
+            centroCostoId: centroCostoId,
+          },
+        }),
       },
       select: {
         id: true,
@@ -113,6 +121,13 @@ export async function getCajaDataAction(
           gte: startOfDay,
           lte: endOfDay,
         },
+        ...(centroCostoId && {
+          venta: {
+            vendidoPor: {
+              centroCostoId: centroCostoId,
+            },
+          },
+        }),
       },
       include: {
         metodoPago: {
@@ -127,6 +142,11 @@ export async function getCajaDataAction(
             total: true,
             createdAt: true,
             cliente: {
+              select: {
+                nombre: true,
+              },
+            },
+            vendidoPor: {
               select: {
                 nombre: true,
               },
@@ -173,6 +193,7 @@ export async function getCajaDataAction(
       ventaConsecutivo: pago.venta.consecutivo,
       ventaTotal: Number(pago.venta.total),
       clienteNombre: pago.venta.cliente?.nombre ?? null,
+      asesorNombre: pago.venta.vendidoPor?.nombre ?? null,
       ventaCreatedAt: pago.venta.createdAt,
       createdAt: pago.createdAt,
       consecutivo: pago.consecutivo ?? null,

@@ -6,6 +6,7 @@ import { AlertCircle, DollarSign, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import type {
   PaymentHistoryItem,
@@ -13,6 +14,7 @@ import type {
 } from "../actions/get-caja-data";
 
 interface CajaAdminViewProps {
+  isLoading?: boolean;
   totalVentas: number;
   totalPagos: number;
   diferencia: number;
@@ -33,24 +35,39 @@ interface GroupedPayment {
 interface PaymentTableRow {
   id: string;
   venta: string;
-  fechaVenta: string;
   cliente: string;
+  asesor: string;
+  fechaVenta: string;
   metodoPago: string;
   cantidad: number;
   ventaTotal: number;
-  totalPagosVenta: number;
   esHeader: boolean;
   ventaId: string;
   consecutivo: number | null;
 }
 
 export function CajaAdminView({
+  isLoading,
   totalVentas,
   totalPagos,
   diferencia,
   pagos,
   totalesPorMetodoPago,
 }: CajaAdminViewProps) {
+  const loading = Boolean(isLoading);
+  const paymentMethodSkeletonKeys = [
+    "payment-method-skeleton-1",
+    "payment-method-skeleton-2",
+    "payment-method-skeleton-3",
+  ];
+  const tableSkeletonKeys = [
+    "table-skeleton-1",
+    "table-skeleton-2",
+    "table-skeleton-3",
+    "table-skeleton-4",
+    "table-skeleton-5",
+    "table-skeleton-6",
+  ];
   // Agrupar pagos por venta
   const pagosAgrupados = useMemo<GroupedPayment[]>(() => {
     const grouped = new Map<string, GroupedPayment>();
@@ -68,7 +85,8 @@ export function CajaAdminView({
         });
       }
 
-      const grupo = grouped.get(pago.ventaId)!;
+      const grupo = grouped.get(pago.ventaId);
+      if (!grupo) continue;
       grupo.pagos.push(pago);
       grupo.totalPagos += pago.cantidad;
     }
@@ -91,10 +109,10 @@ export function CajaAdminView({
           locale: es,
         }),
         cliente: grupo.clienteNombre || "Sin cliente",
+        asesor: grupo.pagos[0]?.asesorNombre || "Sin asesor",
         metodoPago: `${grupo.pagos.length} pago${grupo.pagos.length > 1 ? "s" : ""}`,
         cantidad: grupo.totalPagos,
         ventaTotal: grupo.ventaTotal,
-        totalPagosVenta: grupo.totalPagos,
         esHeader: true,
         ventaId: grupo.ventaId,
         consecutivo: null,
@@ -107,10 +125,10 @@ export function CajaAdminView({
           venta: "",
           fechaVenta: format(pago.createdAt, "HH:mm", { locale: es }),
           cliente: "",
+          asesor: "",
           metodoPago: pago.metodoPago,
           cantidad: pago.cantidad,
           ventaTotal: 0,
-          totalPagosVenta: 0,
           esHeader: false,
           ventaId: grupo.ventaId,
           consecutivo: pago.consecutivo,
@@ -131,16 +149,6 @@ export function CajaAdminView({
           <span className="text-text-secondary pl-4">↳</span>
         ),
       className: "font-medium",
-    },
-    {
-      header: "Fecha",
-      accessor: (row: PaymentTableRow) => row.fechaVenta,
-      className: "text-text-secondary",
-    },
-    {
-      header: "Cliente",
-      accessor: (row: PaymentTableRow) => (row.esHeader ? row.cliente : ""),
-      className: "text-text-secondary",
     },
     {
       header: "Método de Pago",
@@ -172,10 +180,19 @@ export function CajaAdminView({
       className: "text-right font-semibold",
     },
     {
-      header: "Total Pagos",
-      accessor: (row: PaymentTableRow) =>
-        row.esHeader ? formatPrice(row.totalPagosVenta) : "",
-      className: "text-right font-bold",
+      header: "Asesor",
+      accessor: (row: PaymentTableRow) => (row.esHeader ? row.asesor : ""),
+      className: "text-text-secondary",
+    },
+    {
+      header: "Cliente",
+      accessor: (row: PaymentTableRow) => (row.esHeader ? row.cliente : ""),
+      className: "text-text-secondary",
+    },
+    {
+      header: "Fecha",
+      accessor: (row: PaymentTableRow) => row.fechaVenta,
+      className: "text-text-secondary",
     },
   ];
 
@@ -192,7 +209,13 @@ export function CajaAdminView({
                 <TrendingUp className="h-5 w-5 text-primary" />
               </div>
             </div>
-            <p className="text-3xl font-semibold">{formatPrice(totalVentas)}</p>
+            {loading ? (
+              <Skeleton className="h-8 w-28" />
+            ) : (
+              <p className="text-3xl font-semibold">
+                {formatPrice(totalVentas)}
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -205,7 +228,13 @@ export function CajaAdminView({
                 <DollarSign className="h-5 w-5 text-success" />
               </div>
             </div>
-            <p className="text-3xl font-semibold">{formatPrice(totalPagos)}</p>
+            {loading ? (
+              <Skeleton className="h-8 w-28" />
+            ) : (
+              <p className="text-3xl font-semibold">
+                {formatPrice(totalPagos)}
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -218,20 +247,24 @@ export function CajaAdminView({
                 <AlertCircle className="h-5 w-5 text-warning" />
               </div>
             </div>
-            <p
-              className={`text-3xl font-semibold ${
-                diferencia >= 0 ? "text-success" : "text-error"
-              }`}
-            >
-              {diferencia >= 0 ? "+" : ""}
-              {formatPrice(diferencia)}
-            </p>
+            {loading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <p
+                className={`text-3xl font-semibold ${
+                  diferencia >= 0 ? "text-success" : "text-error"
+                }`}
+              >
+                {diferencia >= 0 ? "+" : ""}
+                {formatPrice(diferencia)}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Totales por método de pago */}
-      {totalesPorMetodoPago.length > 0 && (
+      {(totalesPorMetodoPago.length > 0 || loading) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
@@ -240,19 +273,29 @@ export function CajaAdminView({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {totalesPorMetodoPago.map((item) => (
-                <div
-                  key={item.metodoPago}
-                  className="flex items-center justify-between p-3 bg-surface-2 rounded-lg border border-border"
-                >
-                  <span className="text-sm text-text-secondary">
-                    {item.metodoPago}
-                  </span>
-                  <span className="text-sm font-semibold">
-                    {formatPrice(item.total)}
-                  </span>
-                </div>
-              ))}
+              {loading
+                ? paymentMethodSkeletonKeys.map((key) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between p-3 bg-surface-2 rounded-lg border border-border"
+                    >
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  ))
+                : totalesPorMetodoPago.map((item) => (
+                    <div
+                      key={item.metodoPago}
+                      className="flex items-center justify-between p-3 bg-surface-2 rounded-lg border border-border"
+                    >
+                      <span className="text-sm text-text-secondary">
+                        {item.metodoPago}
+                      </span>
+                      <span className="text-sm font-semibold">
+                        {formatPrice(item.total)}
+                      </span>
+                    </div>
+                  ))}
             </div>
           </CardContent>
         </Card>
@@ -266,7 +309,13 @@ export function CajaAdminView({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {pagos.length === 0 ? (
+          {loading ? (
+            <div className="space-y-3">
+              {tableSkeletonKeys.map((key) => (
+                <Skeleton key={key} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : pagos.length === 0 ? (
             <div className="text-center py-8 text-text-secondary">
               <p>
                 No hay pagos registrados para el rango de fechas seleccionado

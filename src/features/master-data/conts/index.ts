@@ -4,6 +4,7 @@ export const MASTER_DATA_SECTIONS = [
   { slug: "centros-costo", label: "Centros de costo" },
   { slug: "colores", label: "Colores" },
   { slug: "marcas", label: "Marcas" },
+  { slug: "metodo-pago", label: "Métodos de Pago" },
   { slug: "modelos", label: "Modelos" },
   { slug: "productos", label: "Productos" },
   { slug: "proveedores", label: "Proveedores" },

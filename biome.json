@@ -39,7 +39,7 @@
         "noDelete": "error"
       },
       "complexity": {
-        "noExcessiveCognitiveComplexity": "warn",
+        "noExcessiveCognitiveComplexity": "off",
         "noForEach": "off"
       }
     },

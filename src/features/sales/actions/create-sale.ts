@@ -222,7 +222,12 @@ export async function createSaleAction(
           vendidoPorId: currentUser.id,
           ventaProducto: {
             create: lines.map((line) => {
-              const _product = products.find((p) => p.id === line.productId)!;
+              const product = products.find((p) => p.id === line.productId);
+              if (!product) {
+                throw new Error(
+                  `Producto con id ${line.productId} no encontrado en la carga actual`,
+                );
+              }
               const subtotal = line.unitPrice * line.quantity;
               const descuento = 0; // Por ahora sin descuentos
               const lineTotal = subtotal - descuento;
@@ -248,7 +253,12 @@ export async function createSaleAction(
 
       // 4. Crear movimientos de inventario y conectar productos detalles
       for (const [index, line] of lines.entries()) {
-        const product = products.find((p) => p.id === line.productId)!;
+        const product = products.find((p) => p.id === line.productId);
+        if (!product) {
+          throw new Error(
+            `Producto con id ${line.productId} no encontrado en la carga actual`,
+          );
+        }
 
         // Si hay productoDetalleId específico, usar ese; si no, buscar disponibles
         let productoDetalleIds: string[] = [];

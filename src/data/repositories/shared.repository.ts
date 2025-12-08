@@ -11,6 +11,8 @@ export type { ColorDTO } from "./colors.repository";
 export { listColors } from "./colors.repository";
 export type { CostCenterDTO } from "./costCenters.repository";
 export { listCostCenters } from "./costCenters.repository";
+export type { MetodoPagoDTO } from "./metodo-pago.repository";
+export { listMetodoPagos } from "./metodo-pago.repository";
 export type { ModelDTO } from "./models.repository";
 export { listModels } from "./models.repository";
 export type { RamDTO } from "./ram.repository";

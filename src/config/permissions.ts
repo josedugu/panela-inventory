@@ -170,6 +170,13 @@ export const ACTION_PERMISSIONS: Record<string, Record<RoleName, string[]>> = {
     [ROLES.COLABORADOR]: [],
   },
 
+  // Datos Maestros - Métodos de Pago - CRUD completo solo admin
+  "/dashboard/master-data/metodo-pago": {
+    [ROLES.ADMIN]: ["view", "create", "update", "delete"],
+    [ROLES.ASESOR]: [],
+    [ROLES.COLABORADOR]: [],
+  },
+
   // Datos Maestros - Modelos - CRUD completo solo admin
   "/dashboard/master-data/modelos": {
     [ROLES.ADMIN]: ["view", "create", "update", "delete"],
