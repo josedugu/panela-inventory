@@ -7,6 +7,7 @@ import type {
   BrandDTO,
   ColorDTO,
   CostCenterDTO,
+  MetodoPagoDTO,
   ModelDTO,
   RamDTO,
   StorageDTO,
@@ -21,6 +22,7 @@ import { CostCentersSection } from "@/features/master-data/centros-costo";
 import { ColorsSection } from "@/features/master-data/colores";
 import type { MasterDataSection } from "@/features/master-data/conts";
 import { BrandsSection } from "@/features/master-data/marcas";
+import { MetodoPagoSection } from "@/features/master-data/metodo-pago";
 import { ModelsSection } from "@/features/master-data/modelos";
 import { ProductsSection } from "@/features/master-data/productos";
 import { SuppliersSection } from "@/features/master-data/proveedores";
@@ -42,6 +44,7 @@ type SectionRenderer = (props: {
   ramOptions?: RamDTO[];
   tipoProductos?: TipoProductoDTO[];
   products?: ProductDTO[];
+  metodoPagos?: MetodoPagoDTO[];
   onRefresh: () => void;
 }) => React.ReactNode;
 
@@ -51,6 +54,9 @@ const SECTION_RENDERERS: Record<MasterDataSection, SectionRenderer> = {
   ),
   marcas: ({ brands = [], onRefresh }) => (
     <BrandsSection brands={brands} onRefresh={onRefresh} />
+  ),
+  "metodo-pago": ({ metodoPagos = [], onRefresh }) => (
+    <MetodoPagoSection metodoPagos={metodoPagos} onRefresh={onRefresh} />
   ),
   modelos: ({ models = [], brands = [], onRefresh }) => (
     <ModelsSection models={models} brands={brands} onRefresh={onRefresh} />
@@ -133,6 +139,7 @@ export function MasterDataScreen({ section }: MasterDataScreenProps) {
   const ramOptions = data?.ramOptions ?? [];
   const tipoProductos = data?.tipoProductos ?? [];
   const products = data?.products ?? [];
+  const metodoPagos = data?.metodoPagos ?? [];
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -154,6 +161,7 @@ export function MasterDataScreen({ section }: MasterDataScreenProps) {
       ramOptions,
       tipoProductos,
       products,
+      metodoPagos,
       onRefresh: handleRefresh,
     });
   }, [
@@ -161,6 +169,7 @@ export function MasterDataScreen({ section }: MasterDataScreenProps) {
     colors,
     costCenters,
     handleRefresh,
+    metodoPagos,
     models,
     products,
     ramOptions,

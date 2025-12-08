@@ -40,6 +40,17 @@ export function CajaAsesorView({
   totalesPorMetodoPago,
 }: CajaAsesorViewProps) {
   const loading = Boolean(isLoading);
+  const paymentMethodSkeletonKeys = [
+    "payment-method-skeleton-1",
+    "payment-method-skeleton-2",
+  ];
+  const tableSkeletonKeys = [
+    "table-skeleton-1",
+    "table-skeleton-2",
+    "table-skeleton-3",
+    "table-skeleton-4",
+    "table-skeleton-5",
+  ];
   // Agrupar pagos por venta
   const pagosAgrupados = useMemo<GroupedPayment[]>(() => {
     const grouped = new Map<string, GroupedPayment>();
@@ -57,7 +68,8 @@ export function CajaAsesorView({
         });
       }
 
-      const grupo = grouped.get(pago.ventaId)!;
+      const grupo = grouped.get(pago.ventaId);
+      if (!grupo) continue;
       grupo.pagos.push(pago);
       grupo.totalPagos += pago.cantidad;
     }
@@ -144,9 +156,9 @@ export function CajaAsesorView({
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {loading
-                  ? Array.from({ length: 2 }).map((_, index) => (
+                  ? paymentMethodSkeletonKeys.map((key) => (
                       <div
-                        key={index}
+                        key={key}
                         className="flex items-center justify-between p-2 bg-surface-1 rounded border border-border/50"
                       >
                         <Skeleton className="h-4 w-24" />
@@ -182,8 +194,8 @@ export function CajaAsesorView({
         <CardContent>
           {loading ? (
             <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} className="h-12 w-full" />
+              {tableSkeletonKeys.map((key) => (
+                <Skeleton key={key} className="h-12 w-full" />
               ))}
             </div>
           ) : pagos.length === 0 ? (

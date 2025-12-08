@@ -21,6 +21,13 @@ import {
   type ProductDTO,
 } from "@/data/repositories/master.products.repository";
 import {
+  createMetodoPago,
+  deleteMetodoPago,
+  listMetodoPagos,
+  type MetodoPagoDTO,
+  updateMetodoPago,
+} from "@/data/repositories/metodo-pago.repository";
+import {
   createModel,
   deleteModel,
   updateModel,
@@ -494,6 +501,29 @@ export const deleteColorAction = CrudActionBuilder.for(colorSchema)
   .deleteWith(deleteColor)
   .buildDeleteAction();
 
+// MetodoPago
+const metodoPagoSchema = z.object({
+  nombre: z.string().min(1, "El nombre es obligatorio"),
+  esCredito: z.boolean(),
+  comisionAsesor: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === "") return true;
+      const num = parseFloat(val);
+      return !Number.isNaN(num) && num >= 0 && num <= 100;
+    }, "La comisión debe ser un número entre 0 y 100"),
+});
+
+export const upsertMetodoPagoAction = CrudActionBuilder.for(metodoPagoSchema)
+  .createWith(createMetodoPago)
+  .updateWith(updateMetodoPago)
+  .buildUpsertAction();
+
+export const deleteMetodoPagoAction = CrudActionBuilder.for(metodoPagoSchema)
+  .deleteWith(deleteMetodoPago)
+  .buildDeleteAction();
+
 // Storage
 const storageSchema = z.object({
   capacidad: z
@@ -541,6 +571,7 @@ export type MasterDataPayload = {
   ramOptions?: RamDTO[];
   tipoProductos?: TipoProductoDTO[];
   products?: ProductDTO[];
+  metodoPagos?: MetodoPagoDTO[];
 };
 
 export async function getSectionData(
@@ -593,6 +624,10 @@ export async function getSectionData(
     case "tipo-productos":
       return {
         tipoProductos: await listTipoProductos(),
+      };
+    case "metodo-pago":
+      return {
+        metodoPagos: await listMetodoPagos(),
       };
     case "productos": {
       const [

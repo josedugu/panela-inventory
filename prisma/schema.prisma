@@ -367,8 +367,9 @@ model Pago {
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  ventaId String @map("venta_id") @db.Uuid
-  venta   Venta  @relation(fields: [ventaId], references: [id])
+  ventaId   String     @map("venta_id") @db.Uuid
+  venta     Venta      @relation(fields: [ventaId], references: [id])
+  comisions Comision[]
 
   @@map("pago")
   @@schema("dev")
@@ -377,12 +378,27 @@ model Pago {
 model MetodoPago {
   id        String   @id @default(uuid()) @db.Uuid
   nombre    String
+  esCredito Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
+  estado    Boolean  @default(true)
+  comisionAsesor Decimal @default(0) @db.Decimal(10, 2)
   pagos Pago[]
 
   @@map("metodo_pago")
+  @@schema("dev")
+}
+
+model Comision {
+  id          String   @id @default(uuid()) @db.Uuid
+  consecutivo Int      @unique @default(autoincrement()) @map("consecutivo") @db.Integer
+  monto       Decimal  @db.Decimal(10, 2)
+  pagoId      String   @map("pago_id") @db.Uuid
+  pago        Pago     @relation(fields: [pagoId], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("comision")
   @@schema("dev")
 }
 
