@@ -214,6 +214,49 @@ export async function createSaleAction(
         }
       }
 
+      // Preparar mapa de métodos de pago con sus comisiones (valores como enteros: 10 = 10%)
+      const paymentMethodsMap = new Map<
+        string,
+        {
+          comisionPlataforma: Prisma.Decimal;
+          comisionAsesor: Prisma.Decimal;
+        }
+      >();
+
+      if (payments.length > 0) {
+        const paymentMethodIds = [
+          ...new Set(payments.map((payment) => payment.methodId)),
+        ];
+
+        const metodoPagos = await tx.metodoPago.findMany({
+          where: {
+            id: {
+              in: paymentMethodIds,
+            },
+            estado: true,
+          },
+          select: {
+            id: true,
+            comisionPlataforma: true,
+            comisionAsesor: true,
+          },
+        });
+
+        if (metodoPagos.length !== paymentMethodIds.length) {
+          throw new Error(
+            "Uno o más métodos de pago no fueron encontrados o están inactivos",
+          );
+        }
+
+        for (const metodoPago of metodoPagos) {
+          paymentMethodsMap.set(metodoPago.id, {
+            comisionPlataforma:
+              metodoPago.comisionPlataforma ?? new Prisma.Decimal(0),
+            comisionAsesor: metodoPago.comisionAsesor ?? new Prisma.Decimal(0),
+          });
+        }
+      }
+
       // 3. Crear la venta
       const venta = await tx.venta.create({
         data: {
@@ -341,13 +384,41 @@ export async function createSaleAction(
 
       // 5. Crear pagos si se proporcionaron
       if (payments.length > 0) {
-        await tx.pago.createMany({
-          data: payments.map((payment) => ({
-            ventaId: venta.id,
-            metodoPagoId: payment.methodId,
-            cantidad: new Prisma.Decimal(payment.amount.toString()),
-          })),
-        });
+        for (const payment of payments) {
+          const metodoPago = paymentMethodsMap.get(payment.methodId);
+
+          if (!metodoPago) {
+            throw new Error(
+              "Método de pago no encontrado para calcular comisiones",
+            );
+          }
+
+          const amountDecimal = new Prisma.Decimal(payment.amount.toString());
+
+          // Percentages are stored as integers (e.g., 10 = 10%), so divide by 100 when applying.
+          const plataformaPct = metodoPago.comisionPlataforma;
+          const asesorPct = metodoPago.comisionAsesor;
+
+          const comisionPlataforma = amountDecimal.mul(plataformaPct).div(100);
+          const netoDespuesPlataforma = amountDecimal.sub(comisionPlataforma);
+          const comisionAsesor = netoDespuesPlataforma.mul(asesorPct).div(100);
+
+          const pago = await tx.pago.create({
+            data: {
+              ventaId: venta.id,
+              metodoPagoId: payment.methodId,
+              cantidad: amountDecimal,
+            },
+          });
+
+          await tx.comision.create({
+            data: {
+              pagoId: pago.id,
+              porcentaje: asesorPct,
+              monto: comisionAsesor,
+            },
+          });
+        }
       }
 
       return {

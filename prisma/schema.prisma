@@ -382,6 +382,7 @@ model MetodoPago {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   estado    Boolean  @default(true)
+  comisionPlataforma Decimal @default(0) @db.Decimal(10, 2)
   comisionAsesor Decimal @default(0) @db.Decimal(10, 2)
   pagos Pago[]
 
@@ -391,6 +392,7 @@ model MetodoPago {
 
 model Comision {
   id          String   @id @default(uuid()) @db.Uuid
+  porcentaje  Decimal @default(0) @db.Decimal(10, 2)
   consecutivo Int      @unique @default(autoincrement()) @map("consecutivo") @db.Integer
   monto       Decimal  @db.Decimal(10, 2)
   pagoId      String   @map("pago_id") @db.Uuid
