@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { DollarSign, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice } from "@/lib/utils";
 import type {
   PaymentHistoryItem,
@@ -12,6 +13,7 @@ import type {
 } from "../actions/get-caja-data";
 
 interface CajaAsesorViewProps {
+  isLoading?: boolean;
   totalVentas: number;
   totalPagos: number;
   diferencia: number;
@@ -30,12 +32,14 @@ interface GroupedPayment {
 }
 
 export function CajaAsesorView({
+  isLoading,
   totalVentas,
   totalPagos,
   diferencia,
   pagos,
   totalesPorMetodoPago,
 }: CajaAsesorViewProps) {
+  const loading = Boolean(isLoading);
   // Agrupar pagos por venta
   const pagosAgrupados = useMemo<GroupedPayment[]>(() => {
     const grouped = new Map<string, GroupedPayment>();
@@ -81,9 +85,13 @@ export function CajaAsesorView({
               </div>
               <div>
                 <p className="text-sm text-text-secondary">Total Ventas</p>
-                <p className="text-2xl font-semibold">
-                  {formatPrice(totalVentas)}
-                </p>
+                {loading ? (
+                  <Skeleton className="h-7 w-24" />
+                ) : (
+                  <p className="text-2xl font-semibold">
+                    {formatPrice(totalVentas)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -98,9 +106,13 @@ export function CajaAsesorView({
                 <p className="text-sm text-text-secondary">
                   Total Pagos Recibidos
                 </p>
-                <p className="text-2xl font-semibold">
-                  {formatPrice(totalPagos)}
-                </p>
+                {loading ? (
+                  <Skeleton className="h-7 w-24" />
+                ) : (
+                  <p className="text-2xl font-semibold">
+                    {formatPrice(totalPagos)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -109,37 +121,51 @@ export function CajaAsesorView({
           <div className="flex items-center justify-between p-4 bg-surface-2 rounded-lg border-2 border-dashed">
             <div>
               <p className="text-sm text-text-secondary">Diferencia</p>
-              <p
-                className={`text-xl font-semibold ${
-                  diferencia >= 0 ? "text-success" : "text-error"
-                }`}
-              >
-                {diferencia >= 0 ? "+" : ""}
-                {formatPrice(diferencia)}
-              </p>
+              {loading ? (
+                <Skeleton className="h-6 w-24" />
+              ) : (
+                <p
+                  className={`text-xl font-semibold ${
+                    diferencia >= 0 ? "text-success" : "text-error"
+                  }`}
+                >
+                  {diferencia >= 0 ? "+" : ""}
+                  {formatPrice(diferencia)}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Totales por método de pago */}
-          {totalesPorMetodoPago.length > 0 && (
+          {(totalesPorMetodoPago.length > 0 || loading) && (
             <div className="pt-2 border-t border-border">
               <p className="text-sm font-medium text-text-secondary mb-3">
                 Totales por Método de Pago
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {totalesPorMetodoPago.map((item) => (
-                  <div
-                    key={item.metodoPago}
-                    className="flex items-center justify-between p-2 bg-surface-1 rounded border border-border/50"
-                  >
-                    <span className="text-sm text-text-secondary">
-                      {item.metodoPago}
-                    </span>
-                    <span className="text-sm font-semibold">
-                      {formatPrice(item.total)}
-                    </span>
-                  </div>
-                ))}
+                {loading
+                  ? Array.from({ length: 2 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-surface-1 rounded border border-border/50"
+                      >
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    ))
+                  : totalesPorMetodoPago.map((item) => (
+                      <div
+                        key={item.metodoPago}
+                        className="flex items-center justify-between p-2 bg-surface-1 rounded border border-border/50"
+                      >
+                        <span className="text-sm text-text-secondary">
+                          {item.metodoPago}
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {formatPrice(item.total)}
+                        </span>
+                      </div>
+                    ))}
               </div>
             </div>
           )}
@@ -154,7 +180,13 @@ export function CajaAsesorView({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {pagos.length === 0 ? (
+          {loading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : pagos.length === 0 ? (
             <div className="text-center py-8 text-text-secondary">
               <p>
                 No hay pagos registrados para el rango de fechas seleccionado

@@ -1,6 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Gift, Pencil, Trash2 } from "lucide-react";
-import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header";
 import type { TableAction } from "@/components/ui/table-actions-cell";
 import { TableActionsCell } from "@/components/ui/table-actions-cell";
 import type { TipoProductoDTO } from "@/data/repositories/shared.repository";
