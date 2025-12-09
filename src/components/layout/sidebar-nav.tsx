@@ -98,6 +98,10 @@ const navItems: NavItem[] = [
         title: "Caja",
         href: "/dashboard/reports/caja",
       },
+      {
+        title: "Productividad",
+        href: "/dashboard/reports/productivity",
+      },
     ],
   },
   {
