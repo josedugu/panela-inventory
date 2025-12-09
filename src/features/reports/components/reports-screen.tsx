@@ -48,19 +48,28 @@ export function ReportsScreen() {
           </CardContent>
         </Card>
 
-        {/* Placeholder para futuros reportes */}
-        <Card className="opacity-50">
+        <Card
+          className="cursor-pointer hover:bg-surface-2 transition-colors"
+          onClick={() => router.push("/dashboard/reports/productivity")}
+        >
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-surface-2 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-text-secondary" />
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-lg">Más Reportes</CardTitle>
-                <CardDescription>Próximamente</CardDescription>
+                <CardTitle className="text-lg">Productividad</CardTitle>
+                <CardDescription>
+                  Utilidad por asesor, semana y mes
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full">
+              Ver Reporte
+            </Button>
+          </CardContent>
         </Card>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
-import { Button } from "./button";
+import { buttonVariants } from "./button";
 import {
   Command,
   CommandEmpty,
@@ -98,13 +98,16 @@ export function MultiSelectSearch({
       )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
+          <div
             role="combobox"
             aria-expanded={open}
-            disabled={disabled}
-            className="w-full justify-between min-h-10 h-auto py-2"
+            tabIndex={disabled ? -1 : 0}
+            aria-disabled={disabled}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "default" }),
+              "w-full justify-between min-h-10 h-auto py-2 text-left",
+              disabled && "cursor-not-allowed opacity-60",
+            )}
           >
             <div className="flex flex-1 items-center gap-1 flex-wrap min-w-0">
               {selectedValues.length === 0 ? (
@@ -122,6 +125,7 @@ export function MultiSelectSearch({
                       {selected.label}
                       <button
                         type="button"
+                        aria-label="Quitar selección"
                         className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
                         onMouseDown={(e) => {
                           e.preventDefault();
@@ -146,6 +150,7 @@ export function MultiSelectSearch({
                         {selected.label}
                         <button
                           type="button"
+                          aria-label="Quitar selección"
                           className="ml-1 rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
                           onMouseDown={(e) => {
                             e.preventDefault();
@@ -167,7 +172,7 @@ export function MultiSelectSearch({
               )}
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+          </div>
         </PopoverTrigger>
         <PopoverContent className="w-[280px] p-0" align="start">
           <Command shouldFilter={false}>
