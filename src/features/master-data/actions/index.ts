@@ -513,6 +513,14 @@ const metodoPagoSchema = z.object({
       const num = parseFloat(val);
       return !Number.isNaN(num) && num >= 0 && num <= 100;
     }, "La comisión debe ser un número entre 0 y 100"),
+  comisionPlataforma: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === "") return true;
+      const num = parseFloat(val);
+      return !Number.isNaN(num) && num >= 0 && num <= 100;
+    }, "La comisión debe ser un número entre 0 y 100"),
 });
 
 export const upsertMetodoPagoAction = CrudActionBuilder.for(metodoPagoSchema)

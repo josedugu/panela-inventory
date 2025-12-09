@@ -47,6 +47,17 @@ export function getMetodoPagoColumns({
       ),
     },
     {
+      accessorKey: "comisionPlataforma",
+      header: "Comisión Plataforma (%)",
+      cell: ({ row }) => (
+        <span>
+          {row.original.comisionPlataforma != null
+            ? `${row.original.comisionPlataforma.toFixed(2)}%`
+            : "No definido"}
+        </span>
+      ),
+    },
+    {
       id: "actions",
       header: "Acciones",
       size: 80,

@@ -317,6 +317,9 @@ export function CrudSection<TData, TFormValues extends FieldValues>({
       ? `Actualiza la información de la ${config.entityName} seleccionada.`
       : `Ingresa los datos de la nueva ${config.entityName}.`;
 
+  // Para métodos de pago, no mostrar filtros por ahora
+  const shouldShowFilters = config.entityName !== "metodoPago";
+
   return (
     <>
       <EntityTableLayout
@@ -329,17 +332,19 @@ export function CrudSection<TData, TFormValues extends FieldValues>({
         onPageSizeChange={onPageSizeChange}
         searchValue={search}
         onSearchChange={setSearch}
-        filters={config.filters ?? []}
-        filterState={filterState}
-        onFilterStateChange={setFilterState}
-        pendingFilterState={pendingFilterState}
-        onPendingFilterStateChange={setPendingFilterState}
-        onApplyFilters={handleApplyFilters}
-        onResetPendingFilters={handleResetPendingFilters}
-        onClearFilters={handleClearFilters}
-        isFilterDialogOpen={isFilterDialogOpen}
-        setFilterDialogOpen={setFilterDialogOpen}
-        filterOptions={filterOptions}
+        {...(shouldShowFilters && {
+          filters: config.filters ?? [],
+          filterState,
+          onFilterStateChange: setFilterState,
+          pendingFilterState,
+          onPendingFilterStateChange: setPendingFilterState,
+          onApplyFilters: handleApplyFilters,
+          onResetPendingFilters: handleResetPendingFilters,
+          onClearFilters: handleClearFilters,
+          isFilterDialogOpen,
+          setFilterDialogOpen,
+          filterOptions,
+        })}
         isLoading={isBusy}
       />
 
