@@ -105,6 +105,42 @@ function MetodoPagoForm({
           </FormItem>
         )}
       />
+      <FormField
+        control={form.control}
+        name="comisionPlataforma"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Comisión Plataforma (%)</FormLabel>
+            <FormControl>
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00 (opcional)"
+                value={field.value || ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Permitir solo números, punto decimal y vacío
+                  const cleanedValue = value
+                    .replace(/[^0-9.,]/g, "")
+                    .replace(/,/g, ".");
+                  if (cleanedValue === "" || cleanedValue === ".") {
+                    field.onChange("");
+                  } else {
+                    const numericValue = parseFloat(cleanedValue);
+                    field.onChange(
+                      Number.isNaN(numericValue) ? "" : numericValue.toString(),
+                    );
+                  }
+                }}
+                onBlur={field.onBlur}
+                name={field.name}
+                ref={field.ref}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </>
   );
 }
@@ -127,11 +163,13 @@ export function MetodoPagoSection({
       nombre: "",
       esCredito: false,
       comisionAsesor: "",
+      comisionPlataforma: "",
     },
     getFormValuesForEdit: (metodoPago) => ({
       nombre: metodoPago.nombre,
       esCredito: metodoPago.esCredito,
       comisionAsesor: metodoPago.comisionAsesor?.toString() ?? "",
+      comisionPlataforma: metodoPago.comisionPlataforma?.toString() ?? "",
     }),
 
     upsertAction: upsertMetodoPagoAction,

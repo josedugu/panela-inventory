@@ -1,6 +1,6 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
+import { ComisionTipo, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { createCustomer } from "@/data/repositories/customers.repository";
 import { getCurrentUserWithRole } from "@/lib/auth/get-current-user";
@@ -61,6 +61,13 @@ export async function createSaleAction(
       return {
         success: false,
         error: "Usuario no autenticado",
+      };
+    }
+
+    if (!currentUser.centroCostoId) {
+      return {
+        success: false,
+        error: "El usuario no tiene un centro de costos asignado",
       };
     }
 
@@ -195,6 +202,123 @@ export async function createSaleAction(
         }
       }
 
+      // Resolver productoDetalle(s) y costos por línea antes de crear la venta
+      const lineSelections = await Promise.all(
+        lines.map(async (line) => {
+          const product = products.find((p) => p.id === line.productId);
+          if (!product) {
+            throw new Error(
+              `Producto con id ${line.productId} no encontrado en la carga actual`,
+            );
+          }
+
+          let detalles: {
+            id: string;
+            bodegaId: string | null;
+          }[] = [];
+
+          if (line.productoDetalleId) {
+            const productoDetalle = await tx.productoDetalle.findFirst({
+              where: {
+                id: line.productoDetalleId,
+                estado: true,
+                ventaProductoId: null,
+                productoId: line.productId,
+              },
+              select: {
+                id: true,
+                bodegaId: true,
+              },
+            });
+
+            if (!productoDetalle) {
+              throw new Error(
+                `El IMEI seleccionado no está disponible para ${product.nombre ?? product.id}`,
+              );
+            }
+
+            detalles = [productoDetalle];
+          } else {
+            const availableDetails = await tx.productoDetalle.findMany({
+              where: {
+                productoId: line.productId,
+                estado: true,
+                ventaProductoId: null,
+              },
+              select: {
+                id: true,
+                bodegaId: true,
+              },
+              take: line.quantity,
+            });
+
+            if (availableDetails.length < line.quantity) {
+              throw new Error(
+                `No hay suficientes productos detalles disponibles para ${product.nombre ?? product.id}`,
+              );
+            }
+
+            detalles = availableDetails;
+          }
+
+          const productCost = product.costo ? Number(product.costo) : 0;
+          let costoTotal = 0;
+
+          for (const detalle of detalles) {
+            const movimientoIngreso = await tx.movimientoInventario.findFirst({
+              where: {
+                productos: {
+                  some: {
+                    id: detalle.id,
+                  },
+                },
+                tipoMovimiento: {
+                  ingreso: true,
+                },
+                costoUnitario: {
+                  not: null,
+                },
+              },
+              select: {
+                costoUnitario: true,
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+            });
+
+            const detalleCost = movimientoIngreso?.costoUnitario
+              ? Number(movimientoIngreso.costoUnitario)
+              : productCost;
+            costoTotal += detalleCost;
+          }
+
+          const costoUnitario =
+            detalles.length > 0 ? costoTotal / detalles.length : 0;
+
+          const esObsequio = line.unitPrice === 0;
+
+          return {
+            line,
+            detailIds: detalles.map((detalle) => detalle.id),
+            costoUnitario,
+            costoTotal,
+            esObsequio,
+            bodegaId: detalles[0]?.bodegaId ?? null,
+          };
+        }),
+      );
+
+      const saleBodegaId =
+        lineSelections.find((selection) => selection.bodegaId)?.bodegaId ??
+        null;
+
+      if (!saleBodegaId) {
+        throw new Error(
+          "No se pudo determinar la bodega para la venta. Verifica que los productos detalles tengan bodega asignada.",
+        );
+      }
+
       // Calcular total de la venta
       const total = lines.reduce(
         (sum, line) => sum + line.unitPrice * line.quantity,
@@ -263,12 +387,20 @@ export async function createSaleAction(
           clienteId: finalCustomerId,
           total: new Prisma.Decimal(total.toString()),
           vendidoPorId: currentUser.id,
+          centroCostoId: currentUser.centroCostoId ?? null,
+          bodegaId: saleBodegaId,
           ventaProducto: {
-            create: lines.map((line) => {
+            create: lines.map((line, index) => {
               const product = products.find((p) => p.id === line.productId);
               if (!product) {
                 throw new Error(
                   `Producto con id ${line.productId} no encontrado en la carga actual`,
+                );
+              }
+              const selection = lineSelections[index];
+              if (!selection) {
+                throw new Error(
+                  `No se pudo resolver costos para el producto ${product.nombre ?? product.id}`,
                 );
               }
               const subtotal = line.unitPrice * line.quantity;
@@ -281,6 +413,11 @@ export async function createSaleAction(
                 descuento: new Prisma.Decimal(descuento.toString()),
                 subtotal: new Prisma.Decimal(subtotal.toString()),
                 total: new Prisma.Decimal(lineTotal.toString()),
+                costoUnitario: new Prisma.Decimal(
+                  selection.costoUnitario.toString(),
+                ),
+                costoTotal: new Prisma.Decimal(selection.costoTotal.toString()),
+                esObsequio: selection.esObsequio,
                 // Obtener productos detalles disponibles para este producto
                 productosDetalles: {
                   connect: [], // Se conectará después de crear el movimiento
@@ -303,46 +440,14 @@ export async function createSaleAction(
           );
         }
 
-        // Si hay productoDetalleId específico, usar ese; si no, buscar disponibles
-        let productoDetalleIds: string[] = [];
-
-        if (line.productoDetalleId) {
-          // Validar que el productoDetalle existe, está disponible y pertenece al producto correcto
-          const productoDetalle = await tx.productoDetalle.findUnique({
-            where: {
-              id: line.productoDetalleId,
-              estado: true,
-              ventaProductoId: null,
-              productoId: line.productId,
-            },
-          });
-
-          if (!productoDetalle) {
-            throw new Error(
-              `El IMEI seleccionado no está disponible para ${product.nombre ?? product.id}`,
-            );
-          }
-
-          productoDetalleIds = [line.productoDetalleId];
-        } else {
-          // Fallback: buscar productos detalles disponibles (sin venta asignada)
-          const availableDetails = await tx.productoDetalle.findMany({
-            where: {
-              productoId: line.productId,
-              estado: true,
-              ventaProductoId: null,
-            },
-            take: line.quantity,
-          });
-
-          if (availableDetails.length < line.quantity) {
-            throw new Error(
-              `No hay suficientes productos detalles disponibles para ${product.nombre ?? product.id}`,
-            );
-          }
-
-          productoDetalleIds = availableDetails.map((detail) => detail.id);
+        const selection = lineSelections[index];
+        if (!selection) {
+          throw new Error(
+            `No se pudo resolver producto detalle para ${product.nombre ?? product.id}`,
+          );
         }
+
+        const productoDetalleIds = selection.detailIds;
 
         // Crear movimiento de inventario
         // Para ventas, no necesitamos costo unitario ya que es una salida
@@ -414,8 +519,20 @@ export async function createSaleAction(
           await tx.comision.create({
             data: {
               pagoId: pago.id,
+              porcentaje: plataformaPct,
+              baseComision: amountDecimal,
+              monto: comisionPlataforma,
+              tipo: ComisionTipo.PLATAFORMA,
+            },
+          });
+
+          await tx.comision.create({
+            data: {
+              pagoId: pago.id,
               porcentaje: asesorPct,
+              baseComision: netoDespuesPlataforma,
               monto: comisionAsesor,
+              tipo: ComisionTipo.ASESOR,
             },
           });
         }

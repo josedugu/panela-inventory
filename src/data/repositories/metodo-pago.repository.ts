@@ -10,15 +10,30 @@ export interface MetodoPagoDTO {
   updatedAt: Date;
   estado: boolean;
   comisionAsesor: number | null;
+  comisionPlataforma: number | null;
 }
 
 interface MetodoPagoInput {
   nombre: string;
   esCredito: boolean;
   comisionAsesor?: number | string | null;
+  comisionPlataforma?: number | string | null;
 }
 
 function parseComisionAsesor(value: MetodoPagoInput["comisionAsesor"]) {
+  if (value === null || value === undefined || value === "") {
+    return 0;
+  }
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  const parsed = Number.parseFloat(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function parseComisionPlataforma(value: MetodoPagoInput["comisionPlataforma"]) {
   if (value === null || value === undefined || value === "") {
     return 0;
   }
@@ -44,16 +59,19 @@ export async function listMetodoPagos(): Promise<MetodoPagoDTO[]> {
     updatedAt: metodoPago.updatedAt,
     estado: metodoPago.estado,
     comisionAsesor: metodoPago.comisionAsesor?.toNumber() ?? null,
+    comisionPlataforma: metodoPago.comisionPlataforma?.toNumber() ?? null,
   }));
 }
 
 export async function createMetodoPago(input: MetodoPagoInput) {
   const comisionAsesor = parseComisionAsesor(input.comisionAsesor);
+  const comisionPlataforma = parseComisionPlataforma(input.comisionPlataforma);
   const metodoPago = await prisma.metodoPago.create({
     data: {
       nombre: input.nombre,
       esCredito: input.esCredito,
       comisionAsesor,
+      comisionPlataforma,
     },
   });
 
@@ -65,17 +83,20 @@ export async function createMetodoPago(input: MetodoPagoInput) {
     updatedAt: metodoPago.updatedAt,
     estado: metodoPago.estado,
     comisionAsesor: metodoPago.comisionAsesor?.toNumber() ?? null,
+    comisionPlataforma: metodoPago.comisionPlataforma?.toNumber() ?? null,
   };
 }
 
 export async function updateMetodoPago(id: string, input: MetodoPagoInput) {
   const comisionAsesor = parseComisionAsesor(input.comisionAsesor);
+  const comisionPlataforma = parseComisionPlataforma(input.comisionPlataforma);
   const metodoPago = await prisma.metodoPago.update({
     where: { id },
     data: {
       nombre: input.nombre,
       esCredito: input.esCredito,
       comisionAsesor,
+      comisionPlataforma,
     },
   });
 
@@ -87,6 +108,7 @@ export async function updateMetodoPago(id: string, input: MetodoPagoInput) {
     updatedAt: metodoPago.updatedAt,
     estado: metodoPago.estado,
     comisionAsesor: metodoPago.comisionAsesor?.toNumber() ?? null,
+    comisionPlataforma: metodoPago.comisionPlataforma?.toNumber() ?? null,
   };
 }
 
