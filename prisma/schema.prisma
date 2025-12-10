@@ -355,6 +355,17 @@ model Venta {
   @@schema("dev")
 }
 
+model Nota {
+  id String @id @default(uuid()) @db.Uuid
+  texto String @map("texto")
+  fechaEjecucion DateTime @map("fecha_ejecucion") @db.Timestamptz(6)
+  estado Boolean @default(true) @map("estado")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("nota")
+  @@schema("dev")
+}
 model VentaProducto {
   id                String            @id @default(uuid()) @db.Uuid
   ventaId           String            @map("venta_id") @db.Uuid
